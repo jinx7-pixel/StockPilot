@@ -12,8 +12,16 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint ."
+    "typecheck": "npm run typecheck:app && npm run typecheck:migrations",
+    "typecheck:app": "tsc -p tsconfig.json --noEmit",
+    "typecheck:migrations": "tsc -p ../database/tsconfig.json --noEmit",
+    "lint": "eslint . && npm run lint:migrations",
+    "lint:migrations": "cd ../database && eslint --config eslint.config.js .",
+    "migration:create": "tsx src/db/migrate.ts create",
+    "migration:up": "tsx src/db/migrate.ts up",
+    "migration:down": "tsx src/db/migrate.ts down",
+    "migration:redo": "tsx src/db/migrate.ts redo",
+    "migration:status": "tsx src/db/migrate.ts status"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -29,6 +37,7 @@
     "@types/pg": "^8.15.6",
     "eslint": "^10.12.0",
     "globals": "^17.13.0",
+    "node-pg-migrate": "^9.0.0",
     "tsx": "^4.20.7",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.0"

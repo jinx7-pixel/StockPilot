@@ -6,8 +6,8 @@
     "moduleResolution": "NodeNext",
     "types": ["node"],
 
-    "rootDir": "src",
-    "outDir": "dist",
+    /* Type-check only by default; tsconfig.build.json opts into emit. */
+    "noEmit": true,
 
     /* Strictness */
     "strict": true,

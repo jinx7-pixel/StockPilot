@@ -36,13 +36,17 @@ docker compose ps        # expect STATUS "healthy"
 
 This creates a PostgreSQL 18 container with local credentials
 (`stockpilot` / `stockpilot` / `stockpilot_local_dev`) and a named volume
-`stockpilot_pgdata`. An **empty schema is expected** at this stage.
+`stockpilot_pgdata`. Apart from migration infrastructure, an **empty schema is
+expected** at this stage.
 
 ```bash
 docker compose logs -f db   # follow startup logs
 docker compose down         # stop
 docker compose down -v      # stop and delete all local data
 ```
+
+> **Not using Docker?** A native PostgreSQL 18 works identically. Create the role
+> and database yourself, then point the `PG*` variables in `backend/.env` at it.
 
 ## 3. Configure environment
 
@@ -61,7 +65,28 @@ The defaults in both templates already work for the local Docker database, so no
 editing is required to start. `.env` and `.env.local` are git-ignored — never
 commit them, and never put a real password or API key in the `.example` files.
 
-## 4. Run the backend
+## 4. Apply database migrations
+
+```bash
+cd backend
+npm run migration:status
+npm run migration:up
+```
+
+```
+[migrate] target : postgresql://stockpilot@localhost:5432/stockpilot
+[migrate] schema : public
+[migrate] dir    : C:\StockPilot\database\migrations
+[migrate] up 1791027517242_shared-database-helpers.ts
+[migrate] done — 1 migration(s) applied.
+```
+
+This creates the `pgmigrations` tracking table plus one generic helper function.
+**No business tables exist yet** — that is intentional.
+
+Full workflow, naming rules and rollback: [`database/README.md`](../database/README.md).
+
+## 5. Run the backend
 
 ```bash
 cd backend
@@ -85,7 +110,7 @@ curl http://localhost:4000/api/health
 { "status": "ok", "service": "stockpilot-api" }
 ```
 
-## 5. Run the frontend
+## 6. Run the frontend
 
 In a second terminal:
 
@@ -99,15 +124,15 @@ server proxies `/api/*` to the backend, so
 <http://localhost:5173/api/health> also returns the health JSON — a
 one-command end-to-end check that both halves are wired together.
 
-## 6. Quality checks
+## 7. Quality checks
 
 Run from each package directory.
 
 ```bash
 # backend
 cd backend
-npm run typecheck   # tsc --noEmit, strict
-npm run lint        # ESLint 10 flat config
+npm run typecheck   # tsc --noEmit, strict — covers the app AND migrations
+npm run lint        # ESLint 10 — covers the app AND migrations
 npm run build       # emit dist/
 
 # frontend
@@ -126,6 +151,10 @@ npm run preview     # serve the production build locally
 | Backend production run | `cd backend && npm run build && npm start` |
 | Frontend dev with HMR | `cd frontend && npm run dev` |
 | Frontend production preview | `cd frontend && npm run build && npm run preview` |
+| Create a migration | `cd backend && npm run migration:create -- <slug>` |
+| Apply migrations | `cd backend && npm run migration:up` |
+| Roll back the latest migration | `cd backend && npm run migration:down` |
+| Check migration state | `cd backend && npm run migration:status` |
 | Graceful API shutdown | `Ctrl+C` (SIGINT) — drains requests, closes the pool |
 
 ## Troubleshooting

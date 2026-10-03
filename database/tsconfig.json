@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+
+    /*
+     * node-pg-migrate is installed in the `backend` package, and this directory
+     * is a sibling of it, so plain Node resolution cannot reach it from here.
+     *
+     * Candidates are tried in order. The first points at the published type
+     * entry directly (TypeScript will not follow a package-directory candidate
+     * for a bare specifier in ESM/NodeNext mode from outside that package); the
+     * second is a plain-directory fallback in case a future version moves the
+     * bundled types. If a node-pg-migrate upgrade breaks BOTH candidates,
+     * `npm run typecheck:migrations` fails loudly and this mapping is what needs
+     * updating.
+     */
+    "baseUrl": ".",
+    "paths": {
+      "node-pg-migrate": [
+        "../backend/node_modules/node-pg-migrate/dist/bundle/index.d.ts",
+        "../backend/node_modules/node-pg-migrate"
+      ]
+    },
+
+    "noEmit": true
+  },
+  "include": ["migrations/**/*.ts"]
+}

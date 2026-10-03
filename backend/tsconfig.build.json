@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "noEmit": false
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["src/db/migrate.ts"]
 }

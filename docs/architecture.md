@@ -18,7 +18,6 @@ StockPilot/
 ├── .github/workflows/   CI/CD (reserved, no workflows yet)
 └── docker-compose.yml   local PostgreSQL 18 only
 ```
-
 Frontend and backend communicate over **REST** (`/api/*`). There is no shared
 runtime package yet — the only things genuinely shared are the API contract and
 the root tooling conventions, so a premature `packages/shared` monorepo layer
@@ -74,9 +73,20 @@ The backend holds a single lazily-created `pg` connection pool per process
 (`db/pool.ts`). It is opened on first use, reports idle-client errors without
 crashing, supports `withTransaction`, and is drained on `SIGTERM`/`SIGINT`.
 
+Connection settings are defined exactly once, in `db/config.ts`
+(`buildClientConfig()`), which reads the validated `env` object. Both the
+application pool and the migration runner build their clients from that one
+function, so a migration can never be pointed at a different database than the
+API — a bug that is otherwise very hard to diagnose.
+
 **No tables are created by application code.** The schema is applied exclusively
-through versioned migrations committed under `database/migrations/` — see
-[`database/README.md`](../database/README.md).
+through versioned migrations committed under `database/migrations/` and run with
+`node-pg-migrate` via `db/migrate.ts`. Migrations run inside a single
+transaction, under a PostgreSQL advisory lock, with out-of-order detection
+enabled. See [`database/README.md`](../database/README.md).
+
+`db/migrate.ts` is tooling: excluded from the production build, never imported by
+the API.
 
 ## Frontend
 
@@ -116,9 +126,12 @@ Each of these is a deliberate seam, not existing code:
 
 - **Modules** → new `routes/x.routes.ts` + `services/` + `repositories/`, mounted
   in `routes/index.ts`. No changes to `app.ts`.
-- **Migrations** → add a numbered SQL file; no application change.
+- **Migrations** → `npm run migration:create -- <slug>`, then `migration:up`. No
+  application change required.
 - **Auth** → a middleware plus `env` additions; routes opt in individually.
 - **Docker** → `docker-compose.yml` already isolates the `db` service, so
   frontend/backend services can be added beside it.
 - **CI** → `.github/workflows/` is reserved and documented; scripts
-  (`lint`, `typecheck`, `build`) are already CI-ready entry points.
+  (`lint`, `typecheck`, `build`, `migration:up`) are already CI-ready entry
+  points. `migration:up` is safe to run on every deploy: it applies only pending
+  migrations and serialises concurrent runs with an advisory lock.

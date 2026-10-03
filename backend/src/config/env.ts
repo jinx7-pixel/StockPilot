@@ -72,6 +72,22 @@ export const env = {
     connectionTimeoutMillis: readInt('PGCONNECT_TIMEOUT_MS', 5_000),
   },
 
+  /**
+   * Migration tooling (node-pg-migrate). These values affect only the
+   * `npm run migration:*` commands, never the running API.
+   */
+  migrations: {
+    /**
+     * Directory holding migration files. Relative paths resolve from the
+     * backend package root (where npm scripts execute).
+     */
+    dir: readString('MIGRATIONS_DIR', '../database/migrations'),
+    /** Schema that migrations run against, and that holds the tracking table. */
+    schema: readString('PGSCHEMA', 'public'),
+    /** Table in which applied migrations are recorded. */
+    table: readString('PGMIGRATIONS_TABLE', 'pgmigrations'),
+  },
+
   /** Log verbosity: 'debug' | 'info' | 'warn' | 'error' | 'silent' */
   logLevel: readString('LOG_LEVEL', nodeEnv === 'production' ? 'info' : 'debug'),
 } as const;

@@ -10,6 +10,7 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
 
 import { env } from '../config/env.js';
+import { buildClientConfig } from './config.js';
 
 const isProduction = env.isProduction;
 
@@ -22,16 +23,9 @@ let pool: Pool | null = null;
 export function getPool(): Pool {
   if (pool === null) {
     pool = new Pool({
-      // DATABASE_URL takes precedence when present, otherwise discrete PG* vars.
-      connectionString: env.database.url,
-      host: env.database.host,
-      port: env.database.port,
-      database: env.database.database,
-      user: env.database.user,
-      password: env.database.password,
-      ssl: env.database.ssl === 'require' ? { rejectUnauthorized: false } : undefined,
+      // Connection settings are shared with the migration runner — see ./config.ts
+      ...buildClientConfig(),
       max: env.database.maxConnections,
-      connectionTimeoutMillis: env.database.connectionTimeoutMillis,
       application_name: 'stockpilot-api',
     });
 

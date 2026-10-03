@@ -8,7 +8,8 @@ Architecture notes, decisions and how-to guides live here.
 | --- | --- |
 | [`architecture.md`](./architecture.md) | Layering, request lifecycle, module boundaries, scaling path |
 | [`getting-started.md`](./getting-started.md) | Prerequisites and step-by-step local run |
-| [`../database/README.md`](../database/README.md) | Schema + migration policy |
+| [`../database/README.md`](../database/README.md) | Migration workflow, env vars, rollback, troubleshooting |
+| [`../database/migrations/README.md`](../database/migrations/README.md) | Migration file conventions and rules |
 | [`../README.md`](../README.md) | Project overview and roadmap |
 
 ## Conventions

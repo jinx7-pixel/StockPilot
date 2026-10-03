@@ -18,10 +18,15 @@ npm run dev            # http://localhost:4000
 | Script | Description |
 | --- | --- |
 | `npm run dev` | `tsx watch` — dev server with auto-reload |
-| `npm run typecheck` | `tsc --noEmit` in strict mode |
-| `npm run lint` | ESLint 10 flat config with `typescript-eslint` |
+| `npm run typecheck` | Type-check the app **and** the migrations |
+| `npm run lint` | Lint the app **and** the migrations |
 | `npm run build` | Compile to `dist/` |
 | `npm start` | Run the compiled server |
+| `npm run migration:create -- <slug>` | Create a timestamped migration |
+| `npm run migration:up` | Apply all pending migrations |
+| `npm run migration:down` | Roll back the latest migration |
+| `npm run migration:redo` | Roll back and re-apply the latest |
+| `npm run migration:status` | Show applied vs pending migrations |
 
 ## API
 
@@ -44,7 +49,9 @@ src/
 │   ├── env.ts          # Validated env access
 │   └── index.ts
 ├── db/
+│   ├── config.ts       # Shared connection config (pool + migrations)
 │   ├── pool.ts         # pg pool, query(), withTransaction(), checkConnection()
+│   ├── migrate.ts      # Migration CLI (tooling only, not shipped)
 │   └── index.ts
 ├── middlewares/
 │   ├── errorHandler.ts
@@ -69,15 +76,23 @@ as `undefined` inside a request.
 
 ## Database
 
-`db/pool.ts` configures **connectivity only**. It creates no tables and runs no
-schema changes — the schema is applied through versioned migrations. See
-[`../database/README.md`](../database/README.md).
+`db/config.ts` turns environment variables into a `pg` config object. It is the
+single source of connection settings, used by both the application pool
+(`db/pool.ts`) and the migration runner (`db/migrate.ts`) — so a migration can
+never be pointed at a different database than the API.
+
+Schema changes are applied **only** through versioned migrations in
+`database/migrations/`, managed with `node-pg-migrate`. No application code
+creates or alters tables. See [`../database/README.md`](../database/README.md).
 
 All SQL goes through parameterised `query(sql, values)`. Never interpolate input
 into a query string.
 
 The pool is created lazily, survives idle-client errors without crashing, and is
 drained on `SIGTERM`/`SIGINT` (10s force-exit timeout).
+
+`db/migrate.ts` is tooling only: it is excluded from the production build and is
+never imported by the running API.
 
 ## Configuration
 
@@ -93,6 +108,9 @@ See `.env.example` for the full contract. Highlights:
 | `PGHOST` … `PGSSLMODE` | local defaults | Discrete libpq-style variables |
 | `PGPOOL_MAX` | `10` | Pool size |
 | `PGCONNECT_TIMEOUT_MS` | `5000` | Connection timeout |
+| `PGSCHEMA` | `public` | Schema migrations run against |
+| `PGMIGRATIONS_TABLE` | `pgmigrations` | Migration tracking table |
+| `MIGRATIONS_DIR` | `../database/migrations` | Migration directory |
 
 `JWT_SECRET` and `OPENAI_API_KEY` are reserved for later milestones and are
 intentionally blank.

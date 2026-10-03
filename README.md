@@ -44,6 +44,7 @@ The design principle throughout: **decision support, not decision automation.**
 | **Frontend** | React 19, TypeScript 6, Vite 8, Tailwind CSS 4 |
 | **Backend** | Node.js 22+, Express 5, TypeScript 5.9 |
 | **Database** | PostgreSQL 18 |
+| **Schema management** | node-pg-migrate (versioned, reversible migrations) |
 | **API** | REST (JSON over HTTP, `/api/*`) |
 | **Language** | TypeScript end to end (frontend + backend) |
 | **Linting** | ESLint 10 flat config + `typescript-eslint` |
@@ -81,8 +82,10 @@ StockPilot/
 │   ├── eslint.config.js
 │   └── tsconfig*.json
 │
-├── database/                  # Schema lifecycle documentation
-│   └── README.md              # Migrations policy (no tables yet)
+├── database/                  # Schema lifecycle
+│   ├── migrations/            # Versioned node-pg-migrate migrations (committed)
+│   ├── package.json           # Marks migrations as an ESM project
+│   └── README.md              # Migration workflow and policy (no business tables yet)
 │
 ├── docs/
 │   ├── architecture.md        # Layering, request lifecycle, scaling path
@@ -100,7 +103,8 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: project foundation.** The toolchain is complete, verified and runnable.
+**Stage: migration infrastructure.** The toolchain is complete, verified and
+runnable, and the database schema can now be versioned, applied and rolled back.
 **No business functionality has been built yet** — by design.
 
 ### ✅ Complete
@@ -111,6 +115,13 @@ StockPilot/
 - `GET /api/health` → `{"status":"ok","service":"stockpilot-api"}`
 - Layered backend structure (`routes` → `middlewares` → `db` → `config`) with
   `createApp()` separated from `server.ts` for testability
+- **Migration infrastructure**: node-pg-migrate wired through a typed CLI
+  (`backend/src/db/migrate.ts`) with `create` / `up` / `down` / `redo` / `status`
+- Migrations directory at `database/migrations/`, append-only, versioned and
+  type-checked and linted alongside the API
+- **Shared connection config** (`db/config.ts`) so the pool and the migration
+  runner can never target different databases
+- Migrations are transactional, order-checked and serialised with an advisory lock
 - PostgreSQL connection configuration (`pg` pool from env vars) with transaction
   helper and graceful shutdown — **no tables created**
 - Environment configuration via committed `.env.example` files; **no secrets in source**
@@ -125,14 +136,14 @@ StockPilot/
 ### ⏳ Not started (intentionally)
 
 Authentication · Products · Inventory · Sales · Suppliers · Purchase Orders ·
-Dashboard · AI/ML features · Database business tables · Migrations · Docker
+Dashboard · AI/ML features · **Database business tables** · Seed data · Docker
 images · CI/CD workflows · Tests
 
 ### Verification results
 
 | Check | Backend | Frontend |
 | --- | --- | --- |
-| `npm run typecheck` | ✅ pass | ✅ pass |
+| `npm run typecheck` | ✅ pass (app **and** migrations) | ✅ pass |
 | `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
 | `npm run build` | ✅ `dist/` emitted | ✅ `dist/` emitted |
 | Server starts | ✅ port 4000 | ✅ port 5173 |
@@ -154,10 +165,13 @@ docker compose up -d db
 cp backend/.env.example  backend/.env
 cp frontend/.env.example frontend/.env.local
 
-# 4. Run the API           (terminal 1 → http://localhost:4000)
+# 4. Apply database migrations
+cd backend && npm run migration:up && cd ..
+
+# 5. Run the API           (terminal 1 → http://localhost:4000)
 cd backend && npm run dev
 
-# 5. Run the web client    (terminal 2 → http://localhost:5173)
+# 6. Run the web client    (terminal 2 → http://localhost:5173)
 cd frontend && npm run dev
 ```
 
@@ -166,10 +180,47 @@ Verify the foundation end to end:
 ```bash
 curl http://localhost:4000/api/health
 # {"status":"ok","service":"stockpilot-api"}
+
+cd backend && npm run migration:status
 ```
 
 Full setup instructions and troubleshooting:
 [`docs/getting-started.md`](./docs/getting-started.md).
+Migration workflow: [`database/README.md`](./database/README.md).
+
+---
+
+## Database Migrations
+
+The schema is applied **only** through versioned, forward-only migrations run by
+[node-pg-migrate](https://node-pg-migrate.vercel.app/). No application code
+creates or alters tables, and no credentials live in source control.
+
+```bash
+cd backend
+npm run migration:create -- add-product-tables   # new timestamped migration
+npm run migration:status                         # applied vs pending
+npm run migration:up                             # apply pending
+npm run migration:down                           # roll back the latest
+npm run migration:redo                           # prove a down() works
+```
+
+Guarantees:
+
+- **Append-only** — applied migrations are never edited or deleted; corrections
+  ship as new migrations.
+- **Reversible** — every migration has a `down`, guarded with `IF EXISTS`.
+- **Safe to repeat** — `up` applies only pending migrations, in one transaction.
+- **Order-checked** — an out-of-order migration fails loudly instead of corrupting
+  history.
+- **Deploy-safe** — concurrent runners serialise on a PostgreSQL advisory lock.
+- **Same database as the API** — the pool and the migration runner share one
+  connection config (`backend/src/db/config.ts`).
+- **Quality-gated** — migrations are type-checked and linted by the same
+  `npm run typecheck` / `npm run lint` used for the API.
+
+**No business tables exist yet.** The single committed migration creates one
+generic `set_updated_at()` helper and nothing else.
 
 ---
 
@@ -188,7 +239,7 @@ Each module is a future milestone. **None of these are implemented.**
 | 7 | **Dashboard & Risk Insights** | Stockout / overstock / dead-stock detection, exposure summaries, prioritised action list |
 | 8 | **Recommendations Engine** | Rule-based (and later ML) reorder, defer, reallocate and renegotiate suggestions with plain-language explanations |
 | 9 | **AI/ML Layer** *(long-term)* | Demand forecasting, anomaly detection, natural-language explanations and summaries |
-| 10 | **Platform & Operations** | Migrations tooling, Docker images, GitHub Actions CI/CD, observability and deployment |
+| 10 | **Platform & Operations** | Docker images, GitHub Actions CI/CD, observability, deployment, seed tooling |
 
 ### Guiding principles for these modules
 
@@ -207,7 +258,8 @@ Each module is a future milestone. **None of these are implemented.**
   `.env.example` templates are committed, containing placeholders only.
 - Any variable prefixed `VITE_` is compiled into the **public** browser bundle
   and must never hold a secret.
-- All SQL goes through parameterised queries in `db/pool.ts`.
+- All SQL goes through parameterised queries in `db/pool.ts`; migrations use
+  node-pg-migrate's parameterised builder, never string interpolation.
 - CORS uses an explicit origin allow-list from `CORS_ORIGINS`, never `*`.
 - Stack traces are never returned in production error responses.
 
@@ -219,7 +271,8 @@ Each module is a future milestone. **None of these are implemented.**
 | --- | --- |
 | [`docs/architecture.md`](./docs/architecture.md) | Layering, request lifecycle, module boundaries, scaling path |
 | [`docs/getting-started.md`](./docs/getting-started.md) | Local setup, quality checks, troubleshooting |
-| [`database/README.md`](./database/README.md) | Schema and migration policy |
+| [`database/README.md`](./database/README.md) | Migration workflow, environment variables, rollback, troubleshooting |
+| [`database/migrations/README.md`](./database/migrations/README.md) | Migration file conventions and rules |
 
 ---
 
@@ -227,5 +280,5 @@ Each module is a future milestone. **None of these are implemented.**
 
 Private — all rights reserved. No licence has been granted yet.
 
-**StockPilot** · Foundation stage · Built for growing businesses that deserve
-clear answers about their stock.
+**StockPilot** · Migration infrastructure stage · Built for growing businesses
+that deserve clear answers about their stock.
