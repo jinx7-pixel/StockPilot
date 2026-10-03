@@ -1,0 +1,47 @@
+# StockPilot — local infrastructure
+#
+# This file is a placeholder for the foundation stage. It defines the
+# PostgreSQL 18 service only, so the backend has a real database to connect
+# to during local development.
+#
+# Application container images (frontend / backend) are intentionally NOT
+# defined yet — Docker packaging is a later milestone and will be added here
+# once Dockerfiles exist.
+#
+# Usage:
+#   docker compose up -d db
+#   docker compose ps
+#   docker compose down          # stop, keep data
+#   docker compose down -v       # stop, delete the data volume
+#
+# All credentials below are LOCAL DEVELOPMENT PLACEHOLDERS ONLY.
+# Never reuse them anywhere else, and never commit a real .env file.
+
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: stockpilot-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-stockpilot}
+      POSTGRES_USER: ${POSTGRES_USER:-stockpilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stockpilot_local_dev}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    ports:
+      # Host:container mapping. Drop it to keep PostgreSQL off the host network.
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - stockpilot_pgdata:/var/lib/postgresql/data
+      # Mount ./database/init only when it exists; kept commented out so the
+      # foundation has no auto-applied schema.
+      # - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-stockpilot} -d ${POSTGRES_DB:-stockpilot}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  stockpilot_pgdata:
+    name: stockpilot_pgdata

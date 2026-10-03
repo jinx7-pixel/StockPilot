@@ -1,0 +1,231 @@
+# StockPilot
+
+**Inventory Intelligence Platform for Growing Businesses**
+
+> Track inventory → understand risk → explain the problem → recommend the action →
+> let the business owner decide.
+
+StockPilot is built for small and mid-sized businesses that run on spreadsheets
+and intuition. It does not simply record stock levels: it flags *risk*, explains
+*why* something is at risk in plain language, recommends what to do about it, and
+then stops — the decision stays with the owner.
+
+---
+
+## Description
+
+Inventory problems in a growing business rarely arrive as a clean error. They
+show up as a supplier delay, a demand spike, a slow-moving SKU quietly tying up
+cash — and are usually discovered too late. StockPilot's value is not the
+tracking itself, but the **interpretation layer on top of it**:
+
+| Stage | What StockPilot does |
+| --- | --- |
+| **Track** | Maintains a live, accurate picture of stock across locations, SKUs and movements. |
+| **Understand risk** | Spots stockouts, overstock, dead stock and supplier exposure before they bite. |
+| **Explain** | States the problem in plain language a non-technical owner can act on — no jargon. |
+| **Recommend** | Proposes concrete next steps (reorder, defer, reallocate, renegotiate) with reasoning. |
+| **Decide** | Presents options and trade-offs. The owner decides; the system advises. |
+
+The design principle throughout: **decision support, not decision automation.**
+
+### Non-goals
+
+- Not a point-of-sale or accounting system — it integrates with them later.
+- Not a generic BI dashboard — insight must lead to an action.
+- Not autonomous purchasing — StockPilot never places orders on the owner's behalf.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| **Frontend** | React 19, TypeScript 6, Vite 8, Tailwind CSS 4 |
+| **Backend** | Node.js 22+, Express 5, TypeScript 5.9 |
+| **Database** | PostgreSQL 18 |
+| **API** | REST (JSON over HTTP, `/api/*`) |
+| **Language** | TypeScript end to end (frontend + backend) |
+| **Linting** | ESLint 10 flat config + `typescript-eslint` |
+| **Package manager** | npm (separate dependency tree per package) |
+| **Version control** | Git, GitHub |
+| **CI/CD** | GitHub Actions — *reserved, not implemented yet* |
+| **Containerization** | Docker — *planned for a later milestone* |
+| **Local infrastructure** | `docker-compose.yml` (PostgreSQL 18 only) |
+
+---
+
+## Repository Structure
+
+```
+StockPilot/
+├── frontend/                  # React + TypeScript + Vite + Tailwind
+│   ├── src/
+│   │   ├── App.tsx            # Foundation shell (no business features yet)
+│   │   ├── main.tsx
+│   │   └── index.css          # Tailwind import + design tokens
+│   ├── .env.example
+│   ├── eslint.config.js
+│   ├── tsconfig*.json
+│   └── vite.config.ts         # Tailwind plugin + /api dev proxy
+│
+├── backend/                   # Node.js + Express + TypeScript
+│   ├── src/
+│   │   ├── server.ts          # Process lifecycle, listen, graceful shutdown
+│   │   ├── app.ts             # Express app factory (separated for testability)
+│   │   ├── config/env.ts      # Validated env access (the only process.env reader)
+│   │   ├── db/pool.ts         # pg connection pool — connection only, no schema
+│   │   ├── middlewares/       # notFoundHandler, errorHandler
+│   │   └── routes/            # /api/health (apiRouter + healthRouter)
+│   ├── .env.example
+│   ├── eslint.config.js
+│   └── tsconfig*.json
+│
+├── database/                  # Schema lifecycle documentation
+│   └── README.md              # Migrations policy (no tables yet)
+│
+├── docs/
+│   ├── architecture.md        # Layering, request lifecycle, scaling path
+│   └── getting-started.md     # Local setup and troubleshooting
+│
+├── .github/
+│   └── workflows/             # Reserved for CI/CD — no workflows yet
+│
+├── docker-compose.yml         # Local PostgreSQL 18 service
+├── .gitignore                 # Single source of truth for the monorepo
+└── README.md
+```
+
+---
+
+## Current Development Status
+
+**Stage: project foundation.** The toolchain is complete, verified and runnable.
+**No business functionality has been built yet** — by design.
+
+### ✅ Complete
+
+- Monorepo structure with `frontend/`, `backend/`, `database/`, `docs/`, `.github/workflows/`
+- Frontend: React 19 + TypeScript 6 + Vite 8, Tailwind CSS 4 via `@tailwindcss/vite`
+- Backend: Node.js + Express 5 + TypeScript, ESM, strict mode
+- `GET /api/health` → `{"status":"ok","service":"stockpilot-api"}`
+- Layered backend structure (`routes` → `middlewares` → `db` → `config`) with
+  `createApp()` separated from `server.ts` for testability
+- PostgreSQL connection configuration (`pg` pool from env vars) with transaction
+  helper and graceful shutdown — **no tables created**
+- Environment configuration via committed `.env.example` files; **no secrets in source**
+- ESLint 10 flat config in both packages
+- Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
+  output, database dumps and IDE files
+- `docker-compose.yml` providing a local PostgreSQL 18 instance
+- Verified `typecheck`, `lint`, and `build` in both packages; both servers start
+  and the frontend dev proxy reaches the backend
+- Git repository initialised
+
+### ⏳ Not started (intentionally)
+
+Authentication · Products · Inventory · Sales · Suppliers · Purchase Orders ·
+Dashboard · AI/ML features · Database business tables · Migrations · Docker
+images · CI/CD workflows · Tests
+
+### Verification results
+
+| Check | Backend | Frontend |
+| --- | --- | --- |
+| `npm run typecheck` | ✅ pass | ✅ pass |
+| `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
+| `npm run build` | ✅ `dist/` emitted | ✅ `dist/` emitted |
+| Server starts | ✅ port 4000 | ✅ port 5173 |
+| `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
+
+---
+
+## Quick Start
+
+```bash
+# 1. Install
+npm install --prefix frontend
+npm install --prefix backend
+
+# 2. Start the local database
+docker compose up -d db
+
+# 3. Configure environment (defaults already work locally)
+cp backend/.env.example  backend/.env
+cp frontend/.env.example frontend/.env.local
+
+# 4. Run the API           (terminal 1 → http://localhost:4000)
+cd backend && npm run dev
+
+# 5. Run the web client    (terminal 2 → http://localhost:5173)
+cd frontend && npm run dev
+```
+
+Verify the foundation end to end:
+
+```bash
+curl http://localhost:4000/api/health
+# {"status":"ok","service":"stockpilot-api"}
+```
+
+Full setup instructions and troubleshooting:
+[`docs/getting-started.md`](./docs/getting-started.md).
+
+---
+
+## Planned Modules
+
+Each module is a future milestone. **None of these are implemented.**
+
+| # | Module | Scope (planned) |
+| --- | --- | --- |
+| 1 | **Authentication & Users** | Owner/admin roles, sessions, onboarding, tenant isolation |
+| 2 | **Products & Catalog** | SKUs, variants, units of measure, categories, barcodes, costing |
+| 3 | **Inventory Tracking** | Stock levels per location, stock ledger, adjustments, cycle counts, low-stock thresholds |
+| 4 | **Suppliers** | Supplier records, lead times, MOQs, pricing, performance and reliability history |
+| 5 | **Purchase Orders** | Draft → approve → send workflow, PO lines, receiving, supplier acknowledgements |
+| 6 | **Sales & Demand** | Sales history, demand signals, seasonality, forecast inputs |
+| 7 | **Dashboard & Risk Insights** | Stockout / overstock / dead-stock detection, exposure summaries, prioritised action list |
+| 8 | **Recommendations Engine** | Rule-based (and later ML) reorder, defer, reallocate and renegotiate suggestions with plain-language explanations |
+| 9 | **AI/ML Layer** *(long-term)* | Demand forecasting, anomaly detection, natural-language explanations and summaries |
+| 10 | **Platform & Operations** | Migrations tooling, Docker images, GitHub Actions CI/CD, observability and deployment |
+
+### Guiding principles for these modules
+
+1. **Explain, don't just alert.** Every insight carries a human-readable reason.
+2. **Recommend, never auto-execute.** The owner approves every action.
+3. **Migrations only.** No application code creates or alters tables.
+4. **Secrets stay out of source.** Configuration is environment-driven.
+5. **No mock business data in the repository.** Realistic data is seeded locally
+   or generated by migrations fixtures, never committed as filler.
+
+---
+
+## Security Notes
+
+- `.env`, `.env.*` and common key/cert extensions are git-ignored; only
+  `.env.example` templates are committed, containing placeholders only.
+- Any variable prefixed `VITE_` is compiled into the **public** browser bundle
+  and must never hold a secret.
+- All SQL goes through parameterised queries in `db/pool.ts`.
+- CORS uses an explicit origin allow-list from `CORS_ORIGINS`, never `*`.
+- Stack traces are never returned in production error responses.
+
+---
+
+## Documentation
+
+| Document | Purpose |
+| --- | --- |
+| [`docs/architecture.md`](./docs/architecture.md) | Layering, request lifecycle, module boundaries, scaling path |
+| [`docs/getting-started.md`](./docs/getting-started.md) | Local setup, quality checks, troubleshooting |
+| [`database/README.md`](./database/README.md) | Schema and migration policy |
+
+---
+
+## License
+
+Private — all rights reserved. No licence has been granted yet.
+
+**StockPilot** · Foundation stage · Built for growing businesses that deserve
+clear answers about their stock.

@@ -1,0 +1,124 @@
+# Architecture — StockPilot
+
+Foundation-stage architecture. This describes what is true **today**, plus the
+boundaries that keep the codebase scalable as business modules arrive.
+
+## Repository shape
+
+A lightweight monorepo: two independently installable, independently runnable
+applications plus shared documentation, sharing a single root `.gitignore` and
+Git history.
+
+```
+StockPilot/
+├── frontend/     React + TypeScript + Vite + Tailwind CSS   (port 5173)
+├── backend/      Node.js + Express + TypeScript             (port 4000)
+├── database/     schema migrations + data documentation
+├── docs/         architecture, guides, future ADRs
+├── .github/workflows/   CI/CD (reserved, no workflows yet)
+└── docker-compose.yml   local PostgreSQL 18 only
+```
+
+Frontend and backend communicate over **REST** (`/api/*`). There is no shared
+runtime package yet — the only things genuinely shared are the API contract and
+the root tooling conventions, so a premature `packages/shared` monorepo layer
+was deliberately avoided.
+
+## Backend layering
+
+Dependencies point **inward only**: `routes → services → repositories → db`.
+A layer may import from layers below it, never from layers above it.
+
+```mermaid
+graph TD
+    A[server.ts<br/>process lifecycle] --> B[app.ts<br/>express wiring]
+    B --> C[middlewares/]
+    B --> D[routes/index.ts<br/>/api/*]
+    D --> E[health.routes.ts]
+    D -. future .-> F[products / inventory /<br/>suppliers / sales routers]
+    F -.-> G[services/  business logic]
+    G -.-> H[repositories/  SQL]
+    H --> I[db/pool.ts]
+    I --> J[(PostgreSQL 18)]
+    B --> K[config/env.ts]
+```
+
+| Layer | Responsibility | Never does |
+| --- | --- | --- |
+| `server.ts` | process lifecycle, listen, graceful shutdown, signal handling | handle requests |
+| `app.ts` | middleware order, mounting routers | business logic |
+| `config/env.ts` | read + validate process env once, at import time | read `process.env` elsewhere |
+| `routes/` | HTTP shape only: parse, delegate, respond | SQL, business rules |
+| `middlewares/` | cross-cutting concerns (404, errors, logging) | route-specific logic |
+| `services/` *(planned)* | business rules and orchestration | touch `req`/`res` |
+| `repositories/` *(planned)* | all SQL and row mapping | business rules |
+| `db/pool.ts` | connection lifecycle, parameterised queries | schema creation |
+
+**`config/env.ts` is the only module allowed to read `process.env`.** Everything
+else imports the validated `env` object, so a missing variable fails once, at
+startup, with a clear message — instead of surfacing as `undefined` deep inside a
+request.
+
+### Current API surface
+
+| Method | Path | Response |
+| --- | --- | --- |
+| `GET` | `/api/health` | `{"status":"ok","service":"stockpilot-api"}` |
+
+`/api/health` is intentionally dependency-free — it does not query PostgreSQL, so
+a database outage can never make the HTTP process look dead.
+
+## Database
+
+The backend holds a single lazily-created `pg` connection pool per process
+(`db/pool.ts`). It is opened on first use, reports idle-client errors without
+crashing, supports `withTransaction`, and is drained on `SIGTERM`/`SIGINT`.
+
+**No tables are created by application code.** The schema is applied exclusively
+through versioned migrations committed under `database/migrations/` — see
+[`database/README.md`](../database/README.md).
+
+## Frontend
+
+- **Vite 8** dev server / bundler, **React 19**, **TypeScript 6** (strict).
+- **Tailwind CSS 4** via the `@tailwindcss/vite` plugin — no PostCSS config
+  file, no separate `tailwind.config.js`; theme tokens are declared with
+  `@theme` in `src/index.css`.
+- **Strict type-check** in `tsconfig.app.json` plus a separate
+  `tsconfig.node.json` for build tooling; `tsc -b` type-checks both.
+- **ESLint 10** flat config with `typescript-eslint`, `react-hooks` and
+  `react-refresh`.
+
+### Talking to the API
+
+`vite.config.ts` proxies `/api` → `http://localhost:4000` in dev. The frontend
+therefore calls **relative** `/api/...` paths: no hard-coded backend host, and
+CORS never enters the picture locally. `VITE_API_BASE_URL` exists in
+`.env.example` for the case where a separate API origin is genuinely needed.
+
+## Security posture
+
+- **No secrets in source control.** `.gitignore` blocks `.env`, `.env.*` and
+  common key/cert extensions; `.env.example` files are the committed contract
+  and contain placeholders only.
+- **Nothing typed as `VITE_*` is secret** — those values are inlined into the
+  public browser bundle.
+- **Parameterised SQL only**; `query()` takes a values array, never string
+  interpolation.
+- `app.disable('x-powered-by')`; CORS is an explicit origin allow-list from
+  `CORS_ORIGINS`, not `*`.
+- Error responses never leak stack traces in production; details go to the
+  server log only.
+
+## Scaling path (not built yet)
+
+Each of these is a deliberate seam, not existing code:
+
+- **Modules** → new `routes/x.routes.ts` + `services/` + `repositories/`, mounted
+  in `routes/index.ts`. No changes to `app.ts`.
+- **Migrations** → add a numbered SQL file; no application change.
+- **Auth** → a middleware plus `env` additions; routes opt in individually.
+- **Docker** → `docker-compose.yml` already isolates the `db` service, so
+  frontend/backend services can be added beside it.
+- **CI** → `.github/workflows/` is reserved and documented; scripts
+  (`lint`, `typecheck`, `build`) are already CI-ready entry points.
