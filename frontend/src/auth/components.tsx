@@ -1,6 +1,15 @@
-/** Shared form primitives, so login and register stay consistent. */
+/**
+ * Auth-screen specific layout.
+ *
+ * The generic form primitives live in `components/ui.tsx` and are shared with
+ * the catalog screens; only the centred card shell is auth-specific.
+ */
 
 import type { ReactNode } from 'react';
+
+import { ErrorBanner, Field, SubmitButton } from '../components/ui';
+
+export { ErrorBanner as FormError, Field, SubmitButton };
 
 export function AuthCard({
   title,
@@ -29,69 +38,5 @@ export function AuthCard({
         <div className="mt-6 text-center text-sm text-slate-500">{footer}</div>
       </div>
     </main>
-  );
-}
-
-export function Field({
-  label,
-  type = 'text',
-  value,
-  onChange,
-  autoComplete,
-  placeholder,
-  required = true,
-  minLength,
-}: {
-  label: string;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-  autoComplete?: string;
-  placeholder?: string;
-  required?: boolean;
-  minLength?: number;
-}) {
-  const id = label.toLowerCase().replace(/\s+/g, '-');
-
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-      <input
-        id={id}
-        name={id}
-        type={type}
-        value={value}
-        required={required}
-        minLength={minLength}
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-      />
-    </div>
-  );
-}
-
-export function FormError({ message }: { message: string | null }) {
-  if (!message) return null;
-
-  return (
-    <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-      {message}
-    </p>
-  );
-}
-
-export function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? 'Please wait…' : label}
-    </button>
   );
 }

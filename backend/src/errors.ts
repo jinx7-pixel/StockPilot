@@ -41,6 +41,18 @@ export class AuthenticationError extends AppError {
   }
 }
 
+/**
+ * 404 — the resource does not exist **within the caller's business**.
+ *
+ * A resource that exists but belongs to another tenant is reported this way
+ * too, so the API never confirms the existence of another tenant's data.
+ */
+export class NotFoundError extends AppError {
+  constructor(message = 'Resource not found.', code = 'NOT_FOUND') {
+    super(message, 404, code);
+  }
+}
+
 /** 403 — authenticated, but not permitted to perform this action. */
 export class AuthorizationError extends AppError {
   constructor(message = 'You do not have permission to perform this action.') {

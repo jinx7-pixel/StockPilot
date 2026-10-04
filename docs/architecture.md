@@ -93,8 +93,8 @@ never see `req`/`res`; repositories never contain business rules.
 
 | Concern | Lives in | Notes |
 | --- | --- | --- |
-| HTTP shape, validation, cookies | `routes/auth.routes.ts` | Zod schemas in `services/auth.schemas.ts` |
-| Registration / login / session logic | `services/auth.service.ts` | The only place transactions are opened for auth |
+| HTTP shape, validation, cookies | `routes/auth.routes.ts`, `routes/product.routes.ts`, `routes/category.routes.ts` | Zod schemas in `services/*.schemas.ts` |
+| Business rules | `services/auth.service.ts`, `product.service.ts`, `category.service.ts` | Transactions, conflict detection, soft delete |
 | All SQL | `repositories/*.repository.ts` | Parameterised queries only |
 | Password hashing | `security/password.ts` | Argon2id, OWASP parameters |
 | Token generation | `security/session.ts` | 256-bit random; only the SHA-256 digest is stored |
@@ -123,6 +123,27 @@ each call site — means a hash cannot reach a response body by accident.
 a stable machine-readable code. The terminal error handler returns `AppError`s
 as-is and everything else as a generic 500 with no internal detail, so stack
 traces never reach a client.
+
+### Adding a new business module
+
+1. A migration under `database/migrations/` — the schema is never created by
+   application code.
+2. `repositories/x.repository.ts` — all SQL, and **every function takes
+   `businessId` explicitly**. An unscoped lookup should be a compile error, not
+   a review comment.
+3. `services/x.service.ts` — business rules, conflict detection, transactions.
+4. `services/x.schemas.ts` — Zod schemas, `.strict()` so unknown keys are
+   rejected rather than silently ignored.
+5. `routes/x.routes.ts` — validation, delegation, response. Mount it in
+   `routes/index.ts` and apply `requireAuth` inside the module router so it
+   cannot be mounted unauthenticated by accident.
+6. Take the tenant from `req.auth.businessId`. **Never** accept a `businessId`
+   from a body, query parameter, header or URL segment.
+7. Tests in `src/tests/x.test.ts`, including at least one assertion that another
+   tenant's resource yields `404`.
+
+This is the pattern the catalog module (`categories`, `products`) already
+follows; read those files before writing the next one.
 
 ## Database
 
@@ -189,10 +210,8 @@ Each of these is a deliberate seam, not existing code:
 - **Auth** → already built: `routes/auth.routes.ts` + `services/auth.service.ts`
   + `repositories/`. The seam for a future refresh-token flow is
   `auth_sessions` plus `security/session.ts`.
-- **New business module** → new `routes/x.routes.ts`, `services/x.service.ts`
-  and `repositories/x.repository.ts`, mounted in `routes/index.ts`. Put
-  `requireAuth` on the router and take `businessId` from `req.auth`; never accept
-  a tenant from the request.
+- **New business module** → follow the recipe above; the catalog module is the
+  reference implementation.
 - **Docker** → `docker-compose.yml` already isolates the `db` service, so
   frontend/backend services can be added beside it.
 - **CI** → `ci.yml` already runs `lint`, `typecheck`, `build` for the app and the

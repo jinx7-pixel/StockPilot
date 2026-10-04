@@ -33,11 +33,23 @@ export class TestClient {
     return this.request<T>('POST', path, body);
   }
 
+  async patch<T = unknown>(path: string, body?: unknown): Promise<JsonResponse<T>> {
+    return this.request<T>('PATCH', path, body);
+  }
+
+  async delete<T = unknown>(path: string): Promise<JsonResponse<T>> {
+    return this.request<T>('DELETE', path);
+  }
+
   async get<T = unknown>(path: string): Promise<JsonResponse<T>> {
     return this.request<T>('GET', path);
   }
 
-  private async request<T>(method: string, path: string, body?: unknown): Promise<JsonResponse<T>> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<JsonResponse<T>> {
     const headers: Record<string, string> = { Accept: 'application/json' };
 
     if (body !== undefined) headers['Content-Type'] = 'application/json';

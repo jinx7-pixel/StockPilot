@@ -105,9 +105,10 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: authentication and multi-tenant foundation.** Registration, login,
-sessions, role authorization and tenant isolation work end to end, and CI now
-runs the database-backed test suite. **No business modules yet** — by design.
+**Stage: products and categories catalog.** Registration, sessions, role
+authorization, tenant isolation and a working product catalog are all in place
+and covered by tests. **No stock, inventory or intelligence features yet** — by
+design.
 
 ### ✅ Complete
 
@@ -120,23 +121,27 @@ runs the database-backed test suite. **No business modules yet** — by design.
 - **Migration infrastructure**: node-pg-migrate wired through a typed CLI
   (`backend/src/db/migrate.ts`) with `create` / `up` / `down` / `redo` / `status`
 - **Auth schema**: `businesses`, `users` (with the `user_role` enum) and
-  `auth_sessions`, via two reversible migrations
+  `auth_sessions`
+- **Catalog schema**: `categories` and `products` — catalog definitions only,
+  with no stock, availability or reorder columns
 - **Authentication API**: `POST /api/auth/register`, `/login`, `/logout`,
   `GET /api/auth/me`
-- **Argon2id** password hashing (OWASP parameters) and opaque session tokens
-  stored as SHA-256 digests, delivered in an HTTP-only `SameSite` cookie
-- **Multi-tenant isolation**: `businessId` always comes from the session via a
-  database join, never from a request; repositories require an explicit tenant
-- **Role authorization**: `requireAuth` + reusable `requireRole('owner')` (403 for staff)
-- Rate limiting, Helmet, CORS with credentials, and a typed error contract that
-  never leaks stack traces
-- Atomic registration — business + owner in one transaction
-- Environment configuration via committed `.env.example` files; **no secrets in source**
+- **Products API**: list (search / category / status filters, pagination,
+  server-side ordering), create, get, patch, soft delete
+- **Categories API**: list, create, get, patch, delete (owner-only, refused
+  while in use)
+- **Argon2id** password hashing and opaque session tokens stored as SHA-256
+  digests, delivered in an HTTP-only `SameSite` cookie
+- **Multi-tenant isolation**: `businessId` always comes from the session; a
+  cross-tenant read returns `404`, never `403`, so existence is never confirmed
+- **Role authorization**: `requireAuth` + reusable `requireRole('owner')`
+- Rate limiting, Helmet, CORS with credentials, and a typed error contract
+- Environment configuration via committed `.env.example`; **no secrets in source**
 - ESLint 10 flat config in both packages, with migrations covered too
 - Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
   output, database dumps and IDE files
 - `docker-compose.yml` providing a local PostgreSQL 18 instance
-- **Backend test suite** (35 tests) on the Node built-in runner — no test
+- **Backend test suite** (88 tests) on the Node built-in runner — no test
   framework dependency
 - **GitHub Actions CI**: `frontend`, `backend`, `migrations` and `backend-tests`
   jobs, the last against a throwaway PostgreSQL service container
@@ -144,10 +149,11 @@ runs the database-backed test suite. **No business modules yet** — by design.
 
 ### ⏳ Not started (intentionally)
 
-Products · Inventory · Sales · Suppliers · Purchase Orders · Dashboard ·
-AI/ML features · **Remaining business tables** · Seed data · Staff invitation
-flow · Password reset · Email verification · Refresh tokens · Docker images ·
-**Deployment (CD)** · Frontend tests
+Inventory and stock levels · Sales · Suppliers · Purchase Orders · **Dashboard /
+risk insights** · Recommendations · AI/ML features · `inventory_movements` and
+all remaining business tables · Seed data · Staff invitation flow · Password
+reset · Email verification · Refresh tokens · Docker images · Deployment (CD) ·
+Frontend tests
 
 ### Verification results
 
@@ -157,10 +163,13 @@ flow · Password reset · Email verification · Refresh tokens · Docker images 
 | `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
 | `npm run build` | ✅ `dist/` emitted, no tooling/tests | ✅ `dist/` emitted |
 | `npm ci` (lockfile in sync) | ✅ clean install | ✅ clean install |
-| `npm test` | ✅ 35/35 pass | — (no frontend tests yet) |
+| `npm test` | ✅ 88/88 pass | — (no frontend tests yet) |
 | `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
 | Auth flow (register → me → logout → 401) | ✅ verified live | ✅ UI built |
+| Catalog CRUD + duplicate SKU `409` | ✅ verified live | ✅ UI built |
+| Cross-tenant read / write isolation | ✅ verified live | n/a (no tenant in the client) |
 | Migration `up` → `down` → `up` | ✅ reversible, verified at SQL level | — |
+
 
 ---
 
@@ -262,12 +271,12 @@ generic `set_updated_at()` helper and nothing else.
 
 ## Planned Modules
 
-Each module is a future milestone. **None of these are implemented.**
+Status of each planned module. Only those marked ✅ are built.
 
 | # | Module | Scope (planned) |
 | --- | --- | --- |
-| 1 | **Authentication & Users** | Owner/admin roles, sessions, onboarding, tenant isolation |
-| 2 | **Products & Catalog** | SKUs, variants, units of measure, categories, barcodes, costing |
+| 1 | **Authentication & Users** | ✅ Owner/admin roles, sessions, onboarding, tenant isolation |
+| 2 | **Products & Catalog** | ✅ SKUs, categories, units, costing, active/inactive state |
 | 3 | **Inventory Tracking** | Stock levels per location, stock ledger, adjustments, cycle counts, low-stock thresholds |
 | 4 | **Suppliers** | Supplier records, lead times, MOQs, pricing, performance and reliability history |
 | 5 | **Purchase Orders** | Draft → approve → send workflow, PO lines, receiving, supplier acknowledgements |

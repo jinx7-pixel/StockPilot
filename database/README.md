@@ -9,22 +9,22 @@ hand-editing a live database, and never by application code that runs
 
 ## Current status
 
-The migration infrastructure is in place and the **authentication and tenancy
-schema** exists. The following business tables are explicitly **not** created:
+The migration infrastructure is in place, along with the **authentication,
+tenancy and catalog schema**. The following tables are explicitly **not** created:
 
-`categories` · `products` · `inventory_movements` · `sales` · `sale_items` ·
-`purchase_orders` · `purchase_order_items` · `stock_adjustments` ·
-`recommendations` · `audit_logs`
+`inventory_movements` · `sales` · `sale_items` · `purchase_orders` ·
+`purchase_order_items` · `stock_adjustments` · `recommendations` · `audit_logs`
 
 | Migration | Contents |
 | --- | --- |
 | `1791027517242_shared-database-helpers` | `set_updated_at()` trigger helper |
 | `1791101011378_auth-foundation` | `businesses`, `users`, the `user_role` enum |
 | `1791101015605_auth-sessions` | `auth_sessions` |
+| `1791113189231_products-catalog` | `categories`, `products` |
 
 | Path | Purpose | Status |
 | --- | --- | --- |
-| `migrations/` | Versioned migrations (committed) | ✅ 3 migrations |
+| `migrations/` | Versioned migrations (committed) | ✅ 4 migrations |
 | `tsconfig.json` | Type-checks `migrations/` | ✅ present |
 | `eslint.config.js` | Lints `migrations/` | ✅ present |
 | `package.json` | Marks this directory as an ESM package | ✅ present |
@@ -80,6 +80,77 @@ Indexes and constraints:
 Indexes: unique on `token_hash` (the lookup key for every request), plus
 `user_id` and `expires_at` for session management and pruning.
 
+### `categories`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `business_id` | `uuid` | not null → `businesses(id)` **ON DELETE CASCADE** |
+| `name` | `varchar(100)` | not null |
+| `description` | `text` | nullable |
+| `created_at` / `updated_at` | `timestamptz` | not null, default `now()` |
+
+- `categories_business_id_idx`
+- `categories_business_id_name_key` — **unique per business, case-insensitive**,
+  an expression index on `(business_id, lower(name))` so uniqueness holds without
+  lower-casing the display name.
+
+### `products`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `business_id` | `uuid` | not null → `businesses(id)` **ON DELETE CASCADE** |
+| `category_id` | `uuid` | **nullable** → `categories(id)` **ON DELETE SET NULL** |
+| `sku` | `varchar(100)` | not null, stored upper case |
+| `name` | `varchar(200)` | not null |
+| `description` | `text` | nullable |
+| `unit` | `varchar(30)` | not null, default `piece` |
+| `cost_price` | `numeric(12,2)` | not null, `>= 0` |
+| `selling_price` | `numeric(12,2)` | not null, `>= 0` |
+| `is_active` | `boolean` | not null, default `true` |
+| `created_at` / `updated_at` | `timestamptz` | not null, default `now()` |
+
+- `products_business_id_idx`, `products_category_id_idx`
+- `products_business_id_name_idx` — supports the default `lower(name)` ordering
+- `products_business_id_sku_key` — **unique per business, case-insensitive**, on
+  `(business_id, upper(sku))`
+- `products_cost_price_non_negative`, `products_selling_price_non_negative`
+
+#### Why these columns — and what is deliberately absent
+
+`products` holds **catalog definitions only**. There is no `stock_quantity`,
+`available_quantity`, `reorder_point`, `stock_risk`, `demand` or `recommendation`
+column, by design.
+
+Those values must be **derived from stock movements**, not frozen on the product
+row. Once the inventory module lands, quantities will change constantly; keeping
+a mutable copy on the product would mean every sale, receipt or adjustment has to
+keep two sources of truth in sync, and any drift would make "how much stock do I
+have?" wrong in a way nothing could detect.
+
+A catalog row answers *what is this product and what does it cost*; the future
+inventory tables answer *how much is on hand, and is that a problem*. The API
+reflects this: a product carries no stock fields, and a `stockQuantity` in a
+create or update body is rejected as an unknown field.
+
+### Deletion behaviour
+
+| Operation | Behaviour | Why |
+| --- | --- | --- |
+| Delete a **business** | cascades to categories and products | matches `users` / `auth_sessions` |
+| Delete a **category** | **refused (409)** while products reference it | never orphan a product; reassign or remove them first |
+| Delete a **product** | **soft delete** — sets `is_active = false` | see below |
+
+**Why product deletion is a soft delete.** As soon as the inventory module
+lands, products will be referenced by stock movements, adjustments, sales and
+purchase orders. A hard delete would then either fail on a foreign key or — far
+worse — cascade away financial history that must never disappear. Deactivating
+keeps the catalog row, and therefore every past movement, intact; it is
+reversible with `PATCH { isActive: true }` and idempotent. Hard deletion can be
+introduced later, once the referencing tables exist and the trade-off is decided
+knowingly.
+
 ### Tenancy
 
 There is no membership join table: a user belongs to exactly one business. The
@@ -100,7 +171,8 @@ database/
 ├── migrations/
 │   ├── 1791027517242_shared-database-helpers.ts
 │   ├── 1791101011378_auth-foundation.ts
-│   └── 1791101015605_auth-sessions.ts
+│   ├── 1791101015605_auth-sessions.ts
+│   └── 1791113189231_products-catalog.ts
 ├── seeds/                  # ⏳ reserved — local dev data only, never in production
 ├── package.json            # marks this tree as an ESM package
 ├── tsconfig.json           # type-checks migrations/

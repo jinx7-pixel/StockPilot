@@ -39,10 +39,41 @@ npm run dev            # http://localhost:4000
 | `POST` | `/api/auth/login` | Exchanges credentials for a session cookie |
 | `POST` | `/api/auth/logout` | Revokes the session, clears the cookie |
 | `GET` | `/api/auth/me` | Authenticated user + business (`401` when anonymous) |
+| `GET` | `/api/products` | Paginated list — `search`, `categoryId`, `isActive`, `page`, `limit` |
+| `POST` | `/api/products` | Create a product (`201`) |
+| `GET` | `/api/products/:id` | One product |
+| `PATCH` | `/api/products/:id` | Partial update |
+| `DELETE` | `/api/products/:id` | **Soft delete** — deactivates and returns the product |
+| `GET` | `/api/categories` | All categories, name-ordered |
+| `POST` | `/api/categories` | Create a category (`201`) |
+| `GET` | `/api/categories/:id` | One category |
+| `PATCH` | `/api/categories/:id` | Partial update |
+| `DELETE` | `/api/categories/:id` | Delete (`204`), **owner only**, refused while in use |
 | `*` | *(unmatched)* | JSON `404` |
 
 `/api/health` never touches the database, so a database outage cannot make the
 HTTP process appear dead.
+
+### Catalog rules
+
+- **SKU** is trimmed and upper-cased, and unique per business
+  (case-insensitive). Duplicates return `409`.
+- **Category name** is unique per business, case-insensitive.
+- **Money** is accepted as a number or decimal string, must be `0` or more with
+  at most two decimal places, and is normalised to two decimals. No floating-point
+  arithmetic is involved.
+- **`categoryId` must belong to the caller's business.** A category from another
+  tenant is rejected with `400` and a message that does not reveal whether it
+  exists.
+- **Listing** is paginated (default 25, max 100) with server-side ordering only.
+  There is no user-controllable `ORDER BY` — the value cannot be parameterised,
+  so accepting one would invite injection. A `%` in the search term is escaped and
+  matches literally.
+- **Deleting a product is a soft delete** (`is_active = false`), because inventory
+  tables will soon reference it and hard deletion would destroy that history. It
+  is reversible and idempotent.
+- **Deleting a category is refused (`409`) while products reference it**, so
+  products are never orphaned.
 
 ## Structure
 
@@ -70,19 +101,27 @@ src/
 │   ├── auth.types.ts
 │   ├── business.repository.ts
 │   ├── user.repository.ts
-│   └── session.repository.ts
+│   ├── session.repository.ts
+│   ├── category.repository.ts
+│   └── product.repository.ts
 ├── security/
 │   ├── password.ts     # Argon2id hashing + policy
 │   ├── session.ts      # Opaque token generation + hashing
 │   └── cookies.ts      # HTTP-only cookie set/clear
 ├── services/
-│   ├── auth.schemas.ts # Zod request validation
-│   └── auth.service.ts # register / login / logout / session resolution
+│   ├── auth.schemas.ts      # Zod request validation
+│   ├── auth.service.ts      # register / login / logout / session resolution
+│   ├── category.schemas.ts
+│   ├── category.service.ts
+│   ├── product.schemas.ts
+│   └── product.service.ts
 ├── types/express.d.ts  # `req.auth` augmentation
 └── routes/
     ├── index.ts        # apiRouter — mount new modules here
     ├── health.routes.ts
-    └── auth.routes.ts
+    ├── auth.routes.ts
+    ├── category.routes.ts
+    └── product.routes.ts
 ```
 
 ### Layering
@@ -130,6 +169,20 @@ than a silent cross-tenant leak.
 `requireRole('owner')` guards owner-only actions and returns **403** to a signed-in
 staff user (an anonymous caller still gets 401). It must always be mounted after
 `requireAuth`, and asserts that if it isn't.
+
+### Catalog permissions
+
+| Action | Owner | Staff |
+| --- | --- | --- |
+| Read products / categories | ✅ | ✅ |
+| Create and edit products / categories | ✅ | ✅ |
+| Deactivate (soft-delete) a product | ✅ | ✅ |
+| Delete a category | ✅ | ❌ `403` |
+
+Staff manage the catalog day to day; only an owner retires a category, since
+that is the operation that can be hardest to undo. The frontend mirrors these
+rules by hiding the delete button for staff, so the UI never invites a call the
+server will refuse.
 
 ## Database
 
