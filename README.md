@@ -50,7 +50,7 @@ The design principle throughout: **decision support, not decision automation.**
 | **Linting** | ESLint 10 flat config + `typescript-eslint` |
 | **Package manager** | npm (separate dependency tree per package) |
 | **Version control** | Git, GitHub |
-| **CI/CD** | GitHub Actions — *reserved, not implemented yet* |
+| **CI/CD** | GitHub Actions — `ci.yml` (lint · typecheck · build). Deployment not implemented yet |
 | **Containerization** | Docker — *planned for a later milestone* |
 | **Local infrastructure** | `docker-compose.yml` (PostgreSQL 18 only) |
 
@@ -92,7 +92,9 @@ StockPilot/
 │   └── getting-started.md     # Local setup and troubleshooting
 │
 ├── .github/
-│   └── workflows/             # Reserved for CI/CD — no workflows yet
+│   └── workflows/
+│       ├── ci.yml              # Frontend, backend and migration checks
+│       └── README.md           # What CI does, and what is deliberately not in it
 │
 ├── docker-compose.yml         # Local PostgreSQL 18 service
 ├── .gitignore                 # Single source of truth for the monorepo
@@ -103,8 +105,9 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: migration infrastructure.** The toolchain is complete, verified and
-runnable, and the database schema can now be versioned, applied and rolled back.
+**Stage: CI pipeline.** The toolchain is complete, verified and runnable, the
+database schema can be versioned and rolled back, and every push and pull
+request is now gated by GitHub Actions.
 **No business functionality has been built yet** — by design.
 
 ### ✅ Complete
@@ -131,13 +134,18 @@ runnable, and the database schema can now be versioned, applied and rolled back.
 - `docker-compose.yml` providing a local PostgreSQL 18 instance
 - Verified `typecheck`, `lint`, and `build` in both packages; both servers start
   and the frontend dev proxy reaches the backend
-- Git repository initialised
+- Migration tooling verified end to end against a live PostgreSQL 18
+  (`status` → `up` → `redo` → `down`), with rollback confirmed at the SQL level
+- **GitHub Actions CI** (`.github/workflows/ci.yml`): three parallel jobs —
+  `frontend`, `backend`, `migrations` — each running `npm ci` then lint,
+  type-check and build. No database, no secrets, no deployment
+- Git repository initialised and pushed to `github.com/jinx7-pixel/StockPilot`
 
 ### ⏳ Not started (intentionally)
 
 Authentication · Products · Inventory · Sales · Suppliers · Purchase Orders ·
 Dashboard · AI/ML features · **Database business tables** · Seed data · Docker
-images · CI/CD workflows · Tests
+images · **Deployment (CD)** · Automated tests
 
 ### Verification results
 
@@ -148,6 +156,29 @@ images · CI/CD workflows · Tests
 | `npm run build` | ✅ `dist/` emitted | ✅ `dist/` emitted |
 | Server starts | ✅ port 4000 | ✅ port 5173 |
 | `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
+| `npm ci` (lockfile in sync) | ✅ clean install | ✅ clean install |
+| `migration:up` / `redo` / `down` | ✅ verified live on PostgreSQL 18 | — |
+| CI workflow YAML | ✅ parses; 40+ structural assertions pass | — |
+
+---
+
+## Continuous Integration
+
+Every push to `main` and every pull request targeting `main` runs
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — three parallel jobs
+on `ubuntu-latest` with Node 24 (current Active LTS):
+
+| Job | Checks |
+| --- | --- |
+| `frontend` | `npm ci` → `lint` → `typecheck` → `build` |
+| `backend` | `npm ci` → `lint` → `typecheck` → `build` |
+| `migrations` | `npm ci` → `typecheck:migrations` → `lint:migrations` |
+
+CI needs **no database and no secrets** — nothing it runs touches PostgreSQL.
+Actions are pinned to exact release tags, `permissions` is least-privilege, and
+duplicate runs for a branch are cancelled. Deployment is intentionally not part
+of CI; see [`.github/workflows/README.md`](./.github/workflows/README.md) for the
+full rationale and how to reproduce the pipeline locally.
 
 ---
 

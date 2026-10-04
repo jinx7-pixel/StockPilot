@@ -15,7 +15,7 @@ StockPilot/
 ├── backend/      Node.js + Express + TypeScript             (port 4000)
 ├── database/     schema migrations + data documentation
 ├── docs/         architecture, guides, future ADRs
-├── .github/workflows/   CI/CD (reserved, no workflows yet)
+├── .github/workflows/   CI (ci.yml); deployment workflows not yet added
 └── docker-compose.yml   local PostgreSQL 18 only
 ```
 Frontend and backend communicate over **REST** (`/api/*`). There is no shared
@@ -131,7 +131,10 @@ Each of these is a deliberate seam, not existing code:
 - **Auth** → a middleware plus `env` additions; routes opt in individually.
 - **Docker** → `docker-compose.yml` already isolates the `db` service, so
   frontend/backend services can be added beside it.
-- **CI** → `.github/workflows/` is reserved and documented; scripts
-  (`lint`, `typecheck`, `build`, `migration:up`) are already CI-ready entry
-  points. `migration:up` is safe to run on every deploy: it applies only pending
-  migrations and serialises concurrent runs with an advisory lock.
+- **CI** → `ci.yml` already runs `lint`, `typecheck` and `build` for the app and
+  the migrations on every push and pull request, with no database and no
+  secrets. Adding a module means adding a new script only if the existing gates
+  do not cover it.
+- **CD / deploy** → not implemented. `migration:up` is deliberately absent from
+  CI; it belongs in a deploy step, and it is safe to run repeatedly: it applies
+  only pending migrations and serialises concurrent runs with an advisory lock.
