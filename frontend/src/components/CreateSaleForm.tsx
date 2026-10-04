@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Create-sale form.
  *
  * A cart of product lines plus optional customer details. The running total is a
@@ -12,7 +12,7 @@
  * without changing either API contract.
  */
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 
 import {
   ErrorBanner,
@@ -39,8 +39,6 @@ interface DraftLine {
   quantity: string;
 }
 
-let draftKey = 0;
-
 export function CreateSaleForm({
   products,
   onClose,
@@ -57,6 +55,9 @@ export function CreateSaleForm({
   ]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Ref rather than a module-level counter: mutating module state during render
+  // is a React purity violation, and a ref is per-instance anyway.
+  const nextLineKey = useRef(2);
 
   function updateLine(key: string, patch: Partial<DraftLine>) {
     setLines((current) =>
@@ -68,10 +69,9 @@ export function CreateSaleForm({
     const unused = products.find(
       (product) => !lines.some((line) => line.productId === product.id),
     );
-    draftKey += 1;
     setLines((current) => [
       ...current,
-      { key: `line-${draftKey}`, productId: unused?.id ?? products[0]?.id ?? '', quantity: '1' },
+      { key: `line-${nextLineKey.current++}`, productId: unused?.id ?? products[0]?.id ?? '', quantity: '1' },
     ]);
   }
 
@@ -237,3 +237,4 @@ export function CreateSaleForm({
     </form>
   );
 }
+

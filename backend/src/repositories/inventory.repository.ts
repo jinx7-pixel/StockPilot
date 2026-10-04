@@ -58,9 +58,26 @@ export async function acquireProductStockLock(
   businessId: string,
   productId: string,
 ): Promise<void> {
+  await acquireAdvisoryLock(client, `${businessId}:${productId}`);
+}
+
+/**
+ * The single advisory-lock primitive used across the codebase.
+ *
+ * `pg_advisory_xact_lock` is transaction-scoped and re-entrant within a session,
+ * so it releases automatically on commit *or* rollback, and taking it twice on the
+ * same key costs nothing.
+ *
+ * Callers lock a **specific resource** by its key, never a global lock. Products
+ * are locked per `(business_id, product_id)`; purchase orders lock their own id
+ * and then each product they touch, in ascending order, so two overlapping
+ * receipts serialise on the products they share without deadlocking and without
+ * blocking unrelated work.
+ */
+export async function acquireAdvisoryLock(client: PoolClient, key: string): Promise<void> {
   await client.query(
-    `SELECT pg_advisory_xact_lock(hashtextextended($1::text || ':' || $2::text, 0))`,
-    [businessId, productId],
+    `SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`,
+    [key],
   );
 }
 

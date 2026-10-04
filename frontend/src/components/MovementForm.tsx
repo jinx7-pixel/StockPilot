@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Movement form: Stock In, Stock Out or Adjustment.
  *
  * The form adapts to the movement type rather than offering one generic screen:
@@ -166,3 +166,4 @@ export function MovementForm({
     </form>
   );
 }
+

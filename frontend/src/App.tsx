@@ -20,9 +20,12 @@ import { InventoryDetailPage } from './pages/InventoryDetailPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
+import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SaleDetailPage } from './pages/SaleDetailPage';
 import { SalesPage } from './pages/SalesPage';
+import { SuppliersPage } from './pages/SuppliersPage';
 import { WorkspaceLayout } from './pages/WorkspaceLayout';
 import { WorkspacePage } from './pages/WorkspacePage';
 
@@ -43,6 +46,9 @@ export function App() {
           <Route path="inventory/:productId" element={<InventoryDetailPage />} />
           <Route path="sales" element={<SalesPage />} />
           <Route path="sales/:saleId" element={<SaleDetailPage />} />
+          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="purchase-orders/:orderId" element={<PurchaseOrderDetailPage />} />
         </Route>
       </Route>
 
