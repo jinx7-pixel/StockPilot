@@ -93,14 +93,58 @@ never see `req`/`res`; repositories never contain business rules.
 
 | Concern | Lives in | Notes |
 | --- | --- | --- |
-| HTTP shape, validation, cookies | `routes/auth.routes.ts`, `routes/product.routes.ts`, `routes/category.routes.ts` | Zod schemas in `services/*.schemas.ts` |
-| Business rules | `services/auth.service.ts`, `product.service.ts`, `category.service.ts` | Transactions, conflict detection, soft delete |
+| HTTP shape, validation, cookies | `routes/*.routes.ts` | Zod schemas in `services/*.schemas.ts` |
+| Business rules | `services/{auth,product,category,inventory}.service.ts` | Transactions, conflict detection, soft delete |
 | All SQL | `repositories/*.repository.ts` | Parameterised queries only |
 | Password hashing | `security/password.ts` | Argon2id, OWASP parameters |
 | Token generation | `security/session.ts` | 256-bit random; only the SHA-256 digest is stored |
 | Cookie attributes | `security/cookies.ts` | HttpOnly, SameSite, Secure |
 | Identity + role gates | `middlewares/requireAuth.ts` | `requireAuth`, `requireRole` |
 | Throttling | `middlewares/rateLimit.ts` | Per-endpoint limits |
+
+## Stock: derived, never cached
+
+Stock is **computed from the movement ledger**, not stored:
+
+```
+stock = SUM(in.quantity) - SUM(out.quantity) + SUM(adjustment.quantity)
+```
+
+This is the single most important invariant in the system. A `current_stock`
+column would be a second source of truth that can silently drift from the
+movements, and "how much stock do I have?" must never be answerable two ways.
+A test asserts the column does not exist.
+
+All quantity arithmetic happens in **PostgreSQL**, in exact `numeric`. JavaScript
+never adds stock quantities together; it only converts the returned decimal for
+display. The balance and the *projected* balance after a proposed movement are
+read in a single statement, so the arithmetic and the non-negative check are both
+database work.
+
+The ledger is **append-only**: no `PATCH` or `DELETE` route exists, a `BEFORE
+UPDATE` trigger rejects any UPDATE, and `NO ACTION` foreign keys stop a product or
+user being deleted out from under a movement. A mistake is corrected by recording
+another movement.
+
+### Concurrency
+
+A "read balance, then insert" sequence is a time-of-check / time-of-use race: two
+concurrent `out` requests can read the same balance and both commit. Movement
+writes therefore take a **transaction-scoped advisory lock keyed on
+`(business_id, product_id)`** as the first statement of the transaction, before
+reading the balance.
+
+| Property | Consequence |
+| --- | --- |
+| Lock is per product | Different products never block each other |
+| `pg_advisory_xact_lock` | Released automatically on commit *or* rollback |
+| Balance read is a later statement | Under `READ COMMITTED` it necessarily sees everything the previous lock holder committed |
+| `SERIALIZABLE` not used | The lock already provides mutual exclusion; a hash collision could only over-serialise, never double-spend |
+
+The `LATERAL` sub-select used by the inventory listing scopes the balance
+calculation to the current page, so it is one round trip without an N+1 — and
+without scanning every movement the business has ever recorded.
+
 
 ### Why server-side sessions rather than a stateless JWT
 

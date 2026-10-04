@@ -105,10 +105,9 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: products and categories catalog.** Registration, sessions, role
-authorization, tenant isolation and a working product catalog are all in place
-and covered by tests. **No stock, inventory or intelligence features yet** — by
-design.
+**Stage: inventory and stock ledger.** Accounts, the product catalog and a
+concurrency-safe stock ledger are all in place and covered by tests. **No sales,
+suppliers, purchasing or intelligence features yet** — by design.
 
 ### ✅ Complete
 
@@ -122,26 +121,30 @@ design.
   (`backend/src/db/migrate.ts`) with `create` / `up` / `down` / `redo` / `status`
 - **Auth schema**: `businesses`, `users` (with the `user_role` enum) and
   `auth_sessions`
-- **Catalog schema**: `categories` and `products` — catalog definitions only,
-  with no stock, availability or reorder columns
+- **Catalog schema**: `categories` and `products`
+- **Stock ledger**: `inventory_movements` — append-only, and the **single source
+  of truth for stock**. There is no cached quantity column anywhere
 - **Authentication API**: `POST /api/auth/register`, `/login`, `/logout`,
   `GET /api/auth/me`
 - **Products API**: list (search / category / status filters, pagination,
   server-side ordering), create, get, patch, soft delete
 - **Categories API**: list, create, get, patch, delete (owner-only, refused
   while in use)
+- **Inventory API**: list with derived stock, summary, per-product detail,
+  paginated ledger, and movement recording
+- **Concurrency safety**: a per-`(business, product)` advisory lock makes two
+  simultaneous `out` requests unable to double-spend the same stock
 - **Argon2id** password hashing and opaque session tokens stored as SHA-256
   digests, delivered in an HTTP-only `SameSite` cookie
 - **Multi-tenant isolation**: `businessId` always comes from the session; a
   cross-tenant read returns `404`, never `403`, so existence is never confirmed
-- **Role authorization**: `requireAuth` + reusable `requireRole('owner')`
 - Rate limiting, Helmet, CORS with credentials, and a typed error contract
 - Environment configuration via committed `.env.example`; **no secrets in source**
 - ESLint 10 flat config in both packages, with migrations covered too
 - Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
   output, database dumps and IDE files
 - `docker-compose.yml` providing a local PostgreSQL 18 instance
-- **Backend test suite** (88 tests) on the Node built-in runner — no test
+- **Backend test suite** (137 tests) on the Node built-in runner — no test
   framework dependency
 - **GitHub Actions CI**: `frontend`, `backend`, `migrations` and `backend-tests`
   jobs, the last against a throwaway PostgreSQL service container
@@ -149,11 +152,11 @@ design.
 
 ### ⏳ Not started (intentionally)
 
-Inventory and stock levels · Sales · Suppliers · Purchase Orders · **Dashboard /
-risk insights** · Recommendations · AI/ML features · `inventory_movements` and
-all remaining business tables · Seed data · Staff invitation flow · Password
-reset · Email verification · Refresh tokens · Docker images · Deployment (CD) ·
-Frontend tests
+Sales · Suppliers · Purchase Orders · Reorder recommendations · Demand
+forecasting · Overstock / dead-stock intelligence · **Dashboard** · Analytics ·
+AI/ML · Barcode/QR · Notifications · Payments · Multiple warehouses ·
+`stock_adjustments` and all remaining business tables · Seed data · Docker
+images · Deployment (CD) · Frontend tests
 
 ### Verification results
 
@@ -163,12 +166,16 @@ Frontend tests
 | `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
 | `npm run build` | ✅ `dist/` emitted, no tooling/tests | ✅ `dist/` emitted |
 | `npm ci` (lockfile in sync) | ✅ clean install | ✅ clean install |
-| `npm test` | ✅ 88/88 pass | — (no frontend tests yet) |
+| `npm test` | ✅ 137/137 pass | — (no frontend tests yet) |
 | `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
 | Auth flow (register → me → logout → 401) | ✅ verified live | ✅ UI built |
 | Catalog CRUD + duplicate SKU `409` | ✅ verified live | ✅ UI built |
-| Cross-tenant read / write isolation | ✅ verified live | n/a (no tenant in the client) |
+| Stock IN / OUT / ±adjustment balances | ✅ verified live | ✅ UI built |
+| Negative-stock refusal | ✅ `409` verified live | ✅ error surfaced in UI |
+| Concurrent OUT (start 10, two × 7) | ✅ one `201`, one `409`, final `3` | n/a |
+| Cross-tenant isolation | ✅ verified live | n/a (no tenant in the client) |
 | Migration `up` → `down` → `up` | ✅ reversible, verified at SQL level | — |
+| No cached stock column | ✅ asserted by test + `information_schema` | — |
 
 
 ---
@@ -277,7 +284,7 @@ Status of each planned module. Only those marked ✅ are built.
 | --- | --- | --- |
 | 1 | **Authentication & Users** | ✅ Owner/admin roles, sessions, onboarding, tenant isolation |
 | 2 | **Products & Catalog** | ✅ SKUs, categories, units, costing, active/inactive state |
-| 3 | **Inventory Tracking** | Stock levels per location, stock ledger, adjustments, cycle counts, low-stock thresholds |
+| 3 | **Inventory Tracking** | ✅ Stock ledger, derived balances, IN/OUT/adjustments. Locations, cycle counts and low-stock thresholds still to come |
 | 4 | **Suppliers** | Supplier records, lead times, MOQs, pricing, performance and reliability history |
 | 5 | **Purchase Orders** | Draft → approve → send workflow, PO lines, receiving, supplier acknowledgements |
 | 6 | **Sales & Demand** | Sales history, demand signals, seasonality, forecast inputs |

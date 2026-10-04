@@ -16,6 +16,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, PublicOnlyRoute } from './auth/ProtectedRoute';
 import { CategoriesPage } from './pages/CategoriesPage';
+import { InventoryDetailPage } from './pages/InventoryDetailPage';
+import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -35,6 +37,8 @@ export function App() {
           <Route index element={<WorkspacePage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="inventory/:productId" element={<InventoryDetailPage />} />
         </Route>
       </Route>
 

@@ -10,10 +10,11 @@ hand-editing a live database, and never by application code that runs
 ## Current status
 
 The migration infrastructure is in place, along with the **authentication,
-tenancy and catalog schema**. The following tables are explicitly **not** created:
+tenancy, catalog and stock-ledger schema**. The following tables are explicitly
+**not** created:
 
-`inventory_movements` · `sales` · `sale_items` · `purchase_orders` ·
-`purchase_order_items` · `stock_adjustments` · `recommendations` · `audit_logs`
+`sales` · `sale_items` · `purchase_orders` · `purchase_order_items` ·
+`stock_adjustments` · `recommendations` · `audit_logs`
 
 | Migration | Contents |
 | --- | --- |
@@ -21,10 +22,10 @@ tenancy and catalog schema**. The following tables are explicitly **not** create
 | `1791101011378_auth-foundation` | `businesses`, `users`, the `user_role` enum |
 | `1791101015605_auth-sessions` | `auth_sessions` |
 | `1791113189231_products-catalog` | `categories`, `products` |
-
+| `1791116341568_inventory-movements` | `inventory_movements`, the `inventory_movement_type` enum |
 | Path | Purpose | Status |
 | --- | --- | --- |
-| `migrations/` | Versioned migrations (committed) | ✅ 4 migrations |
+| `migrations/` | Versioned migrations (committed) | ✅ 5 migrations |
 | `tsconfig.json` | Type-checks `migrations/` | ✅ present |
 | `eslint.config.js` | Lints `migrations/` | ✅ present |
 | `package.json` | Marks this directory as an ESM package | ✅ present |
@@ -134,6 +135,73 @@ inventory tables answer *how much is on hand, and is that a problem*. The API
 reflects this: a product carries no stock fields, and a `stockQuantity` in a
 create or update body is rejected as an unknown field.
 
+### `inventory_movements` — the append-only stock ledger
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `business_id` | `uuid` | not null → `businesses(id)` **ON DELETE CASCADE** |
+| `product_id` | `uuid` | not null → `products(id)` **ON DELETE NO ACTION** |
+| `movement_type` | `inventory_movement_type` | not null — `in` \| `out` \| `adjustment` |
+| `quantity` | `numeric(12,2)` | not null; sign rules below |
+| `reason` | `varchar(255)` | nullable |
+| `reference_type` | `varchar(50)` | nullable — e.g. `purchase_order` |
+| `reference_id` | `uuid` | nullable |
+| `created_by` | `uuid` | not null → `users(id)` **ON DELETE NO ACTION** |
+| `created_at` | `timestamptz` | not null, default `now()` |
+
+Indexes: `business_id`, `product_id`, `created_at`, plus
+`(business_id, product_id, created_at DESC)` for the ledger read and
+`(business_id, created_at DESC)` for tenant-wide activity.
+
+#### The balance
+
+```
+stock = SUM(in.quantity) - SUM(out.quantity) + SUM(adjustment.quantity)
+```
+
+An adjustment carries its own sign, so it needs no special case. **There is no
+`current_stock` column anywhere in the schema** — verified by a test, not just
+by convention. A cached quantity would be a second source of truth that could
+drift from the movements without anything detecting it.
+
+#### Quantity rules (one CHECK constraint)
+
+```sql
+(movement_type = 'in'         AND quantity >  0) OR
+(movement_type = 'out'        AND quantity >  0) OR
+(movement_type = 'adjustment' AND quantity <> 0)
+```
+
+A negative `in`/`out` and a zero adjustment are therefore impossible even by
+direct SQL, not merely by API validation.
+
+#### Referential actions — why `NO ACTION` and not `RESTRICT`
+
+`business → movements` cascades, but `product → movements` and
+`user → movements` use the **`NO ACTION` default**. Both are needed:
+
+- `NO ACTION` stops a product or user being deleted while movements reference
+  it, so history cannot be orphaned and the audit trail keeps a real actor.
+- `RESTRICT` would achieve that too, but it is checked *immediately*, which
+  would break `DELETE FROM businesses`: the cascade to `products` fires that
+  check before the cascade to `inventory_movements` has run, and deleting a
+  tenant would start failing. `NO ACTION` is checked at end of statement, so the
+  whole cascade completes and only a *direct* delete of a referenced row is
+  refused.
+
+This is verified directly against the database, not assumed.
+
+#### Immutability
+
+- `BEFORE UPDATE` trigger `inventory_movements_no_update` raises on any UPDATE.
+  Safe to enforce at the storage layer: a cascading business delete only ever
+  performs DELETE.
+- **DELETE is not blocked by a trigger**, because the business cascade depends on
+  it. Append-only is enforced instead by (a) the UPDATE trigger, (b) the absence
+  of any `PATCH` or `DELETE` movement endpoint, and (c) the `NO ACTION` foreign
+  keys. A correction is a **new** movement.
+
 ### Deletion behaviour
 
 | Operation | Behaviour | Why |
@@ -172,7 +240,8 @@ database/
 │   ├── 1791027517242_shared-database-helpers.ts
 │   ├── 1791101011378_auth-foundation.ts
 │   ├── 1791101015605_auth-sessions.ts
-│   └── 1791113189231_products-catalog.ts
+│   ├── 1791113189231_products-catalog.ts
+│   └── 1791116341568_inventory-movements.ts
 ├── seeds/                  # ⏳ reserved — local dev data only, never in production
 ├── package.json            # marks this tree as an ESM package
 ├── tsconfig.json           # type-checks migrations/

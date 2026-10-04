@@ -49,6 +49,11 @@ npm run dev            # http://localhost:4000
 | `GET` | `/api/categories/:id` | One category |
 | `PATCH` | `/api/categories/:id` | Partial update |
 | `DELETE` | `/api/categories/:id` | Delete (`204`), **owner only**, refused while in use |
+| `GET` | `/api/inventory` | Products with derived stock — filters + pagination |
+| `GET` | `/api/inventory/summary` | Tenant ledger counters (declared before `/:productId`) |
+| `GET` | `/api/inventory/:productId` | Product, current stock, per-type totals |
+| `GET` | `/api/inventory/:productId/movements` | The paginated ledger |
+| `POST` | `/api/inventory/movements` | Record one movement (`201`) + the new balance |
 | `*` | *(unmatched)* | JSON `404` |
 
 `/api/health` never touches the database, so a database outage cannot make the
@@ -103,7 +108,8 @@ src/
 │   ├── user.repository.ts
 │   ├── session.repository.ts
 │   ├── category.repository.ts
-│   └── product.repository.ts
+│   ├── product.repository.ts
+│   └── inventory.repository.ts
 ├── security/
 │   ├── password.ts     # Argon2id hashing + policy
 │   ├── session.ts      # Opaque token generation + hashing
@@ -114,14 +120,17 @@ src/
 │   ├── category.schemas.ts
 │   ├── category.service.ts
 │   ├── product.schemas.ts
-│   └── product.service.ts
+│   ├── product.service.ts
+│   ├── inventory.schemas.ts
+│   └── inventory.service.ts
 ├── types/express.d.ts  # `req.auth` augmentation
 └── routes/
     ├── index.ts        # apiRouter — mount new modules here
     ├── health.routes.ts
     ├── auth.routes.ts
     ├── category.routes.ts
-    └── product.routes.ts
+    ├── product.routes.ts
+    └── inventory.routes.ts
 ```
 
 ### Layering
@@ -183,6 +192,84 @@ Staff manage the catalog day to day; only an owner retires a category, since
 that is the operation that can be hardest to undo. The frontend mirrors these
 rules by hiding the delete button for staff, so the UI never invites a call the
 server will refuse.
+
+## Inventory & stock ledger
+
+Stock is **derived from the movement ledger**. There is no `current_stock` /
+`stock_quantity` column anywhere — a cached quantity would be a second source of
+truth that could drift from the movements without anything detecting it.
+
+```
+stock = SUM(in.quantity) - SUM(out.quantity) + SUM(adjustment.quantity)
+```
+
+An adjustment carries its own sign, so it needs no special case. **All of this
+arithmetic happens in PostgreSQL** in exact `numeric`; JavaScript never adds
+stock quantities together, and only converts the returned decimal for display.
+
+`GET /api/inventory` computes each product's balance in a `LATERAL` sub-select
+scoped to the page, so it is one round trip and avoids an N+1.
+`getCurrentStockForProducts(businessId, ids)` is available for callers that need
+many balances at once.
+
+### Movement rules
+
+| Type | Quantity | Effect |
+| --- | --- | --- |
+| `in` | `> 0` | increases stock |
+| `out` | `> 0` | decreases stock; **never below zero** |
+| `adjustment` | `≠ 0`, either sign | positive adds, negative subtracts; never below zero |
+
+An operation that would leave stock negative returns **409** with a message
+stating the resulting and available quantities. These rules are enforced twice:
+by Zod at the request boundary (a `400`) and by a CHECK constraint in the
+database, so an invalid row is impossible even via direct SQL.
+
+`businessId`, `createdBy` and any stock figure are rejected as unknown fields.
+The tenant and the actor come from the session; the balance comes from the
+ledger.
+
+### Concurrency
+
+Two concurrent `out` requests must not both succeed when their combined quantity
+exceeds the balance. A plain "read balance, then insert" is a
+time-of-check / time-of-use race. `recordMovement` instead:
+
+1. `BEGIN`
+2. `pg_advisory_xact_lock(hashtextextended(business_id || ':' || product_id, 0))`
+3. verify the product belongs to the business
+4. read `current_stock` **and** `projected_stock` in one statement
+5. reject with `409` if `projected_stock < 0`
+6. insert the immutable movement
+7. `COMMIT`
+
+The lock gives **mutual exclusion per product** — two movements for the same
+product serialise, while movements for different products never block each
+other. It is transaction-scoped, so a rollback releases it automatically. Under
+the default `READ COMMITTED` isolation each statement takes a fresh snapshot, and
+the balance read is a *later* statement than the lock, so it necessarily
+observes everything the previous lock holder committed. `SERIALIZABLE` is
+therefore unnecessary, and a hash collision could only over-serialise two
+unrelated products — never permit a double-spend.
+
+Verified live: with a balance of 10, two simultaneous `out 7` requests give
+exactly one `201` and one `409`, leaving stock at exactly 3.
+
+### The ledger is append-only
+
+There is deliberately **no** `PATCH` or `DELETE` route for a movement. A mistake
+is corrected by recording another movement. The database reinforces this: a
+`BEFORE UPDATE` trigger rejects any UPDATE, and `NO ACTION` foreign keys prevent
+a product or user being deleted out from under a movement.
+
+### Inventory permissions
+
+Both **owner and staff** can view inventory and record stock `in`, stock `out`
+and adjustments. Deliberately **no owner-only restriction**: recording a movement
+is ordinary day-to-day work, adjustments are how stock counts get corrected, and
+nothing in the ledger is destructive — every entry is an append. Restricting it
+would add friction without protecting anything. Correction happens by adding a
+movement, not by removing one, so no role is blocked from fixing a mistake.
 
 ## Database
 
