@@ -54,6 +54,9 @@ npm run dev            # http://localhost:4000
 | `GET` | `/api/inventory/:productId` | Product, current stock, per-type totals |
 | `GET` | `/api/inventory/:productId/movements` | The paginated ledger |
 | `POST` | `/api/inventory/movements` | Record one movement (`201`) + the new balance |
+| `GET` | `/api/sales` | Paginated list — `search`, `status`, `from`, `to`, `page`, `limit` |
+| `POST` | `/api/sales` | Record a sale (`201`); reduces stock in the same transaction |
+| `GET` | `/api/sales/:id` | One sale with its lines |
 | `*` | *(unmatched)* | JSON `404` |
 
 `/api/health` never touches the database, so a database outage cannot make the
@@ -109,7 +112,8 @@ src/
 │   ├── session.repository.ts
 │   ├── category.repository.ts
 │   ├── product.repository.ts
-│   └── inventory.repository.ts
+│   ├── inventory.repository.ts
+│   └── sale.repository.ts
 ├── security/
 │   ├── password.ts     # Argon2id hashing + policy
 │   ├── session.ts      # Opaque token generation + hashing
@@ -122,7 +126,9 @@ src/
 │   ├── product.schemas.ts
 │   ├── product.service.ts
 │   ├── inventory.schemas.ts
-│   └── inventory.service.ts
+│   ├── inventory.service.ts
+│   ├── sales.schemas.ts
+│   └── sales.service.ts
 ├── types/express.d.ts  # `req.auth` augmentation
 └── routes/
     ├── index.ts        # apiRouter — mount new modules here
@@ -130,7 +136,8 @@ src/
     ├── auth.routes.ts
     ├── category.routes.ts
     ├── product.routes.ts
-    └── inventory.routes.ts
+    ├── inventory.routes.ts
+    └── sales.routes.ts
 ```
 
 ### Layering
@@ -264,12 +271,58 @@ a product or user being deleted out from under a movement.
 
 ### Inventory permissions
 
-Both **owner and staff** can view inventory and record stock `in`, stock `out`
-and adjustments. Deliberately **no owner-only restriction**: recording a movement
-is ordinary day-to-day work, adjustments are how stock counts get corrected, and
-nothing in the ledger is destructive — every entry is an append. Restricting it
-would add friction without protecting anything. Correction happens by adding a
-movement, not by removing one, so no role is blocked from fixing a mistake.
+Both **owner and staff** can view inventory and record stock `in`, `out` and adjustments. Deliberately **no owner-only restriction**: recording a movement is ordinary day-to-day work, adjustments are how stock counts get corrected, and nothing in the ledger is destructive — every entry is an append. Restricting it would add friction without protecting anything. Correction happens by adding a movement, not by removing one, so no role is blocked from fixing a mistake.
+
+## Sales
+
+A sale is a **completed transaction**, and it owns no stock. Creating one writes
+the header, its lines, and one `out` movement per product into
+`inventory_movements` — all in a single transaction.
+
+### One stock system, not two
+
+The movements are written through `appendMovement` in `inventory.service.ts` —
+the *same* function `POST /api/inventory/movements` uses. The same advisory
+lock, the same balance read and the same non-negative check therefore apply. A
+sale cannot oversell because it goes through the guard, not around it.
+
+Inside the transaction:
+
+1. resolve every line, snapshot prices and compute all money in **one SQL query**;
+2. take each product's advisory lock, in **ascending product-id order**;
+3. insert the sale header;
+4. insert the sale lines;
+5. append one `out` movement per distinct product, through the inventory service.
+
+Locks are taken in a deterministic order so two sales sharing products cannot
+deadlock. If a sale lists the same product twice, the quantities are **aggregated**
+for the stock check and the ledger while the sale keeps one line per item —
+checking each line separately would let two lines of 3 pass against a balance of 5.
+
+### Money
+
+`line_total` is `quantity * unit_price` and `total_amount` is the sum, **all
+computed by PostgreSQL** in exact `numeric` and returned as strings.
+`unit_price` is snapshotted from the product's `selling_price`, so a later
+reprice never rewrites a past sale. No monetary arithmetic happens in
+JavaScript — a test asserts two 0.30 sales sum to a stock of exactly 4, not
+3.9999.
+
+### Sales are immutable
+
+There is deliberately **no** `PATCH` or `DELETE` route. Editing a sale would
+rewrite both money history and the stock movements it produced.
+
+### What the client may not send
+
+`businessId`, `createdBy`, `totalAmount`, `unitPrice`, `lineTotal`, `status` and
+`stock` are all rejected as unknown fields. The tenant and actor come from the
+session, the money from PostgreSQL, and the status from the database default.
+
+### Sales permissions
+
+Both **owner and staff** can create and view sales. Selling is ordinary work
+and the ledger is append-only, so there is nothing destructive to restrict.
 
 ## Database
 

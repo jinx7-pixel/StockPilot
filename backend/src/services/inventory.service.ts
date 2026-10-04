@@ -39,6 +39,8 @@
  * quantities together.
  */
 
+import type { PoolClient } from 'pg';
+
 import { withTransaction } from '../db/pool.js';
 import { ConflictError, NotFoundError } from '../errors.js';
 import {
@@ -164,6 +166,75 @@ export async function getBusinessInventorySummary(
 }
 
 /**
+ * Append one immutable movement to a **caller-supplied** transaction.
+ *
+ * This is the single place a movement is ever written, and it is deliberately
+ * exported so that another module writing to the ledger — currently Sales, which
+ * creates one `out` movement per sale line — uses the *same* lock, the same
+ * balance read and the same non-negative check as the direct API. There is one
+ * stock system, not two.
+ *
+ * Contract for the caller:
+ *  - pass a `client` whose transaction already resolved the product, and
+ *  - ideally take the product's locks in a deterministic order beforehand (see
+ *    `acquireProductStockLock`, which is re-entrant within a session).
+ *
+ * Re-acquiring the lock here is harmless: `pg_advisory_xact_lock` is re-entrant
+ * for the same session and is released automatically on commit or rollback.
+ */
+export async function appendMovement(
+  client: PoolClient,
+  input: {
+    businessId: string;
+    productId: string;
+    /** Used only to build a helpful error message. */
+    productName: string;
+    productUnit: string;
+    movementType: MovementType;
+    /** Normalised to two decimals by the validation layer. */
+    quantity: string;
+    reason: string | null;
+    referenceType: string | null;
+    referenceId: string | null;
+    createdBy: string;
+  },
+): Promise<{ movement: Movement; currentStock: number }> {
+  // 1. Serialise movement writes for this product.
+  await acquireProductStockLock(client, input.businessId, input.productId);
+
+  // 2. Balance and projected balance, computed in exact numeric by PostgreSQL.
+  const { projected, current } = await readBalanceWithProjection(client, {
+    businessId: input.businessId,
+    productId: input.productId,
+    movementType: input.movementType,
+    quantity: input.quantity,
+  });
+
+  // 3. Stock may never go negative, for any movement type.
+  if (projected < 0) {
+    throw new ConflictError(
+      `This would leave ${input.productName} with ${formatQuantity(projected)} ` +
+        `${input.productUnit}. Only ${formatQuantity(current)} ${input.productUnit} available.`,
+      'INSUFFICIENT_STOCK',
+    );
+  }
+
+  // 4. Append the immutable movement.
+  const movement = await insertMovement(client, {
+    businessId: input.businessId,
+    productId: input.productId,
+    movementType: input.movementType,
+    quantity: input.quantity,
+    reason: input.reason,
+    referenceType: input.referenceType,
+    referenceId: input.referenceId,
+    createdBy: input.createdBy,
+  });
+
+  return { movement, currentStock: projected };
+}
+
+/**
  * Record one immutable movement.
  *
  * Atomic: any failure rolls the whole thing back, so a rejected `out` never
@@ -175,36 +246,17 @@ export async function recordMovement(
   input: CreateMovementInput,
 ): Promise<{ movement: Movement; currentStock: number }> {
   return withTransaction(async (client) => {
-    // 1. Serialise movements for this product. Must be first: everything after
-    //    it observes a stable balance.
-    await acquireProductStockLock(client, businessId, input.productId);
-
-    // 2. The product must exist in *this* business. A foreign product 404s, so
-    //    nothing about another tenant is confirmed.
+    // The product must exist in *this* business. A foreign product 404s, so
+    // nothing about another tenant is confirmed. Resolved before appending
+    // because `appendMovement` needs its name and unit for the error message.
     const product = await findProductById(businessId, input.productId);
     if (!product) throw new NotFoundError('Product not found.');
 
-    // 3. Balance and projected balance, computed in exact numeric by PostgreSQL.
-    const { projected, current } = await readBalanceWithProjection(client, {
+    return appendMovement(client, {
       businessId,
       productId: input.productId,
-      movementType: input.movementType as MovementType,
-      quantity: input.quantity,
-    });
-
-    // 4. Stock may never go negative, for any movement type.
-    if (projected < 0) {
-      throw new ConflictError(
-        `This movement would leave ${product.name} with ${formatQuantity(projected)} ` +
-          `${product.unit}. Only ${formatQuantity(current)} ${product.unit} available.`,
-        'INSUFFICIENT_STOCK',
-      );
-    }
-
-    // 5. Append the immutable movement.
-    const movement = await insertMovement(client, {
-      businessId,
-      productId: input.productId,
+      productName: product.name,
+      productUnit: product.unit,
       movementType: input.movementType as MovementType,
       quantity: input.quantity,
       reason: input.reason ?? null,
@@ -212,8 +264,6 @@ export async function recordMovement(
       referenceId: input.referenceId ?? null,
       createdBy: userId,
     });
-
-    return { movement, currentStock: projected };
   });
 }
 

@@ -5,6 +5,7 @@ import { categoryRouter } from './category.routes.js';
 import { healthRouter } from './health.routes.js';
 import { inventoryRouter } from './inventory.routes.js';
 import { productRouter } from './product.routes.js';
+import { salesRouter } from './sales.routes.js';
 
 /**
  * Root API router. Every feature module (suppliers, purchases, …) will be
@@ -20,3 +21,4 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/categories', categoryRouter);
 apiRouter.use('/products', productRouter);
 apiRouter.use('/inventory', inventoryRouter);
+apiRouter.use('/sales', salesRouter);

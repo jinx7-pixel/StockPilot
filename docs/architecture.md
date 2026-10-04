@@ -145,6 +145,36 @@ The `LATERAL` sub-select used by the inventory listing scopes the balance
 calculation to the current page, so it is one round trip without an N+1 — and
 without scanning every movement the business has ever recorded.
 
+## Sales write to the same ledger
+
+A sale owns no stock. Creating one writes its header, its lines and one `out`
+movement per product into `inventory_movements`, inside a single transaction,
+and those movements go through the **same** `appendMovement` function that
+`POST /api/inventory/movements` uses.
+
+That is the whole point: there is one stock system, and a sale cannot oversell
+because it goes through the guard rather than around it. Two things make
+multi-item sales safe:
+
+| Concern | How it is handled |
+| --- | --- |
+| Deadlock | Locks are taken in ascending product-id order, so two sales sharing products cannot deadlock |
+| Duplicate lines | Quantities are aggregated per product for the check and the ledger, while the sale keeps one line per item |
+| Money | `line_total` and `total_amount` are computed by PostgreSQL in `numeric`; JavaScript never multiplies or sums money |
+| Price drift | `unit_price` is snapshotted from the product, so a later reprice never rewrites a past sale |
+| Partial writes | Any failure rolls the entire transaction back: no sale row, no lines, no movements |
+
+Sales are immutable — there is no `PATCH` or `DELETE` route, because editing a
+sale would rewrite both the money history and the stock movements it produced.
+
+### A note on validation strictness
+
+List endpoints for `inventory` and `sales` use `.strict()` query schemas, so an
+unknown key such as `?orderBy=` is rejected with `400` rather than ignored. That
+is stricter than the `products` listing, which ignores unknown query keys. Both
+are safe — an ignored key can never reach SQL — but strictness is the newer
+convention, and it fails loudly instead of silently.
+
 
 ### Why server-side sessions rather than a stateless JWT
 

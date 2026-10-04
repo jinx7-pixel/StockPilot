@@ -105,9 +105,9 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: inventory and stock ledger.** Accounts, the product catalog and a
-concurrency-safe stock ledger are all in place and covered by tests. **No sales,
-suppliers, purchasing or intelligence features yet** — by design.
+**Stage: sales.** Accounts, the product catalog, the stock ledger and sales are
+all in place and covered by tests. **No suppliers, purchasing or intelligence
+features yet** — by design.
 
 ### ✅ Complete
 
@@ -123,7 +123,9 @@ suppliers, purchasing or intelligence features yet** — by design.
   `auth_sessions`
 - **Catalog schema**: `categories` and `products`
 - **Stock ledger**: `inventory_movements` — append-only, and the **single source
-  of truth for stock**. There is no cached quantity column anywhere
+  of truth for stock**. No cached quantity column anywhere
+- **Sales schema**: `sales` and `sale_items`, with a composite foreign key
+  guaranteeing a line never belongs to a different business than its sale
 - **Authentication API**: `POST /api/auth/register`, `/login`, `/logout`,
   `GET /api/auth/me`
 - **Products API**: list (search / category / status filters, pagination,
@@ -132,8 +134,12 @@ suppliers, purchasing or intelligence features yet** — by design.
   while in use)
 - **Inventory API**: list with derived stock, summary, per-product detail,
   paginated ledger, and movement recording
+- **Sales API**: list with search / status / date filters and pagination, create,
+  detail. A sale writes its header, lines **and** the `out` stock movements in one
+  transaction, through the same inventory service the direct route uses
 - **Concurrency safety**: a per-`(business, product)` advisory lock makes two
-  simultaneous `out` requests unable to double-spend the same stock
+  simultaneous sales unable to oversell the same stock, with no deadlock between
+  sales sharing products
 - **Argon2id** password hashing and opaque session tokens stored as SHA-256
   digests, delivered in an HTTP-only `SameSite` cookie
 - **Multi-tenant isolation**: `businessId` always comes from the session; a
@@ -144,7 +150,7 @@ suppliers, purchasing or intelligence features yet** — by design.
 - Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
   output, database dumps and IDE files
 - `docker-compose.yml` providing a local PostgreSQL 18 instance
-- **Backend test suite** (137 tests) on the Node built-in runner — no test
+- **Backend test suite** (184 tests) on the Node built-in runner — no test
   framework dependency
 - **GitHub Actions CI**: `frontend`, `backend`, `migrations` and `backend-tests`
   jobs, the last against a throwaway PostgreSQL service container
@@ -152,27 +158,30 @@ suppliers, purchasing or intelligence features yet** — by design.
 
 ### ⏳ Not started (intentionally)
 
-Sales · Suppliers · Purchase Orders · Reorder recommendations · Demand
-forecasting · Overstock / dead-stock intelligence · **Dashboard** · Analytics ·
-AI/ML · Barcode/QR · Notifications · Payments · Multiple warehouses ·
-`stock_adjustments` and all remaining business tables · Seed data · Docker
-images · Deployment (CD) · Frontend tests
+Suppliers · Purchase Orders · `stock_adjustments` · Reorder recommendations ·
+Demand forecasting · Overstock / dead-stock intelligence · **Dashboard** ·
+Analytics · AI/ML · Barcode/QR · Notifications · Payments · Multiple
+warehouses · Remaining business tables · Seed data · Docker images ·
+Deployment (CD) · Frontend tests
 
 ### Verification results
 
 | Check | Backend | Frontend |
 | --- | --- | --- |
+| `npm ci` (both) | ✅ 0 vulnerabilities | ✅ 0 vulnerabilities |
 | `npm run typecheck` | ✅ pass (app **and** migrations) | ✅ pass |
 | `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
 | `npm run build` | ✅ `dist/` emitted, no tooling/tests | ✅ `dist/` emitted |
-| `npm ci` (lockfile in sync) | ✅ clean install | ✅ clean install |
-| `npm test` | ✅ 137/137 pass | — (no frontend tests yet) |
+| `npm test` | ✅ **184/184** pass | — (no frontend tests yet) |
 | `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
 | Auth flow (register → me → logout → 401) | ✅ verified live | ✅ UI built |
 | Catalog CRUD + duplicate SKU `409` | ✅ verified live | ✅ UI built |
 | Stock IN / OUT / ±adjustment balances | ✅ verified live | ✅ UI built |
 | Negative-stock refusal | ✅ `409` verified live | ✅ error surfaced in UI |
 | Concurrent OUT (start 10, two × 7) | ✅ one `201`, one `409`, final `3` | n/a |
+| Sale multi-item totals + line totals | ✅ `30.00` verified live | ✅ UI built |
+| Sale atomic rollback (2nd item short) | ✅ no sale, no items, no movements | n/a |
+| **Concurrent sales (start 5, two × 4)** | ✅ one `201`, one `409`, final `1` | n/a |
 | Cross-tenant isolation | ✅ verified live | n/a (no tenant in the client) |
 | Migration `up` → `down` → `up` | ✅ reversible, verified at SQL level | — |
 | No cached stock column | ✅ asserted by test + `information_schema` | — |
@@ -287,7 +296,7 @@ Status of each planned module. Only those marked ✅ are built.
 | 3 | **Inventory Tracking** | ✅ Stock ledger, derived balances, IN/OUT/adjustments. Locations, cycle counts and low-stock thresholds still to come |
 | 4 | **Suppliers** | Supplier records, lead times, MOQs, pricing, performance and reliability history |
 | 5 | **Purchase Orders** | Draft → approve → send workflow, PO lines, receiving, supplier acknowledgements |
-| 6 | **Sales & Demand** | Sales history, demand signals, seasonality, forecast inputs |
+| 6 | **Sales & Demand** | ✅ Completed sales with immutable stock movements. Demand signals, seasonality and forecast inputs still to come |
 | 7 | **Dashboard & Risk Insights** | Stockout / overstock / dead-stock detection, exposure summaries, prioritised action list |
 | 8 | **Recommendations Engine** | Rule-based (and later ML) reorder, defer, reallocate and renegotiate suggestions with plain-language explanations |
 | 9 | **AI/ML Layer** *(long-term)* | Demand forecasting, anomaly detection, natural-language explanations and summaries |

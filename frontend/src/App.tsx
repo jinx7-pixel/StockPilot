@@ -21,6 +21,8 @@ import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SaleDetailPage } from './pages/SaleDetailPage';
+import { SalesPage } from './pages/SalesPage';
 import { WorkspaceLayout } from './pages/WorkspaceLayout';
 import { WorkspacePage } from './pages/WorkspacePage';
 
@@ -39,6 +41,8 @@ export function App() {
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="inventory/:productId" element={<InventoryDetailPage />} />
+          <Route path="sales" element={<SalesPage />} />
+          <Route path="sales/:saleId" element={<SaleDetailPage />} />
         </Route>
       </Route>
 

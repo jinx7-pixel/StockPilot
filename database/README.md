@@ -10,11 +10,11 @@ hand-editing a live database, and never by application code that runs
 ## Current status
 
 The migration infrastructure is in place, along with the **authentication,
-tenancy, catalog and stock-ledger schema**. The following tables are explicitly
-**not** created:
+tenancy, catalog, stock-ledger and sales schema**. The following tables are
+explicitly **not** created:
 
-`sales` · `sale_items` · `purchase_orders` · `purchase_order_items` ·
-`stock_adjustments` · `recommendations` · `audit_logs`
+`purchase_orders` · `purchase_order_items` · `stock_adjustments` ·
+`recommendations` · `audit_logs`
 
 | Migration | Contents |
 | --- | --- |
@@ -23,9 +23,10 @@ tenancy, catalog and stock-ledger schema**. The following tables are explicitly
 | `1791101015605_auth-sessions` | `auth_sessions` |
 | `1791113189231_products-catalog` | `categories`, `products` |
 | `1791116341568_inventory-movements` | `inventory_movements`, the `inventory_movement_type` enum |
+| `1791119489209_sales` | `sales`, `sale_items`, the `sale_status` enum |
 | Path | Purpose | Status |
 | --- | --- | --- |
-| `migrations/` | Versioned migrations (committed) | ✅ 5 migrations |
+| `migrations/` | Versioned migrations (committed) | ✅ 6 migrations |
 | `tsconfig.json` | Type-checks `migrations/` | ✅ present |
 | `eslint.config.js` | Lints `migrations/` | ✅ present |
 | `package.json` | Marks this directory as an ESM package | ✅ present |
@@ -202,6 +203,53 @@ This is verified directly against the database, not assumed.
   of any `PATCH` or `DELETE` movement endpoint, and (c) the `NO ACTION` foreign
   keys. A correction is a **new** movement.
 
+### `sales` and `sale_items`
+
+A sale records a completed transaction. **It holds no stock.** Stock moves only
+because the application appends `out` movements to `inventory_movements` inside
+the same transaction.
+
+`sales`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `business_id` | `uuid` | not null → `businesses(id)` **ON DELETE CASCADE** |
+| `customer_name` | `varchar(150)` | nullable |
+| `customer_phone` | `varchar(30)` | nullable |
+| `total_amount` | `numeric(14,2)` | not null, `>= 0`; computed by the server |
+| `status` | `sale_status` | not null, default `completed` |
+| `sold_at` | `timestamptz` | not null, default `now()` |
+| `created_by` | `uuid` | not null → `users(id)` **ON DELETE NO ACTION** |
+| `created_at` | `timestamptz` | not null, default `now()` |
+
+`sale_items`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `sale_id` | `uuid` | not null → `sales(id)` **ON DELETE CASCADE** |
+| `business_id` | `uuid` | not null, denormalised from the sale |
+| `product_id` | `uuid` | not null → `products(id)` **ON DELETE NO ACTION** |
+| `quantity` | `numeric(12,2)` | not null, **`> 0`** |
+| `unit_price` | `numeric(12,2)` | not null, `>= 0`; snapshot of `selling_price` |
+| `line_total` | `numeric(14,2)` | not null, `>= 0`; computed in SQL |
+| `created_at` | `timestamptz` | not null, default `now()` |
+
+Indexes: `sales` on `business_id`, `created_at`, `status` and
+`(business_id, sold_at DESC)`; `sale_items` on `sale_id`, `business_id` and
+`product_id`.
+
+**`sale_items.business_id` is enforced, not trusted.** A `UNIQUE (id, business_id)`
+constraint on `sales` backs a composite foreign key
+`FOREIGN KEY (sale_id, business_id) REFERENCES sales (id, business_id)`, so a
+line can never be attributed to a different business than its parent sale. A test
+inserts exactly that and is refused by the database.
+
+`sale_status` currently has a single value, `completed`. Sales are immutable in
+this milestone (no `PATCH` or `DELETE`), so nothing else could set another. Add
+one with `ALTER TYPE sale_status ADD VALUE '...'` in a new migration.
+
 ### Deletion behaviour
 
 | Operation | Behaviour | Why |
@@ -241,7 +289,8 @@ database/
 │   ├── 1791101011378_auth-foundation.ts
 │   ├── 1791101015605_auth-sessions.ts
 │   ├── 1791113189231_products-catalog.ts
-│   └── 1791116341568_inventory-movements.ts
+│   ├── 1791116341568_inventory-movements.ts
+│   └── 1791119489209_sales.ts
 ├── seeds/                  # ⏳ reserved — local dev data only, never in production
 ├── package.json            # marks this tree as an ESM package
 ├── tsconfig.json           # type-checks migrations/

@@ -12,6 +12,7 @@ import { useAuth } from '../auth/authContext';
 const NAV = [
   { to: '/app', label: 'Overview', end: true },
   { to: '/app/inventory', label: 'Inventory', end: true },
+  { to: '/app/sales', label: 'Sales', end: true },
   { to: '/app/products', label: 'Products', end: false },
   { to: '/app/categories', label: 'Categories', end: false },
 ] as const;
