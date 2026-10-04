@@ -9,34 +9,98 @@ hand-editing a live database, and never by application code that runs
 
 ## Current status
 
-**No business tables exist yet.** This milestone delivers the migration
-*infrastructure* only. The following tables are explicitly **not** created:
+The migration infrastructure is in place and the **authentication and tenancy
+schema** exists. The following business tables are explicitly **not** created:
 
-`users` · `businesses` · `categories` · `products` · `suppliers` ·
-`inventory_movements` · `sales` · `sale_items` · `purchase_orders` ·
-`purchase_order_items` · `stock_adjustments` · `recommendations` · `audit_logs`
+`categories` · `products` · `inventory_movements` · `sales` · `sale_items` ·
+`purchase_orders` · `purchase_order_items` · `stock_adjustments` ·
+`recommendations` · `audit_logs`
 
-The single committed migration creates one generic helper function
-(`set_updated_at()`) and no tables. It exists to establish the file format and to
-prove the pipeline end to end.
+| Migration | Contents |
+| --- | --- |
+| `1791027517242_shared-database-helpers` | `set_updated_at()` trigger helper |
+| `1791101011378_auth-foundation` | `businesses`, `users`, the `user_role` enum |
+| `1791101015605_auth-sessions` | `auth_sessions` |
 
 | Path | Purpose | Status |
 | --- | --- | --- |
-| `migrations/` | Versioned migrations (committed) | ✅ 1 infrastructure migration |
+| `migrations/` | Versioned migrations (committed) | ✅ 3 migrations |
 | `tsconfig.json` | Type-checks `migrations/` | ✅ present |
 | `eslint.config.js` | Lints `migrations/` | ✅ present |
 | `package.json` | Marks this directory as an ESM package | ✅ present |
 | `seeds/` | Local-only development data | ⏳ reserved, not created yet |
 | `../backend/src/db/migrate.ts` | Typed CLI wrapper around node-pg-migrate | ✅ present |
+| `../backend/src/db/migrateConfig.ts` | Shared runner config (CLI + tests) | ✅ present |
 | `../backend/src/db/config.ts` | Shared connection config (pool + migrations) | ✅ present |
 | `../docker-compose.yml` | local PostgreSQL 18 service | ✅ present |
+
+## Schema
+
+### `businesses`
+
+A tenant. Every user belongs to exactly one.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `name` | `varchar(150)` | not null |
+| `created_at` / `updated_at` | `timestamptz` | not null, default `now()` |
+
+### `users`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `business_id` | `uuid` | not null → `businesses(id)` **ON DELETE CASCADE** |
+| `name` | `varchar(100)` | not null |
+| `email` | `varchar(255)` | not null, stored lower case |
+| `password_hash` | `text` | not null, Argon2id |
+| `role` | `user_role` | not null, default `staff` |
+| `created_at` / `updated_at` | `timestamptz` | not null, default `now()` |
+
+Indexes and constraints:
+
+- `users_business_id_idx` — every tenant-scoped query filters on this.
+- `users_business_id_email_key` — **unique per business**, not globally. Two
+  unrelated businesses may each register the same address.
+- `users_email_lowercase_check` — `email = lower(email)`, so normalisation is
+  guaranteed by the database and not merely by application code.
+- `users_business_id_fkey` — deleting a business removes its users.
+
+### `auth_sessions`
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK |
+| `user_id` | `uuid` | not null → `users(id)` **ON DELETE CASCADE** |
+| `token_hash` | `text` | SHA-256 hex digest — never the raw token |
+| `expires_at` | `timestamptz` | not null |
+| `created_at` / `last_used_at` | `timestamptz` | not null, default `now()` |
+
+Indexes: unique on `token_hash` (the lookup key for every request), plus
+`user_id` and `expires_at` for session management and pruning.
+
+### Tenancy
+
+There is no membership join table: a user belongs to exactly one business. The
+tenant (`business_id`) is read from the session via a database join and is never
+taken from a request body, query parameter or header.
+
+> **Known design tension.** Because email is unique *per business* rather than
+> globally, the same address can exist in several tenants. `login` takes only an
+> email and password, so more than one match is unresolvable — it fails closed
+> with the same 401 as a wrong password. If that proves too strict in practice,
+> the options are a global unique index on `email`, or a business identifier in
+> the login payload. Both are deliberate product decisions, deferred.
 
 ## Layout
 
 ```
 database/
 ├── migrations/
-│   └── 1791027517242_shared-database-helpers.ts   # <timestamp>_<slug>.ts
+│   ├── 1791027517242_shared-database-helpers.ts
+│   ├── 1791101011378_auth-foundation.ts
+│   └── 1791101015605_auth-sessions.ts
 ├── seeds/                  # ⏳ reserved — local dev data only, never in production
 ├── package.json            # marks this tree as an ESM package
 ├── tsconfig.json           # type-checks migrations/
@@ -48,6 +112,11 @@ database/
 > in `database/`, because node-pg-migrate loads every non-ignored file in the
 > migrations directory and would try to execute a stray `.js` config as a
 > migration.
+>
+> Migrations also import only *types* from `node-pg-migrate`. They are loaded at
+> runtime by jiti from outside the `backend` package, where a value import cannot
+> be resolved — so SQL expressions go through `pgm.sql`.
+
 
 ---
 
@@ -112,16 +181,20 @@ defaults.
 | `PGSSLMODE` | `disable` | `require` enables TLS for the connection |
 | `PGCONNECT_TIMEOUT_MS` | `5000` | Connection timeout |
 
-### Migration-specific (used only by `npm run migration:*`)
+### Migration-specific (used only by `npm run migration:*` and the test suite)
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PGSCHEMA` | `public` | Schema migrations run against |
 | `PGMIGRATIONS_TABLE` | `pgmigrations` | Table recording applied migrations |
 | `MIGRATIONS_DIR` | `../database/migrations` | Migration directory, relative to `backend/` |
+| `TEST_PGDATABASE` | `stockpilot_test` | Database the automated tests use |
 
 > Changing `PGMIGRATIONS_TABLE` or `PGSCHEMA` after migrations have run orphans
 > the existing history. Leave them alone unless you intend to re-baseline.
+>
+> `TEST_PGDATABASE` must differ from `PGDATABASE`. The test bootstrap refuses to
+> start if they match, because the suite truncates tables between tests.
 
 ---
 
@@ -227,15 +300,7 @@ migration cannot be committed unnoticed:
 | Type check | `npm run typecheck` | ✅ via `typecheck:migrations` |
 | Lint | `npm run lint` | ✅ via `lint:migrations` |
 | Build | `npm run build` | ✗ (migrations are tooling, not shipped code) |
-
-Migrations are linted and type-checked by the same gates as the API, so a broken
-migration cannot be committed unnoticed:
-
-| Gate | Command (from `backend/`) | Covers migrations |
-| --- | --- | --- |
-| Type check | `npm run typecheck` | ✅ via `typecheck:migrations` |
-| Lint | `npm run lint` | ✅ via `lint:migrations` |
-| Build | `npm run build` | ✗ (migrations are tooling, not shipped code) |
+| Tests | `npm test` | ✅ the suite applies the migrations to `TEST_PGDATABASE` |
 
 `database/tsconfig.json` and `database/eslint.config.js` exist because the
 migrations sit outside the `backend` package, where ESLint and TypeScript would

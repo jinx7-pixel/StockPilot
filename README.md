@@ -105,10 +105,9 @@ StockPilot/
 
 ## Current Development Status
 
-**Stage: CI pipeline.** The toolchain is complete, verified and runnable, the
-database schema can be versioned and rolled back, and every push and pull
-request is now gated by GitHub Actions.
-**No business functionality has been built yet** — by design.
+**Stage: authentication and multi-tenant foundation.** Registration, login,
+sessions, role authorization and tenant isolation work end to end, and CI now
+runs the database-backed test suite. **No business modules yet** — by design.
 
 ### ✅ Complete
 
@@ -116,36 +115,39 @@ request is now gated by GitHub Actions.
 - Frontend: React 19 + TypeScript 6 + Vite 8, Tailwind CSS 4 via `@tailwindcss/vite`
 - Backend: Node.js + Express 5 + TypeScript, ESM, strict mode
 - `GET /api/health` → `{"status":"ok","service":"stockpilot-api"}`
-- Layered backend structure (`routes` → `middlewares` → `db` → `config`) with
+- Layered backend structure (`routes` → `services` → `repositories` → `db`) with
   `createApp()` separated from `server.ts` for testability
 - **Migration infrastructure**: node-pg-migrate wired through a typed CLI
   (`backend/src/db/migrate.ts`) with `create` / `up` / `down` / `redo` / `status`
-- Migrations directory at `database/migrations/`, append-only, versioned and
-  type-checked and linted alongside the API
-- **Shared connection config** (`db/config.ts`) so the pool and the migration
-  runner can never target different databases
-- Migrations are transactional, order-checked and serialised with an advisory lock
-- PostgreSQL connection configuration (`pg` pool from env vars) with transaction
-  helper and graceful shutdown — **no tables created**
+- **Auth schema**: `businesses`, `users` (with the `user_role` enum) and
+  `auth_sessions`, via two reversible migrations
+- **Authentication API**: `POST /api/auth/register`, `/login`, `/logout`,
+  `GET /api/auth/me`
+- **Argon2id** password hashing (OWASP parameters) and opaque session tokens
+  stored as SHA-256 digests, delivered in an HTTP-only `SameSite` cookie
+- **Multi-tenant isolation**: `businessId` always comes from the session via a
+  database join, never from a request; repositories require an explicit tenant
+- **Role authorization**: `requireAuth` + reusable `requireRole('owner')` (403 for staff)
+- Rate limiting, Helmet, CORS with credentials, and a typed error contract that
+  never leaks stack traces
+- Atomic registration — business + owner in one transaction
 - Environment configuration via committed `.env.example` files; **no secrets in source**
-- ESLint 10 flat config in both packages
+- ESLint 10 flat config in both packages, with migrations covered too
 - Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
   output, database dumps and IDE files
 - `docker-compose.yml` providing a local PostgreSQL 18 instance
-- Verified `typecheck`, `lint`, and `build` in both packages; both servers start
-  and the frontend dev proxy reaches the backend
-- Migration tooling verified end to end against a live PostgreSQL 18
-  (`status` → `up` → `redo` → `down`), with rollback confirmed at the SQL level
-- **GitHub Actions CI** (`.github/workflows/ci.yml`): three parallel jobs —
-  `frontend`, `backend`, `migrations` — each running `npm ci` then lint,
-  type-check and build. No database, no secrets, no deployment
+- **Backend test suite** (35 tests) on the Node built-in runner — no test
+  framework dependency
+- **GitHub Actions CI**: `frontend`, `backend`, `migrations` and `backend-tests`
+  jobs, the last against a throwaway PostgreSQL service container
 - Git repository initialised and pushed to `github.com/jinx7-pixel/StockPilot`
 
 ### ⏳ Not started (intentionally)
 
-Authentication · Products · Inventory · Sales · Suppliers · Purchase Orders ·
-Dashboard · AI/ML features · **Database business tables** · Seed data · Docker
-images · **Deployment (CD)** · Automated tests
+Products · Inventory · Sales · Suppliers · Purchase Orders · Dashboard ·
+AI/ML features · **Remaining business tables** · Seed data · Staff invitation
+flow · Password reset · Email verification · Refresh tokens · Docker images ·
+**Deployment (CD)** · Frontend tests
 
 ### Verification results
 
@@ -153,32 +155,35 @@ images · **Deployment (CD)** · Automated tests
 | --- | --- | --- |
 | `npm run typecheck` | ✅ pass (app **and** migrations) | ✅ pass |
 | `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
-| `npm run build` | ✅ `dist/` emitted | ✅ `dist/` emitted |
-| Server starts | ✅ port 4000 | ✅ port 5173 |
-| `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
+| `npm run build` | ✅ `dist/` emitted, no tooling/tests | ✅ `dist/` emitted |
 | `npm ci` (lockfile in sync) | ✅ clean install | ✅ clean install |
-| `migration:up` / `redo` / `down` | ✅ verified live on PostgreSQL 18 | — |
-| CI workflow YAML | ✅ parses; 40+ structural assertions pass | — |
+| `npm test` | ✅ 35/35 pass | — (no frontend tests yet) |
+| `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
+| Auth flow (register → me → logout → 401) | ✅ verified live | ✅ UI built |
+| Migration `up` → `down` → `up` | ✅ reversible, verified at SQL level | — |
 
 ---
 
 ## Continuous Integration
 
 Every push to `main` and every pull request targeting `main` runs
-[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — three parallel jobs
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) — four parallel jobs
 on `ubuntu-latest` with Node 24 (current Active LTS):
 
-| Job | Checks |
-| --- | --- |
-| `frontend` | `npm ci` → `lint` → `typecheck` → `build` |
-| `backend` | `npm ci` → `lint` → `typecheck` → `build` |
-| `migrations` | `npm ci` → `typecheck:migrations` → `lint:migrations` |
+| Job | Checks | Database |
+| --- | --- | --- |
+| `frontend` | `npm ci` → `lint` → `typecheck` → `build` | none |
+| `backend` | `npm ci` → `lint` → `typecheck` → `build` | none |
+| `migrations` | `npm ci` → `typecheck:migrations` → `lint:migrations` | none |
+| `backend-tests` | `npm ci` → `npm test` | throwaway `postgres:18-alpine` service |
 
-CI needs **no database and no secrets** — nothing it runs touches PostgreSQL.
-Actions are pinned to exact release tags, `permissions` is least-privilege, and
-duplicate runs for a branch are cancelled. Deployment is intentionally not part
-of CI; see [`.github/workflows/README.md`](./.github/workflows/README.md) for the
-full rationale and how to reproduce the pipeline locally.
+CI uses **no repository secrets**. The only database it touches is a per-job
+throwaway container with CI-only credentials, seeded into a dedicated
+`stockpilot_test` database that the suite creates and truncates. Actions are
+pinned to exact release tags, `permissions` is least-privilege, and duplicate
+runs for a branch are cancelled. Deployment is intentionally not part of CI; see
+[`.github/workflows/README.md`](./.github/workflows/README.md) for the full
+rationale and how to reproduce the pipeline locally.
 
 ---
 
@@ -293,6 +298,18 @@ Each module is a future milestone. **None of these are implemented.**
   node-pg-migrate's parameterised builder, never string interpolation.
 - CORS uses an explicit origin allow-list from `CORS_ORIGINS`, never `*`.
 - Stack traces are never returned in production error responses.
+- **Passwords** are hashed with Argon2id (OWASP parameters) and never logged;
+  plaintext is never stored or returned.
+- **Sessions** are 256-bit opaque tokens delivered in an `HttpOnly` cookie.
+  JavaScript cannot read them, and nothing is stored in `localStorage`. Only a
+  SHA-256 digest is persisted, so a database leak yields no usable credential.
+- **Tenant scope** is always derived from the session, never from client input,
+  and repositories require an explicit `businessId` for client-driven lookups.
+- **Login** returns one indistinguishable error for an unknown email, a wrong
+  password and an ambiguous email, and spends comparable CPU in each case, so
+  accounts cannot be enumerated.
+- **Credential endpoints are rate limited**, and `TRUST_PROXY` must be set
+  correctly in production or every client would share one bucket.
 
 ---
 

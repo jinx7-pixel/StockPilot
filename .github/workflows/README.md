@@ -8,7 +8,7 @@ present on the default branch.
 
 | Workflow | Status | Trigger | Jobs |
 | --- | --- | --- | --- |
-| `ci.yml` | ✅ implemented | push to `main`, PR targeting `main` | `frontend`, `backend`, `migrations` |
+| `ci.yml` | ✅ implemented | push to `main`, PR targeting `main` | `frontend`, `backend`, `migrations`, `backend-tests` |
 | `docker.yml` | ⏳ planned | tag / release | build & push `frontend` / `backend` images — no Dockerfiles yet |
 | `deploy.yml` | ⏳ planned | release or manual | deploy to a target environment — none chosen yet |
 
@@ -16,14 +16,15 @@ present on the default branch.
 
 ## `ci.yml` — Continuous Integration
 
-The only workflow so far. It gates every change on three independent jobs that
+The only workflow so far. It gates every change on four independent jobs that
 run in parallel.
 
-| Job | `working-directory` | Steps |
-| --- | --- | --- |
-| `frontend` | `frontend/` | `npm ci` → `lint` → `typecheck` → `build` |
-| `backend` | `backend/` | `npm ci` → `lint` → `typecheck` → `build` |
-| `migrations` | `backend/` | `npm ci` → `typecheck:migrations` → `lint:migrations` |
+| Job | `working-directory` | Steps | Database |
+| --- | --- | --- | --- |
+| `frontend` | `frontend/` | `npm ci` → `lint` → `typecheck` → `build` | none |
+| `backend` | `backend/` | `npm ci` → `lint` → `typecheck` → `build` | none |
+| `migrations` | `backend/` | `npm ci` → `typecheck:migrations` → `lint:migrations` | none |
+| `backend-tests` | `backend/` | `npm ci` → `npm test` | throwaway `postgres:18-alpine` service |
 
 ### Why `migrations` is a separate job
 
@@ -33,6 +34,23 @@ the `backend` package. The backend's composite scripts already include it
 `backend` job covers it too. The dedicated job runs those two steps **in
 isolation** so that a future edit to a composite script cannot silently drop
 migration coverage.
+
+### `backend-tests` and the PostgreSQL service
+
+The auth suite is database-backed, so this job declares a `postgres:18-alpine`
+service container. Everything about it is deliberately throwaway:
+
+- **CI-only credentials.** `POSTGRES_USER` / `POSTGRES_PASSWORD` are literals in
+  the workflow. GitHub-hosted runners are discarded when the job ends, so these
+  are **not secrets** and must never be reused for a real environment.
+- **A separate database.** The suite creates and truncates `stockpilot_test`.
+  `src/tests/setup.ts` refuses to start if `TEST_PGDATABASE` matches
+  `PGDATABASE`, so a misconfigured runner cannot wipe development data.
+- **No repository secrets at all.** Nothing in this workflow reads `secrets.*`.
+
+The suite brings its own schema: the test bootstrap applies the committed
+migrations to the test database, which also means the migrations themselves are
+exercised on every run.
 
 ### Design decisions
 
@@ -54,25 +72,21 @@ migration coverage.
 - **`concurrency`** — a new push to the same branch cancels the in-flight run
   instead of queueing behind it.
 
-### No database, no secrets
+### No production database, no secrets
 
-**CI never contacts PostgreSQL and needs no credentials.** None of the steps
-connect to a database: `lint` and `typecheck` are `eslint`/`tsc`, and `build` is
-`tsc` + `vite build`. Nothing executes the application or the migration runner,
-so there are no `secrets.*` references, no `env:` block and no `.env` file in the
-runner.
+`migration:up` is deliberately **not** run against anything that matters. CI
+never contacts a development, staging or production database, and no job reads a
+repository secret. The only database CI ever touches is the per-job throwaway
+container described above.
 
-`migration:up` is deliberately **not** run. Applying migrations needs a real
-database with a real role, so it belongs to a deploy step (CD) or to a
-dedicated database-backed test job — both of which come later.
+Applying migrations to a real environment belongs to a deploy step (CD), or to a
+deliberate, reviewed operation — not to a pull request.
 
-### When to add a PostgreSQL service container
+### When the service container grows
 
-Once there are database-backed tests, add a `services:` block to the relevant
-job using the official `postgres` image, with a **throwaway** CI-only password
-supplied via the `env:` block (GitHub-hosted runners are ephemeral, so a fixed
-non-secret literal is fine there — it is not a production credential). Do not
-reuse a real database or a real secret.
+If tests later need extensions, a specific `POSTGRES_IMAGE`, or seeded data,
+extend the `services.postgres` block. Keep the credentials CI-only and keep the
+test database distinct from the application one.
 
 ---
 
@@ -93,10 +107,19 @@ npm ci && npm run lint && npm run typecheck && npm run build
 # migrations job
 cd backend
 npm ci && npm run typecheck:migrations && npm run lint:migrations
+
+# backend-tests job (needs a reachable PostgreSQL)
+cd backend
+cp .env.example .env   # set PG* to your local server; keep TEST_PGDATABASE distinct
+npm ci && npm test
 ```
 
-The one thing CI adds is a clean `node_modules` from `npm ci` — running `npm ci`
-locally at least once reproduces that.
+The test suite creates `TEST_PGDATABASE` if it is missing, applies the committed
+migrations to it, and truncates it between tests. It refuses to run if
+`TEST_PGDATABASE` equals `PGDATABASE`.
+
+The one thing CI adds over a local run is a clean `node_modules` from `npm ci` —
+running it locally at least once reproduces that.
 
 ## Conventions for future workflows
 

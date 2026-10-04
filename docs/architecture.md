@@ -18,9 +18,12 @@ StockPilot/
 ├── .github/workflows/   CI (ci.yml); deployment workflows not yet added
 └── docker-compose.yml   local PostgreSQL 18 only
 ```
-Frontend and backend communicate over **REST** (`/api/*`). There is no shared
-runtime package yet — the only things genuinely shared are the API contract and
-the root tooling conventions, so a premature `packages/shared` monorepo layer
+
+Frontend and backend communicate over **REST** (`/api/*`). The session is an
+HTTP-only cookie, so the browser holds no token and nothing is stored in
+`localStorage`. There is no shared runtime package yet — the only things
+genuinely shared are the API contract and the root tooling conventions, so a
+premature `packages/shared` monorepo layer
 was deliberately avoided.
 
 ## Backend layering
@@ -66,6 +69,60 @@ request.
 
 `/api/health` is intentionally dependency-free — it does not query PostgreSQL, so
 a database outage can never make the HTTP process look dead.
+
+## Authentication and tenancy
+
+Two invariants hold the whole thing together.
+
+**1. Identity comes from the session, never the request.** `requireAuth`
+(`middlewares/requireAuth.ts`) is the single place a request gains an identity.
+It reads only the HTTP-only session cookie, then resolves the user and their
+business in a single join:
+
+```sql
+auth_sessions → users → businesses
+```
+
+`businessId` is therefore selected from the database, never parsed from a body,
+query parameter or header. Repositories reinforce this: any lookup driven by
+client-supplied identity takes an explicit `businessId`, so a forgotten scope is
+a compile error rather than a silent data leak.
+
+**2. Layers point inward.** `routes → services → repositories → db`. Services
+never see `req`/`res`; repositories never contain business rules.
+
+| Concern | Lives in | Notes |
+| --- | --- | --- |
+| HTTP shape, validation, cookies | `routes/auth.routes.ts` | Zod schemas in `services/auth.schemas.ts` |
+| Registration / login / session logic | `services/auth.service.ts` | The only place transactions are opened for auth |
+| All SQL | `repositories/*.repository.ts` | Parameterised queries only |
+| Password hashing | `security/password.ts` | Argon2id, OWASP parameters |
+| Token generation | `security/session.ts` | 256-bit random; only the SHA-256 digest is stored |
+| Cookie attributes | `security/cookies.ts` | HttpOnly, SameSite, Secure |
+| Identity + role gates | `middlewares/requireAuth.ts` | `requireAuth`, `requireRole` |
+| Throttling | `middlewares/rateLimit.ts` | Per-endpoint limits |
+
+### Why server-side sessions rather than a stateless JWT
+
+`auth_sessions` stores a hash of the token, not the token. That costs one lookup
+per request, and buys three things a stateless JWT cannot: `logout` genuinely
+revokes access; "sign out everywhere" and per-session revocation are possible
+later; and a database disclosure does not hand over usable credentials. The
+schema also already carries `expires_at` and `last_used_at`, so adding refresh
+tokens later is an additive change rather than a redesign.
+
+### Redaction happens once
+
+`services/auth.service.ts` exposes a single `AuthenticatedUser` shape that has no
+`password_hash` field at all. Redaction at the type boundary — rather than at
+each call site — means a hash cannot reach a response body by accident.
+
+### Error contract
+
+`src/errors.ts` defines a typed `AppError` hierarchy carrying the HTTP status and
+a stable machine-readable code. The terminal error handler returns `AppError`s
+as-is and everything else as a generic 500 with no internal detail, so stack
+traces never reach a client.
 
 ## Database
 
@@ -127,14 +184,17 @@ Each of these is a deliberate seam, not existing code:
 - **Modules** → new `routes/x.routes.ts` + `services/` + `repositories/`, mounted
   in `routes/index.ts`. No changes to `app.ts`.
 - **Migrations** → `npm run migration:create -- <slug>`, then `migration:up`. No
-  application change required.
-- **Auth** → a middleware plus `env` additions; routes opt in individually.
+  application change required. The test suite applies the same migrations to its
+  own database on every run, so a broken migration fails CI.
+- **Auth** → already built: `routes/auth.routes.ts` + `services/auth.service.ts`
+  + `repositories/`. The seam for a future refresh-token flow is
+  `auth_sessions` plus `security/session.ts`.
+- **New business module** → new `routes/x.routes.ts`, `services/x.service.ts`
+  and `repositories/x.repository.ts`, mounted in `routes/index.ts`. Put
+  `requireAuth` on the router and take `businessId` from `req.auth`; never accept
+  a tenant from the request.
 - **Docker** → `docker-compose.yml` already isolates the `db` service, so
   frontend/backend services can be added beside it.
-- **CI** → `ci.yml` already runs `lint`, `typecheck` and `build` for the app and
-  the migrations on every push and pull request, with no database and no
-  secrets. Adding a module means adding a new script only if the existing gates
-  do not cover it.
-- **CD / deploy** → not implemented. `migration:up` is deliberately absent from
-  CI; it belongs in a deploy step, and it is safe to run repeatedly: it applies
-  only pending migrations and serialises concurrent runs with an advisory lock.
+- **CI** → `ci.yml` already runs `lint`, `typecheck`, `build` for the app and the
+  migrations, plus the database-backed test suite against a throwaway PostgreSQL
+  service container. Deployment is not implemented.

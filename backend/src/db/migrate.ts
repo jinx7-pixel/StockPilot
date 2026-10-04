@@ -20,29 +20,14 @@
 
 import { spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
-import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runner, type RunnerOption } from 'node-pg-migrate';
+import { runner } from 'node-pg-migrate';
 
 import { env } from '../config/env.js';
-import { buildClientConfig, describeTarget } from './config.js';
+import { describeTarget } from './config.js';
+import { buildRunnerConfig, MIGRATIONS_DIR, type MigrationDirection } from './migrateConfig.js';
 import { closePool, query } from './pool.js';
-
-/** `node-pg-migrate` does not re-export `MigrationDirection` from its entry point. */
-type MigrationDirection = RunnerOption['direction'];
-
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-/** `backend/` — the package root, and the cwd for npm scripts. */
-const BACKEND_ROOT = path.resolve(MODULE_DIR, '..', '..');
-
-/**
- * Absolute path to the migrations directory. An absolute `MIGRATIONS_DIR` is
- * used verbatim; a relative one resolves from the backend package root.
- */
-const MIGRATIONS_DIR = path.isAbsolute(env.migrations.dir)
-  ? env.migrations.dir
-  : path.resolve(BACKEND_ROOT, env.migrations.dir);
 
 /** Resolve the node-pg-migrate CLI entrypoint so `create` uses its own generator. */
 function resolveCliPath(): string {
@@ -50,43 +35,17 @@ function resolveCliPath(): string {
 }
 
 /**
- * Files that node-pg-migrate must not attempt to load as migrations.
+ * Whether a file in the migrations directory is a migration.
  *
- * node-pg-migrate matches this against the file's base name and wraps it as
- * `^<pattern>$` itself, so this must be a single expression with no top-level
- * alternation and no anchors of its own. Everything with an extension that is
- * not a migration language (`ts` / `js` / `sql`) is excluded, so a stray README
- * or config file in the directory cannot break a migration run.
- * Keep in sync with {@link isMigrationFile}.
+ * Mirrors the runner's `ignorePattern` in `migrateConfig.ts`, which cannot be
+ * reused here because it is a single anchored expression rather than a test.
  */
-const IGNORE_PATTERN = '.*\\.(config\\.[cm]?[jt]s|json|md|txt)$';
-
 function isMigrationFile(fileName: string): boolean {
   return (
     !fileName.startsWith('.') &&
-    !/.*\.(config\.[cm]?[jt]s|json)$/.test(fileName) &&
+    !/.*\.(config\.[cm]?[jt]s|json|md|txt)$/.test(fileName) &&
     /\.(ts|js|sql)$/.test(fileName)
   );
-}
-
-function baseRunnerConfig(direction: MigrationDirection): RunnerOption {
-  return {
-    databaseUrl: buildClientConfig(),
-    dir: MIGRATIONS_DIR,
-    direction,
-    migrationsTable: env.migrations.table,
-    migrationsSchema: env.migrations.schema,
-    schema: env.migrations.schema,
-    // Append-only: refuse to run when an out-of-order migration was added
-    // alongside already-applied ones.
-    checkOrder: true,
-    // All pending migrations commit together or not at all.
-    singleTransaction: true,
-    // Serialise concurrent runners (e.g. two deploys) instead of failing.
-    advisoryLockMode: 'wait',
-    ignorePattern: IGNORE_PATTERN,
-    verbose: false,
-  };
 }
 
 async function runMigrations(direction: MigrationDirection, count?: number): Promise<void> {
@@ -94,10 +53,9 @@ async function runMigrations(direction: MigrationDirection, count?: number): Pro
   console.log(`[migrate] schema : ${env.migrations.schema}`);
   console.log(`[migrate] dir    : ${MIGRATIONS_DIR}`);
 
-  const applied = await runner({
-    ...baseRunnerConfig(direction),
-    ...(count === undefined ? {} : { count }),
-  });
+  const applied = await runner(
+    buildRunnerConfig(direction, count === undefined ? {} : { count }),
+  );
 
   if (applied.length === 0) {
     console.log(`[migrate] no pending migrations to run (${direction}).`);

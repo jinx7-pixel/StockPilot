@@ -5,10 +5,11 @@
 #
 # Deliberately NOT in this workflow:
 #   - no deployment (CD comes in a later milestone)
-#   - no PostgreSQL service container and no `migration:up`
-#     None of the steps below connect to a database, so CI needs no
-#     credentials and no secrets. Add a service container when the project
-#     grows database-backed tests.
+#   - no `migration:up` against a shared or production database
+#
+# The `backend-tests` job does run against a PostgreSQL service container, but
+# only a throwaway one created for that job, seeded with CI-only credentials.
+# Nothing here needs a repository secret, and nothing touches a real database.
 #
 # Actions are pinned to exact release tags rather than floating major
 # versions, so a run is reproducible. Bump them deliberately.
@@ -122,3 +123,61 @@ jobs:
 
       - name: Lint migrations
         run: npm run lint:migrations
+
+  backend-tests:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    # The suite runs against a throwaway database, never a real one.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          # Ephemeral CI-only credentials. GitHub-hosted runners are discarded
+          # after the job, so these are not secrets — and must never be reused
+          # for a real environment.
+          POSTGRES_USER: stockpilot
+          POSTGRES_PASSWORD: stockpilot_ci_only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stockpilot -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: stockpilot
+      PGPASSWORD: stockpilot_ci_only
+      PGDATABASE: postgres
+      # The suite creates this database, applies the migrations to it, and
+      # truncates it between tests. `src/tests/setup.ts` points the connection
+      # at it and refuses to run if it matches the configured database.
+      TEST_PGDATABASE: stockpilot_test
+      NODE_ENV: test
+      # Plain HTTP on the runner, so the Secure cookie flag must be off.
+      COOKIE_SECURE: 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test

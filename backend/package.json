@@ -17,6 +17,7 @@
     "typecheck:migrations": "tsc -p ../database/tsconfig.json --noEmit",
     "lint": "eslint . && npm run lint:migrations",
     "lint:migrations": "cd ../database && eslint --config eslint.config.js .",
+    "test": "node --import tsx --import ./src/tests/setup.ts --test-concurrency=1 --test \"src/tests/**/*.test.ts\"",
     "migration:create": "tsx src/db/migrate.ts create",
     "migration:up": "tsx src/db/migrate.ts up",
     "migration:down": "tsx src/db/migrate.ts down",
@@ -24,13 +25,19 @@
     "migration:status": "tsx src/db/migrate.ts status"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
-    "pg": "^8.23.1"
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "pg": "^8.23.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.3",

@@ -6,5 +6,5 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["src/db/migrate.ts"]
+  "exclude": ["src/db/migrate.ts", "src/db/migrateConfig.ts", "src/tests/**"]
 }
