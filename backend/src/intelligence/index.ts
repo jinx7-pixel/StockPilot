@@ -25,3 +25,25 @@ export type {
   StockRiskFacts,
   StockRiskResult,
 } from './types.js';
+
+// ---- Demand Intelligence ---------------------------------------------------
+
+export {
+  assessDemand,
+  assessDemandConfidence,
+  classifyTrend,
+  classifyVariability,
+  coefficientOfVariation,
+  DEMAND_POLICY,
+  DEMAND_TRENDS,
+  DEMAND_VARIABILITY,
+} from './demand.js';
+
+export type {
+  DemandDay,
+  DemandEvidence,
+  DemandFacts,
+  DemandResult,
+  DemandTrend,
+  DemandVariability,
+} from './types.js';

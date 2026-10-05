@@ -15,6 +15,8 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { listDemandQuerySchema } from '../services/demand.schemas.js';
+import * as demandService from '../services/demand.service.js';
 import {
   listStockRiskQuerySchema,
   productIdParamSchema,
@@ -71,6 +73,42 @@ intelligenceRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const { productId } = parseOrThrow(productIdParamSchema, req.params);
     const result = await intelligenceService.getStockRisk(req.auth.businessId, productId);
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Demand Intelligence
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/demand
+ *
+ * Read-only historical description. It reports what already sold; it does not
+ * project, forecast or recommend a purchase, and there is no write route for it.
+ */
+intelligenceRouter.get(
+  '/demand',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listDemandQuerySchema, req.query);
+
+    const page = await demandService.listDemand(req.auth.businessId, query);
+
+    const { items, total, page: currentPage, limit, totalPages, trendCounts } = page;
+    res.status(200).json({
+      data: items,
+      meta: { total, page: currentPage, limit, totalPages },
+      trendCounts,
+    });
+  }),
+);
+
+/** GET /api/intelligence/demand/:productId */
+intelligenceRouter.get(
+  '/demand/:productId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { productId } = parseOrThrow(productIdParamSchema, req.params);
+    const result = await demandService.getDemand(req.auth.businessId, productId);
     res.status(200).json({ data: result });
   }),
 );

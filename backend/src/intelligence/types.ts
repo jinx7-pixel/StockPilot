@@ -120,3 +120,108 @@ export interface StockRiskResult {
   reason: string;
   evidence: StockRiskEvidence;
 }
+
+// ---------------------------------------------------------------------------
+// Demand Intelligence
+// ---------------------------------------------------------------------------
+
+/** Direction of historical demand, relative to the 30-day baseline. */
+export const DEMAND_TRENDS = [
+  'INCREASING',
+  'STABLE',
+  'DECREASING',
+  'INSUFFICIENT_DATA',
+] as const;
+
+export type DemandTrend = (typeof DEMAND_TRENDS)[number];
+
+/** How uneven the daily demand series is. */
+export const DEMAND_VARIABILITY = [
+  'LOW_VARIABILITY',
+  'MEDIUM_VARIABILITY',
+  'HIGH_VARIABILITY',
+  'INSUFFICIENT_DATA',
+] as const;
+
+export type DemandVariability = (typeof DEMAND_VARIABILITY)[number];
+
+/** One calendar day on which at least one unit was sold. */
+export interface DemandDay {
+  /** UTC calendar day, `YYYY-MM-DD`. */
+  date: string;
+  /** Exact decimal string; units may carry two decimal places. */
+  units: string;
+}
+
+/**
+ * Everything the demand engine needs about one product.
+ *
+ * Days with no sales are **omitted** rather than sent as zeros: the engine needs
+ * the window *length* to compute a correct mean and variance, and that comes
+ * from the policy, not from the number of rows. See `assessDemand` for why the
+ * omission is mathematically exact.
+ */
+export interface DemandFacts {
+  productId: string;
+
+  /**
+   * The last calendar day in the analysis window, `YYYY-MM-DD` (UTC).
+   *
+   * Supplied as a fact rather than read from a clock, which is what keeps the
+   * engine pure and its tests deterministic.
+   */
+  windowEndDate: string;
+
+  /** Days with at least one unit sold, ascending by date. */
+  days: readonly DemandDay[];
+
+  /** Days since the product's first ledger movement — its observable history. */
+  observableHistoryDays: string;
+}
+
+export interface DemandEvidence {
+  /** Length of the widest window the assessment draws on. */
+  salesWindowDays: number;
+  /** Distinct days with a sale inside the 30-day baseline window. */
+  activeSalesDays: string;
+  /** Units sold across the whole 90-day window. */
+  totalUnitsSold: string;
+  /**
+   * Days actually supplied as demand observations. Always less than
+   * `salesWindowDays` unless the product sold every single day.
+   */
+  demandObservationDays: number;
+  /** `activeDays90 / salesWindowDays`; how densely the window was covered. */
+  consistencyRatio: string;
+  /** True when there is enough evidence to classify trend and variability. */
+  hasSufficientEvidence: boolean;
+}
+
+export interface DemandResult {
+  productId: string;
+
+  unitsSold7d: string;
+  unitsSold30d: string;
+  unitsSold90d: string;
+
+  averageDailySales7d: string;
+  averageDailySales30d: string;
+  averageDailySales90d: string;
+
+  activeSalesDays7d: number;
+  activeSalesDays30d: number;
+  activeSalesDays90d: number;
+
+  trend: DemandTrend;
+  /** Signed change of the 7-day rate against the 30-day rate, or `null`. */
+  trendChangePercent: string | null;
+
+  variability: DemandVariability;
+  /** Standard deviation ÷ mean of the daily series, or `null`. */
+  coefficientOfVariation: string | null;
+
+  confidence: ConfidenceLevel;
+  /** Deterministic, human-readable explanation. Never generated. */
+  reason: string;
+  evidence: DemandEvidence;
+}

@@ -104,6 +104,56 @@ export function divide(a: bigint, b: bigint): bigint {
   return divideRounded(a * SCALE_FACTOR, b);
 }
 
+/**
+ * Square a scaled value. The result carries **twice** the scale, so
+ * `square(x) = x² / 10^SCALE` as a plain number.
+ */
+export function square(scaled: bigint): bigint {
+  return scaled * scaled;
+}
+
+/**
+ * Floor of the square root of a non-negative `bigint`, with no floating point
+ * anywhere in the computation.
+ *
+ * Demand variability needs a standard deviation, and `Math.sqrt` would put an
+ * IEEE-754 value inside an otherwise exact-decimal result — the last bit of the
+ * answer would depend on the platform. Newton's method converges on the integer
+ * part in a handful of iterations and returns the same value everywhere.
+ */
+export function integerSqrt(value: bigint): bigint {
+  if (value < 0n) throw new RangeError('Cannot take the square root of a negative value');
+  if (value < 2n) return value;
+
+  // Start above the root, then walk down. The first guess is a power of two at
+  // or above `value`, which is guaranteed to be an over-estimate.
+  let guess = 1n;
+  while (guess * guess <= value) guess <<= 1n;
+
+  let next = (guess + value / guess) / 2n;
+  while (next < guess) {
+    guess = next;
+    next = (guess + value / guess) / 2n;
+  }
+
+  return guess;
+}
+
+/** Subtract two scaled values, keeping the result scaled. May be negative. */
+export function subtract(a: bigint, b: bigint): bigint {
+  return a - b;
+}
+
+/**
+ * Compare two already-scaled values. Returns -1, 0 or 1.
+ *
+ * The scaled form of {@link compare}, for callers holding `bigint`s that must
+ * not be rendered to a string just to be compared.
+ */
+export function compareScaled(a: bigint, b: bigint): -1 | 0 | 1 {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** Compare two decimal strings. Returns -1, 0 or 1. */
 export function compare(a: string | number, b: string | number): -1 | 0 | 1 {
   const left = toScaled(a);
