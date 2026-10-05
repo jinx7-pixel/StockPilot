@@ -12,6 +12,7 @@ import { useAuth } from '../auth/authContext';
 const NAV = [
   { to: '/app', label: 'Overview', end: true },
   { to: '/app/analytics', label: 'Analytics', end: true },
+  { to: '/app/stock-risk', label: 'Stock risk', end: true },
   { to: '/app/inventory', label: 'Inventory', end: true },
   { to: '/app/sales', label: 'Sales', end: true },
   { to: '/app/purchase-orders', label: 'Purchase orders', end: true },
