@@ -33,11 +33,15 @@ export type StockStatus = (typeof STOCK_STATUSES)[number];
  *
  * `adjustment` deliberately needs no branch: it carries its own sign, so a
  * positive adjustment adds and a negative one subtracts.
+ *
+ * **Exported so analytics reuses this exact expression.** Stock has one
+ * definition in this codebase; a second, subtly different one would eventually
+ * make a dashboard disagree with the ledger.
  */
-const BALANCE_EXPRESSION = `CASE im.movement_type WHEN 'out' THEN -im.quantity ELSE im.quantity END`;
+export const BALANCE_EXPRESSION = `CASE im.movement_type WHEN 'out' THEN -im.quantity ELSE im.quantity END`;
 
-/** Same expression, aliased for aggregate queries that do not use the `im` prefix. */
-const BALANCE_EXPRESSION_PLAIN = `CASE movement_type WHEN 'out' THEN -quantity ELSE quantity END`;
+/** Same expression for aggregate queries that do not use the `im` alias. */
+export const BALANCE_EXPRESSION_PLAIN = `CASE movement_type WHEN 'out' THEN -quantity ELSE quantity END`;
 
 // ---------------------------------------------------------------------------
 // Locking

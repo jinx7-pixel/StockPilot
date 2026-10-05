@@ -15,6 +15,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, PublicOnlyRoute } from './auth/ProtectedRoute';
+import { AnalyticsPage } from './pages/AnalyticsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { InventoryDetailPage } from './pages/InventoryDetailPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -40,6 +41,7 @@ export function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/app" element={<WorkspaceLayout />}>
           <Route index element={<WorkspacePage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="inventory" element={<InventoryPage />} />

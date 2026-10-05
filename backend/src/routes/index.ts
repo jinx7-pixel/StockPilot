@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { analyticsRouter } from './analytics.routes.js';
 import { authRouter } from './auth.routes.js';
 import { categoryRouter } from './category.routes.js';
 import { healthRouter } from './health.routes.js';
@@ -25,3 +26,4 @@ apiRouter.use('/inventory', inventoryRouter);
 apiRouter.use('/sales', salesRouter);
 apiRouter.use('/suppliers', supplierRouter);
 apiRouter.use('/purchase-orders', purchaseOrderRouter);
+apiRouter.use('/analytics', analyticsRouter);

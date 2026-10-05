@@ -24,15 +24,15 @@ export function WorkspacePage() {
 
       <Card>
         <EmptyState
-          title="Nothing to show yet"
-          description="StockPilot currently covers accounts, the product catalog and the stock ledger. Suppliers, purchasing and risk insights arrive in later milestones."
+          title="Your workspace at a glance"
+          description="Record stock, sell, and buy — then let Analytics show you what is moving. Suppliers, purchasing and risk insights arrive in later milestones."
           action={
             <div className="flex gap-2">
+              <Link to="/app/analytics">
+                <PrimaryButton>View analytics</PrimaryButton>
+              </Link>
               <Link to="/app/inventory">
                 <PrimaryButton>Go to inventory</PrimaryButton>
-              </Link>
-              <Link to="/app/products">
-                <PrimaryButton>Manage products</PrimaryButton>
               </Link>
             </div>
           }
