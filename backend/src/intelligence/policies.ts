@@ -288,3 +288,65 @@ export const OVERSTOCK_PRIORITY = {
 } as const;
 
 export type OverstockPriority = typeof OVERSTOCK_PRIORITY;
+
+// ---------------------------------------------------------------------------
+// Slow / Dead Stock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Slow / Dead Stock Detection — v1 policy.
+ *
+ * Three distinct concepts that must not be collapsed into one another:
+ * `OVERSTOCK` is about too many days of cover, `SLOW` is about demand that
+ * arrives on too few days, and `DEAD` is inventory held against no observed
+ * sale at all. A fast-selling product can be overstocked; a slow product can
+ * be comfortably covered. Merging them would hide both.
+ */
+export const SLOW_DEAD_POLICY = {
+  /**
+   * The widest demand window the classification is based on.
+   *
+   * Borrowed from the Demand Engine rather than restated, so a window change
+   * there moves this rule with it instead of silently leaving them disagreeing.
+   */
+  analysisWindowDays: DEMAND_POLICY.longDays,
+
+  /**
+   * Observable history required before a verdict is given at all.
+   *
+   * Without it, a product created last week that has never sold is "dead" —
+   * which is true of every new product ever made. Zero sales only means dead
+   * after the product has had a real chance to sell.
+   */
+  minimumObservableDays: 30,
+
+  /**
+   * Active sales days at or below this are `SLOW`.
+   *
+   * Deliberately the *only* threshold in the rule. A units-per-day or revenue
+   * cut-off would punish low-value high-frequency items while waving through a
+   * single large sale; frequency of demand is what "slow" actually means.
+   */
+  slowMaxActiveSalesDays: 10,
+
+  /** Guard so a runaway catalog cannot exhaust memory. */
+  maxProducts: 10_000,
+} as const;
+
+export type SlowDeadPolicy = typeof SLOW_DEAD_POLICY;
+
+/**
+ * Operational priority for slow and dead stock.
+ *
+ * Kept independent of the Stock Risk, Overstock and Reorder scales: sitting on
+ * unsellable inventory is a different problem from running out of sellable
+ * inventory, and sharing a scale would make one of them unreadable.
+ */
+export const SLOW_DEAD_PRIORITY = {
+  DEAD: 80,
+  SLOW: 50,
+  INSUFFICIENT_DATA: 20,
+  NORMAL: 0,
+} as const;
+
+export type SlowDeadPriority = typeof SLOW_DEAD_PRIORITY;

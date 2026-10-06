@@ -16,6 +16,7 @@ const NAV = [
   { to: '/app/demand', label: 'Demand', end: true },
   { to: '/app/reorder', label: 'Reorder', end: true },
   { to: '/app/overstock', label: 'Overstock', end: true },
+  { to: '/app/slow-dead', label: 'Slow / Dead Stock', end: true },
   { to: '/app/inventory', label: 'Inventory', end: true },
   { to: '/app/sales', label: 'Sales', end: true },
   { to: '/app/purchase-orders', label: 'Purchase orders', end: true },

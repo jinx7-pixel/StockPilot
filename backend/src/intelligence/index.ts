@@ -94,3 +94,22 @@ export {
   calculateReorderPoint,
   calculateSafetyStock,
 } from './calculations.js';
+
+// ---- Slow / Dead Stock Detection -------------------------------------------
+
+export {
+  assessSlowDead,
+  classifySlowDead,
+  SLOW_DEAD_POLICY,
+  SLOW_DEAD_PRIORITY,
+  SLOW_DEAD_STATUSES,
+} from './slowDead.js';
+
+export type { SlowDeadPriority } from './policies.js';
+
+export type {
+  SlowDeadEvidence,
+  SlowDeadFacts,
+  SlowDeadResult,
+  SlowDeadStatus,
+} from './types.js';

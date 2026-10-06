@@ -25,6 +25,8 @@ import { listOverstockQuerySchema } from '../services/overstock.schemas.js';
 import * as overstockService from '../services/overstock.service.js';
 import { listReorderQuerySchema } from '../services/reorder.schemas.js';
 import * as reorderService from '../services/reorder.service.js';
+import { listSlowDeadQuerySchema } from '../services/slowDead.schemas.js';
+import * as slowDeadService from '../services/slowDead.service.js';
 import * as intelligenceService from '../services/intelligence.service.js';
 import type { AuthedRequest } from '../types/express.js';
 
@@ -190,6 +192,44 @@ intelligenceRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const { productId } = parseOrThrow(productIdParamSchema, req.params);
     const result = await overstockService.getOverstock(req.auth.businessId, productId);
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Slow / Dead Stock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/slow-dead
+ *
+ * Read-only classification. It identifies inventory that is not moving and
+ * nothing more: no markdown, no supplier return, no stock adjustment, no
+ * recommendation and no action. Those belong to later recommendation modules,
+ * and naming one here would make an assessment look like advice.
+ */
+intelligenceRouter.get(
+  '/slow-dead',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listSlowDeadQuerySchema, req.query);
+
+    const page = await slowDeadService.listSlowDead(req.auth.businessId, query);
+
+    const { items, total, page: currentPage, limit, totalPages, statusCounts } = page;
+    res.status(200).json({
+      data: items,
+      meta: { total, page: currentPage, limit, totalPages },
+      statusCounts,
+    });
+  }),
+);
+
+/** GET /api/intelligence/slow-dead/:productId */
+intelligenceRouter.get(
+  '/slow-dead/:productId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { productId } = parseOrThrow(productIdParamSchema, req.params);
+    const result = await slowDeadService.getSlowDead(req.auth.businessId, productId);
     res.status(200).json({ data: result });
   }),
 );

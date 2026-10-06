@@ -436,3 +436,82 @@ export interface OverstockResult {
   reason: string;
   evidence: OverstockEvidence;
 }
+
+// ---------------------------------------------------------------------------
+// Slow / Dead Stock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Exactly four states, and no more.
+ *
+ * `NORMAL` means "this product is not a slow- or dead-stock problem", which is
+ * deliberately inclusive: a product with no inventory at all is normal here,
+ * because the module exists to find problematic inventory *currently held*.
+ */
+export const SLOW_DEAD_STATUSES = ['DEAD', 'SLOW', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
+
+export type SlowDeadStatus = (typeof SLOW_DEAD_STATUSES)[number];
+
+/**
+ * Everything the slow/dead engine needs about one product.
+ *
+ * The 90-day demand figures come from the Demand Intelligence Engine's query and
+ * rate, and stock comes from the ledger. Neither is derived inside the engine.
+ */
+export interface SlowDeadFacts {
+  productId: string;
+  isActive: boolean;
+
+  /** Sum of the inventory ledger — the same balance every other engine reads. */
+  currentStock: string;
+
+  /** Units sold across the whole analysis window. */
+  unitsSold90d: string;
+  /** Distinct days with a sale across the analysis window. */
+  activeSalesDays90d: number;
+  /** Demand rate across the analysis window, from the Demand Intelligence Engine. */
+  averageDailySales90d: string;
+
+  /** Days since the product's first ledger movement. */
+  observableHistoryDays: string;
+}
+
+export interface SlowDeadEvidence {
+  /** Length of the demand window the classification is based on. */
+  analysisWindowDays: number;
+  /** Observable history required before any verdict is given. */
+  minimumObservableDays: number;
+  /** Active sales days at or below which the product is SLOW. */
+  slowMaxActiveSalesDays: number;
+
+  /** Whether the product has held stock, which every actionable status requires. */
+  holdsInventory: boolean;
+  /** True when the product has had long enough to have sold at all. */
+  hasSufficientHistory: boolean;
+  /**
+   * The ordered rule that decided the status, for example
+   * `no sales in the analysis window`. Makes the verdict auditable.
+   */
+  classificationBasis: string;
+}
+
+export interface SlowDeadResult {
+  productId: string;
+
+  status: SlowDeadStatus;
+  /** Operational priority for this status; separate from every other scale. */
+  priority: number;
+
+  currentStock: string;
+  unitsSold90d: string;
+  activeSalesDays90d: number;
+  averageDailySales90d: string;
+
+  /** Calendar length of the demand window the classification is based on. */
+  analysisWindowDays: number;
+
+  confidence: ConfidenceLevel;
+  /** Deterministic, human-readable explanation. Never generated. */
+  reason: string;
+  evidence: SlowDeadEvidence;
+}
