@@ -69,6 +69,26 @@ export type {
   ReorderResult,
 } from './types.js';
 
+// ---- Overstock Detection ---------------------------------------------------
+
+export {
+  assessOverstock,
+  calculateDaysOfStock,
+  classifyOverstock,
+  OVERSTOCK_POLICY,
+  OVERSTOCK_PRIORITY,
+  OVERSTOCK_STATUSES,
+} from './overstock.js';
+
+export type { OverstockPriority } from './policies.js';
+
+export type {
+  OverstockEvidence,
+  OverstockFacts,
+  OverstockResult,
+  OverstockStatus,
+} from './types.js';
+
 export {
   addDays,
   calculateReorderPoint,

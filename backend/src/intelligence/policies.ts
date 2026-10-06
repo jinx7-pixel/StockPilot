@@ -238,3 +238,53 @@ export const REORDER_POLICY = {
 } as const;
 
 export type ReorderPolicy = typeof REORDER_POLICY;
+
+// ---------------------------------------------------------------------------
+// Overstock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Overstock Detection — v1 policy.
+ *
+ * The threshold is deliberately a *coverage* rule rather than a stock level:
+ * 400 units is comfortable cover for a product selling 2 a day and absurd cover
+ * for one selling 40. Only days of cover compares like with like across a
+ * catalog of wildly different products.
+ */
+export const OVERSTOCK_POLICY = {
+  /** Days of cover at or above this is OVERSTOCK. Exactly 60 qualifies. */
+  thresholdDays: 60,
+
+  evidence: {
+    /**
+     * Distinct days with a sale in the 30-day window.
+     *
+     * This is the gate that does the real work. Without it a product that sold
+     * once in thirty days divides a large stock by a near-zero rate and looks
+     * like it holds years of cover — the smallest denominator always produces the
+     * most alarming ratio, which is exactly backwards.
+     */
+    minimumActiveSalesDays30d: 3,
+
+    /** Units sold in the 30-day window, for the same reason. */
+    minimumUnitsSold30d: '5.00',
+  },
+
+  /** Guard so a runaway catalog cannot exhaust memory. */
+  maxProducts: 10_000,
+} as const;
+
+export type OverstockPolicy = typeof OVERSTOCK_POLICY;
+
+/**
+ * Operational priority for overstocked stock, kept separate from the Stock Risk
+ * priority table: carrying too much and running out are different problems with
+ * different remedies, and merging them would make one of the two unreadable.
+ */
+export const OVERSTOCK_PRIORITY = {
+  OVERSTOCK: 70,
+  INSUFFICIENT_DATA: 20,
+  NORMAL: 0,
+} as const;
+
+export type OverstockPriority = typeof OVERSTOCK_PRIORITY;

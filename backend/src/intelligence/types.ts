@@ -343,3 +343,96 @@ export interface ReorderResult {
   reason: string;
   evidence: ReorderEvidence;
 }
+
+// ---------------------------------------------------------------------------
+// Overstock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Exactly three states, and no others.
+ *
+ * `NORMAL` deliberately does not mean "fine" — it means "below the overstock
+ * threshold with enough evidence to say so". A product that cannot be judged
+ * says so rather than defaulting to normal.
+ */
+export const OVERSTOCK_STATUSES = ['OVERSTOCK', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
+
+export type OverstockStatus = (typeof OVERSTOCK_STATUSES)[number];
+
+/**
+ * Everything the overstock engine needs about one product.
+ *
+ * The demand rate arrives from the Demand Intelligence Engine rather than being
+ * recomputed, and current stock arrives from the ledger. Neither figure is
+ * derived inside the engine.
+ */
+export interface OverstockFacts {
+  productId: string;
+  isActive: boolean;
+
+  /** Sum of the inventory ledger — the same balance every other engine reads. */
+  currentStock: string;
+
+  /** Units sold inside the 30-day baseline window. */
+  unitsSold30d: string;
+  /** Distinct days with a sale inside the 30-day baseline window. */
+  activeSalesDays30d: number;
+  /** Demand rate over the 30-day baseline, from the Demand Intelligence Engine. */
+  averageDailySales30d: string;
+
+  /** Wider-window context. Reported, never used to classify. */
+  unitsSold90d: string;
+  activeSalesDays90d: number;
+  averageDailySales90d: string;
+
+  /** Days since the product's first ledger movement. */
+  observableHistoryDays: string;
+}
+
+export interface OverstockEvidence {
+  analysisWindowDays: number;
+  /** Units sold across the wider window, for context on the 30-day figure. */
+  unitsSold90d: string;
+  activeSalesDays90d: number;
+  observableHistoryDays: string;
+
+  /** The minimum each gate requires, so a reader can check the verdict by hand. */
+  minimumActiveSalesDays30d: number;
+  minimumUnitsSold30d: string;
+  thresholdDays: number;
+
+  /** Which gates were not met. Empty when the product could be assessed. */
+  unmetEvidenceGates: string[];
+  hasSufficientEvidence: boolean;
+}
+
+export interface OverstockResult {
+  productId: string;
+
+  status: OverstockStatus;
+  /** Operational priority for this status; separate from the Stock Risk table. */
+  priority: number;
+
+  currentStock: string;
+  averageDailySales30d: string;
+  unitsSold30d: string;
+  activeSalesDays30d: number;
+
+  /** Calendar length of the window the classification is based on. */
+  analysisWindowDays: number;
+
+  /**
+   * Days of cover at the 30-day rate, or `null` when the rate is not positive.
+   * Never `NaN` and never infinite: a null is the honest answer when there is
+   * no rate to divide by.
+   */
+  daysOfStock: string | null;
+
+  /** The coverage figure at or above which this product is OVERSTOCK. */
+  thresholdDays: number;
+
+  confidence: ConfidenceLevel;
+  /** Deterministic, human-readable explanation. Never generated. */
+  reason: string;
+  evidence: OverstockEvidence;
+}

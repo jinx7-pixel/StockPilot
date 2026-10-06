@@ -21,6 +21,8 @@ import {
   listStockRiskQuerySchema,
   productIdParamSchema,
 } from '../services/intelligence.schemas.js';
+import { listOverstockQuerySchema } from '../services/overstock.schemas.js';
+import * as overstockService from '../services/overstock.service.js';
 import { listReorderQuerySchema } from '../services/reorder.schemas.js';
 import * as reorderService from '../services/reorder.service.js';
 import * as intelligenceService from '../services/intelligence.service.js';
@@ -150,6 +152,44 @@ intelligenceRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const { productId } = parseOrThrow(productIdParamSchema, req.params);
     const result = await reorderService.getReorder(req.auth.businessId, productId);
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Overstock Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/overstock
+ *
+ * Read-only classification. It reports stock that exceeds its own demand and
+ * nothing more: no markdown, no supplier return, no recommendation and no
+ * action. Deciding what to do about excess stock is a later module, and naming
+ * one here would make an assessment look like advice.
+ */
+intelligenceRouter.get(
+  '/overstock',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listOverstockQuerySchema, req.query);
+
+    const page = await overstockService.listOverstock(req.auth.businessId, query);
+
+    const { items, total, page: currentPage, limit, totalPages, statusCounts } = page;
+    res.status(200).json({
+      data: items,
+      meta: { total, page: currentPage, limit, totalPages },
+      statusCounts,
+    });
+  }),
+);
+
+/** GET /api/intelligence/overstock/:productId */
+intelligenceRouter.get(
+  '/overstock/:productId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { productId } = parseOrThrow(productIdParamSchema, req.params);
+    const result = await overstockService.getOverstock(req.auth.businessId, productId);
     res.status(200).json({ data: result });
   }),
 );
