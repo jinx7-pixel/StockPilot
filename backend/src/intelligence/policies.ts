@@ -178,3 +178,63 @@ export const DEMAND_POLICY = {
 } as const;
 
 export type DemandPolicy = typeof DEMAND_POLICY;
+
+// ---------------------------------------------------------------------------
+// Reorder Engine
+// ---------------------------------------------------------------------------
+
+/**
+ * Reorder Engine — v1 policy.
+ *
+ * The decision rule itself is deliberately *not* a tunable threshold: "net
+ * available stock is below the reorder point" is the definition of needing a
+ * reorder, and a policy knob for it would let the definition drift. What lives
+ * here is everything that is genuinely a judgement — how much evidence is
+ * needed, and when a lead time is too strange to be reassuring.
+ */
+export const REORDER_POLICY = {
+  /** Below this much observable history, nothing about replenishment is assessable. */
+  minimumObservableDays: 14,
+
+  /**
+   * Distinct 30-day sales days required before a reorder point is calculated.
+   *
+   * Units alone are not enough evidence. Three units sold on one day is a single
+   * observation of demand; sizing a reorder buffer from it would plan around a
+   * coincidence. Matches the Demand Engine's own floor for "assessable at all".
+   */
+  minimumActiveDays30d: 2,
+
+  leadTime: {
+    /** Completed purchase orders needed before a lead time earns high confidence. */
+    highConfidenceMinimumSamples: 3,
+    /** …and before it earns medium confidence. */
+    mediumConfidenceMinimumSamples: 2,
+
+    /**
+     * A median lead time at or beyond this is unusually long.
+     *
+     * It stays **usable** — an order genuinely takes this long, and hiding it
+     * would understate the reorder point. It only prevents the lead time from
+     * being the thing that makes confidence high on its own.
+     */
+    unusuallyLongDays: '30.00',
+
+    /**
+     * A max-minus-min spread beyond this means the supplier is inconsistent.
+     *
+     * Also usable, also confidence-capping. A median that keeps moving is a
+     * planning input, not a fact to be comfortable with.
+     */
+    unusuallyVariableSpreadDays: '14.00',
+  },
+
+  /**
+   * Guard so a runaway catalog cannot exhaust memory.
+   *
+   * Shared with the other engines; see the caveat in each list endpoint.
+   */
+  maxProducts: 10_000,
+} as const;
+
+export type ReorderPolicy = typeof REORDER_POLICY;

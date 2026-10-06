@@ -31,6 +31,8 @@ export type {
 export {
   assessDemand,
   assessDemandConfidence,
+  assessDemandConfidenceFromTotals,
+  averageDailyRate,
   classifyTrend,
   classifyVariability,
   coefficientOfVariation,
@@ -47,3 +49,28 @@ export type {
   DemandTrend,
   DemandVariability,
 } from './types.js';
+
+export type { DemandConfidenceTotals } from './demand.js';
+
+// ---- Reorder Engine --------------------------------------------------------
+
+export {
+  assessReorder,
+  assessReorderConfidence,
+  classifyReorder,
+  REORDER_DECISIONS,
+  REORDER_POLICY,
+} from './reorder.js';
+
+export type {
+  ReorderDecision,
+  ReorderEvidence,
+  ReorderFacts,
+  ReorderResult,
+} from './types.js';
+
+export {
+  addDays,
+  calculateReorderPoint,
+  calculateSafetyStock,
+} from './calculations.js';

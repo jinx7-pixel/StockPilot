@@ -16,7 +16,8 @@
  * stock write, no purchase order, no movement.
  */
 
-import { compare, divide, fromScaled, isPositive, median, multiply, toScaled } from './decimal.js';
+import { addDays, calculateReorderPoint, calculateSafetyStock } from './calculations.js';
+import { compare, divide, fromScaled, isPositive, median, toScaled } from './decimal.js';
 import { RISK_PRIORITY, STOCK_RISK_POLICY } from './policies.js';
 import {
   CONFIDENCE_LEVELS,
@@ -125,10 +126,6 @@ export function classifyRisk(
   return 'HEALTHY';
 }
 
-function addDays(scaled: bigint, days: number): bigint {
-  return scaled + toScaled(days);
-}
-
 // ---------------------------------------------------------------------------
 // Explanation
 // ---------------------------------------------------------------------------
@@ -229,26 +226,20 @@ export function assessStockRisk(facts: StockRiskFacts): StockRiskResult {
   const effectiveLeadTimeDays = median(facts.leadTimeSamples);
   const leadTimeSampleCount = facts.leadTimeSamples.length;
 
-  // safetyStock = averageDailySales × safetyStockDays
+  // safetyStock = averageDailySales × safetyStockDays, and
+  // reorderPoint = averageDailySales × (leadTime + safetyStockDays).
+  // Both are the shared replenishment formulas, so this engine and the Reorder
+  // Engine can never report different numbers for the same product.
   const safetyStock = hasDemand
-    ? fromScaled(
-        multiply(
-          toScaled(facts.averageDailySales),
-          toScaled(STOCK_RISK_POLICY.safetyStockDays),
-        ),
-        2,
-      )
+    ? calculateSafetyStock(facts.averageDailySales, STOCK_RISK_POLICY.safetyStockDays)
     : null;
 
-  // reorderPoint = averageDailySales × (leadTime + safetyStockDays)
   const reorderPoint =
     hasDemand && effectiveLeadTimeDays !== null
-      ? fromScaled(
-          multiply(
-            toScaled(facts.averageDailySales),
-            addDays(toScaled(effectiveLeadTimeDays), STOCK_RISK_POLICY.safetyStockDays),
-          ),
-          2,
+      ? calculateReorderPoint(
+          facts.averageDailySales,
+          effectiveLeadTimeDays,
+          STOCK_RISK_POLICY.safetyStockDays,
         )
       : null;
 

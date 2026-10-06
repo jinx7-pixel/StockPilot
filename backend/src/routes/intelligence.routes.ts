@@ -21,6 +21,8 @@ import {
   listStockRiskQuerySchema,
   productIdParamSchema,
 } from '../services/intelligence.schemas.js';
+import { listReorderQuerySchema } from '../services/reorder.schemas.js';
+import * as reorderService from '../services/reorder.service.js';
 import * as intelligenceService from '../services/intelligence.service.js';
 import type { AuthedRequest } from '../types/express.js';
 
@@ -109,6 +111,45 @@ intelligenceRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const { productId } = parseOrThrow(productIdParamSchema, req.params);
     const result = await demandService.getDemand(req.auth.businessId, productId);
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Reorder Engine
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/reorder
+ *
+ * A recommendation only. This is the one route in the feature that sounds like
+ * an action, and it deliberately has no counterpart: there is no POST, no
+ * "place order", and no approval step. Deciding what to reorder is not the same
+ * as ordering it, and collapsing the two would make a read-only assessment look
+ * like a purchase.
+ */
+intelligenceRouter.get(
+  '/reorder',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listReorderQuerySchema, req.query);
+
+    const page = await reorderService.listReorder(req.auth.businessId, query);
+
+    const { items, total, page: currentPage, limit, totalPages, decisionCounts } = page;
+    res.status(200).json({
+      data: items,
+      meta: { total, page: currentPage, limit, totalPages },
+      decisionCounts,
+    });
+  }),
+);
+
+/** GET /api/intelligence/reorder/:productId */
+intelligenceRouter.get(
+  '/reorder/:productId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { productId } = parseOrThrow(productIdParamSchema, req.params);
+    const result = await reorderService.getReorder(req.auth.businessId, productId);
     res.status(200).json({ data: result });
   }),
 );

@@ -121,6 +121,18 @@ function dailyRate(units: bigint, windowDays: number): bigint {
 }
 
 /**
+ * The demand rate for one window, as a rendered decimal string.
+ *
+ * The shared seam between the Demand Engine and the Reorder Engine: both size
+ * their buffers from the same rate, and both therefore get it from this one
+ * function. The Reorder Engine reads its units from a 30-day aggregate and never
+ * needs the daily series.
+ */
+export function averageDailyRate(units: string, windowDays: number): string {
+  return fromScaled(dailyRate(toScaled(units), windowDays), 4);
+}
+
+/**
  * Coefficient of variation of the daily series: standard deviation ÷ mean.
  *
  * Uses the population variance over the full window, because the 90 days are a
@@ -271,6 +283,53 @@ export function assessDemandConfidence(
   }
 
   return 'LOW';
+}
+
+/** The window aggregates the confidence ladder reads, in a form a caller can build. */
+export interface DemandConfidenceTotals {
+  /** Days since the product's first ledger movement. */
+  observableHistoryDays: string;
+  /** Distinct days with a sale inside the 30-day baseline window. */
+  activeDays30: number;
+  /** Distinct days with a sale inside the whole window. */
+  activeDays90: number;
+  /** Units sold inside the 30-day baseline window. */
+  unitsSold30: string;
+  /** Length of the widest window; the consistency ratio's denominator. */
+  longWindowDays: number;
+}
+
+/**
+ * The demand confidence ladder, for a caller that already holds window totals
+ * rather than a daily series.
+ *
+ * The Reorder Engine needs a rate and a confidence but no trend and no
+ * coefficient of variation, and its projection deliberately carries aggregates
+ * instead of ninety rows per product. This is the same ladder
+ * {@link assessDemandConfidence} runs — it builds the same internal totals and
+ * calls it — so there is exactly one definition of what counts as well-evidenced
+ * demand in this codebase.
+ */
+export function assessDemandConfidenceFromTotals(
+  totals: DemandConfidenceTotals,
+): ConfidenceLevel {
+  const units30 = toScaled(totals.unitsSold30);
+
+  return assessDemandConfidence(
+    {
+      productId: '',
+      windowEndDate: '',
+      days: [],
+      observableHistoryDays: totals.observableHistoryDays,
+    },
+    {
+      recent: { units: 0n, activeDays: totals.activeDays30 },
+      baseline: { units: units30, activeDays: totals.activeDays30 },
+      long: { units: units30, activeDays: totals.activeDays90 },
+      series: [],
+    },
+    divide(toScaled(totals.activeDays90), toScaled(totals.longWindowDays)),
+  );
 }
 
 /** Render a percentage for a sentence: `40.00` reads as `40`, `33.33` as `33.3`. */

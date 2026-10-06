@@ -25,6 +25,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ReorderPage } from './pages/ReorderPage';
 import { SaleDetailPage } from './pages/SaleDetailPage';
 import { SalesPage } from './pages/SalesPage';
 import { StockRiskPage } from './pages/StockRiskPage';
@@ -46,6 +47,7 @@ export function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="stock-risk" element={<StockRiskPage />} />
           <Route path="demand" element={<DemandPage />} />
+          <Route path="reorder" element={<ReorderPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="inventory" element={<InventoryPage />} />

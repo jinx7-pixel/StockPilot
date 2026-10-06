@@ -14,6 +14,7 @@ const NAV = [
   { to: '/app/analytics', label: 'Analytics', end: true },
   { to: '/app/stock-risk', label: 'Stock risk', end: true },
   { to: '/app/demand', label: 'Demand', end: true },
+  { to: '/app/reorder', label: 'Reorder', end: true },
   { to: '/app/inventory', label: 'Inventory', end: true },
   { to: '/app/sales', label: 'Sales', end: true },
   { to: '/app/purchase-orders', label: 'Purchase orders', end: true },

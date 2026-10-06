@@ -144,6 +144,11 @@ export function subtract(a: bigint, b: bigint): bigint {
   return a - b;
 }
 
+/** Add two scaled values, keeping the result scaled. */
+export function add(a: bigint, b: bigint): bigint {
+  return a + b;
+}
+
 /**
  * Compare two already-scaled values. Returns -1, 0 or 1.
  *

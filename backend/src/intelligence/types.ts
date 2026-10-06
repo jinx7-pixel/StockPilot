@@ -225,3 +225,121 @@ export interface DemandResult {
   reason: string;
   evidence: DemandEvidence;
 }
+
+// ---------------------------------------------------------------------------
+// Reorder Engine
+// ---------------------------------------------------------------------------
+
+/**
+ * The operational decision. Deliberately four states and no more: anything that
+ * cannot be decided is `INSUFFICIENT_DATA` rather than a guess, and a corrupt
+ * ledger is `DATA_ERROR` rather than a reorder.
+ */
+export const REORDER_DECISIONS = [
+  'REORDER',
+  'NO_REORDER',
+  'INSUFFICIENT_DATA',
+  'DATA_ERROR',
+] as const;
+
+export type ReorderDecision = (typeof REORDER_DECISIONS)[number];
+
+/**
+ * Everything the reorder engine needs about one product.
+ *
+ * Figures from the ledger and from completed purchase orders arrive as exact
+ * decimal strings. The demand rate is supplied rather than recomputed here: the
+ * Demand Intelligence Engine already owns that calculation, and redoing it would
+ * be exactly the duplication this architecture avoids.
+ */
+export interface ReorderFacts {
+  productId: string;
+  isActive: boolean;
+
+  /** Sum of the inventory ledger, exactly as the Stock Risk Engine reads it. */
+  currentStock: string;
+
+  /**
+   * Ordered but not yet received, across purchase orders in `ordered` or
+   * `partially_received` state. Draft, received and cancelled orders contribute
+   * nothing: a draft is not a commitment and a received order is already in the
+   * ledger.
+   */
+  onOrderQuantity: string;
+
+  /** Units sold inside the 30-day baseline window. */
+  unitsSold30d: string;
+
+  /**
+   * Distinct days with a sale inside the 30-day baseline window.
+   *
+   * Distinct from `unitsSold30d`: three units sold on a single day is one
+   * observation of demand, not three, and planning a reorder on it would be
+   * building a buffer around a coincidence.
+   */
+  activeSalesDays30d: number;
+
+  /** Demand rate over the 30-day baseline, from the Demand Intelligence Engine. */
+  averageDailySales30d: string;
+
+  /** Days since the product's first ledger movement. */
+  observableHistoryDays: string;
+
+  /**
+   * Lead times in days, from **fully received** purchase orders carrying both
+   * timestamps. Empty when there is no such evidence.
+   */
+  leadTimeSamples: readonly string[];
+}
+
+export interface ReorderEvidence {
+  /** Current stock plus everything already on order. */
+  netAvailable: string;
+  /** Units already on order, reported separately so the arithmetic is visible. */
+  onOrderQuantity: string;
+  /** Completed purchase orders behind the median lead time. */
+  leadTimeSamples: number;
+  /** Max minus min lead time, or `null` with fewer than two samples. */
+  leadTimeSpreadDays: string | null;
+  /** Whether the median lead time is usable at all. */
+  hasLeadTimeEvidence: boolean;
+  /** Whether the median is long enough, or spread wide enough, to cap confidence. */
+  leadTimeUnreliable: boolean;
+  /** Units sold in the 30-day baseline window. */
+  unitsSold30d: string;
+  /** Distinct days with a sale in the 30-day baseline window. */
+  activeSalesDays30d: number;
+  /** Days of lead-time cover plus the safety buffer. */
+  safetyStockDays: number;
+}
+
+export interface ReorderResult {
+  productId: string;
+
+  currentStock: string;
+  onOrderQuantity: string;
+  netAvailable: string;
+
+  /** `null` when there is no demand evidence to size a buffer from. */
+  safetyStock: string | null;
+  /** `null` when demand or lead-time evidence is missing. */
+  reorderPoint: string | null;
+  /**
+   * `max(0, reorderPoint - netAvailable)`, or `null` when the reorder point
+   * cannot be computed.
+   */
+  recommendedQuantity: string | null;
+
+  /** Whether the recommendation is actionable. Never `true` without a quantity. */
+  reorder: boolean;
+  decision: ReorderDecision;
+
+  /** Median of the completed-order lead times, or `null`. */
+  effectiveLeadTimeDays: string | null;
+  safetyStockDays: number;
+
+  confidence: ConfidenceLevel;
+  /** Deterministic, human-readable explanation. Never generated. */
+  reason: string;
+  evidence: ReorderEvidence;
+}
