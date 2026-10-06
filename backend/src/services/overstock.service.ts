@@ -10,7 +10,7 @@
  * This service deliberately has **no repository of its own**. The facts it needs
  * — stock on hand from the ledger, and the 30- and 90-day demand aggregates
  * over the same UTC window the Demand Intelligence Engine uses — are exactly
- * what `reorder.repository` already gathers in a single parameterised query. The
+ * what `demandFacts.repository` already gathers in a single parameterised query. The
  * over-order and lead-time columns come along in that same row at no extra cost,
  * and this module ignores them.
  *
@@ -33,10 +33,10 @@ import {
 } from '../intelligence/index.js';
 import { assessOverstock } from '../intelligence/overstock.js';
 import {
-  getReorderFacts,
-  listReorderFacts,
-  type ReorderFactRow,
-} from '../repositories/reorder.repository.js';
+  getProductDemandFact,
+  listProductDemandFacts,
+  type ProductDemandFactRow,
+} from '../repositories/demandFacts.repository.js';
 import type { ListOverstockQuery } from './overstock.schemas.js';
 
 export interface OverstockEntry extends OverstockResult {
@@ -63,7 +63,7 @@ export interface OverstockPage {
  * calculations, through the same seams the Reorder Engine uses. Nothing is
  * re-derived here.
  */
-function assess(row: ReorderFactRow): OverstockResult {
+function assess(row: ProductDemandFactRow): OverstockResult {
   const observableHistoryDays = String(row.observable_history_days);
 
   const facts: OverstockFacts = {
@@ -90,7 +90,7 @@ function assess(row: ReorderFactRow): OverstockResult {
   return assessOverstock(facts, { confidence });
 }
 
-function toEntry(row: ReorderFactRow, result: OverstockResult): OverstockEntry {
+function toEntry(row: ProductDemandFactRow, result: OverstockResult): OverstockEntry {
   return {
     ...result,
     sku: row.sku,
@@ -116,7 +116,7 @@ export async function listOverstock(
 ): Promise<OverstockPage> {
   // One wide read, classify, then filter and paginate in memory. Bounded by the
   // policy's product guard so a runaway catalog cannot exhaust memory.
-  const rows = await listReorderFacts(businessId, {
+  const rows = await listProductDemandFacts(businessId, {
     ...(query.search !== undefined ? { search: query.search } : {}),
     ...(query.categoryId !== undefined ? { categoryId: query.categoryId } : {}),
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
@@ -156,7 +156,7 @@ export async function getOverstock(
   businessId: string,
   productId: string,
 ): Promise<OverstockEntry> {
-  const row = await getReorderFacts(businessId, productId);
+  const row = await getProductDemandFact(businessId, productId);
   if (!row) throw new NotFoundError('Product not found.');
 
   return toEntry(row, assess(row));

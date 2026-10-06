@@ -27,6 +27,8 @@ import { listReorderQuerySchema } from '../services/reorder.schemas.js';
 import * as reorderService from '../services/reorder.service.js';
 import { listSlowDeadQuerySchema } from '../services/slowDead.schemas.js';
 import * as slowDeadService from '../services/slowDead.service.js';
+import { listSuppliersQuerySchema, supplierIdParamSchema } from '../services/supplierIntelligence.schemas.js';
+import * as supplierIntelligenceService from '../services/supplierIntelligence.service.js';
 import * as intelligenceService from '../services/intelligence.service.js';
 import type { AuthedRequest } from '../types/express.js';
 
@@ -230,6 +232,51 @@ intelligenceRouter.get(
   asyncHandler(async (req: AuthedRequest, res) => {
     const { productId } = parseOrThrow(productIdParamSchema, req.params);
     const result = await slowDeadService.getSlowDead(req.auth.businessId, productId);
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Supplier Intelligence
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/suppliers
+ *
+ * Read-only measurement of how suppliers have actually delivered. There is no
+ * on-time percentage, no SLA compliance and no good/bad score: the schema records
+ * no promised delivery date, so there is nothing to measure lateness against,
+ * and ranking suppliers on elapsed time alone would be a judgement dressed up as
+ * a metric.
+ */
+intelligenceRouter.get(
+  '/suppliers',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listSuppliersQuerySchema, req.query);
+
+    const page = await supplierIntelligenceService.listSupplierIntelligence(
+      req.auth.businessId,
+      query,
+    );
+
+    const { items, total, page: currentPage, limit, totalPages, stabilityCounts } = page;
+    res.status(200).json({
+      data: items,
+      meta: { total, page: currentPage, limit, totalPages },
+      stabilityCounts,
+    });
+  }),
+);
+
+/** GET /api/intelligence/suppliers/:supplierId */
+intelligenceRouter.get(
+  '/suppliers/:supplierId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { supplierId } = parseOrThrow(supplierIdParamSchema, req.params);
+    const result = await supplierIntelligenceService.getSupplierIntelligence(
+      req.auth.businessId,
+      supplierId,
+    );
     res.status(200).json({ data: result });
   }),
 );

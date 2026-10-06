@@ -25,11 +25,11 @@ import {
   type ReorderResult,
 } from '../intelligence/index.js';
 import {
-  getReorderFacts,
-  listReorderFacts,
-  MAX_REORDER_PRODUCTS,
-  type ReorderFactRow,
-} from '../repositories/reorder.repository.js';
+  getProductDemandFact,
+  listProductDemandFacts,
+  MAX_PRODUCT_DEMAND_FACTS,
+  type ProductDemandFactRow,
+} from '../repositories/demandFacts.repository.js';
 import type { ListReorderQuery } from './reorder.schemas.js';
 
 export interface ReorderEntry extends ReorderResult {
@@ -57,7 +57,7 @@ export interface ReorderPage {
  * trend or a coefficient of variation, and the daily series would cost an order
  * of magnitude more memory for figures nothing here reads.
  */
-function assess(row: ReorderFactRow): ReorderResult {
+function assess(row: ProductDemandFactRow): ReorderResult {
   const observableHistoryDays = String(row.observable_history_days);
 
   // The Demand Engine's own rate, and the Demand Engine's own confidence ladder.
@@ -89,7 +89,7 @@ function assess(row: ReorderFactRow): ReorderResult {
   return assessReorder(facts, { demandConfidence });
 }
 
-function toEntry(row: ReorderFactRow, result: ReorderResult): ReorderEntry {
+function toEntry(row: ProductDemandFactRow, result: ReorderResult): ReorderEntry {
   return {
     ...result,
     sku: row.sku,
@@ -115,11 +115,11 @@ export async function listReorder(
 ): Promise<ReorderPage> {
   // One wide read, classify, then filter and paginate in memory. Bounded by the
   // product count, which the database already reads in a single pass.
-  const rows = await listReorderFacts(businessId, {
+  const rows = await listProductDemandFacts(businessId, {
     ...(query.search !== undefined ? { search: query.search } : {}),
     ...(query.categoryId !== undefined ? { categoryId: query.categoryId } : {}),
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
-    limit: MAX_REORDER_PRODUCTS,
+    limit: MAX_PRODUCT_DEMAND_FACTS,
     offset: 0,
   });
 
@@ -152,7 +152,7 @@ export async function listReorder(
 
 /** Assess a single product. A product in another business is not found. */
 export async function getReorder(businessId: string, productId: string): Promise<ReorderEntry> {
-  const row = await getReorderFacts(businessId, productId);
+  const row = await getProductDemandFact(businessId, productId);
   if (!row) throw new NotFoundError('Product not found.');
 
   return toEntry(row, assess(row));

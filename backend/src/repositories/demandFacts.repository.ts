@@ -1,22 +1,31 @@
 /**
- * Reorder fact gathering.
+ * Product demand facts.
  *
- * The only place SQL touches the reorder engine's inputs. The engine is pure, so
- * replacing PostgreSQL changes this file alone.
+ * The single query that answers "what does this product look like right now":
+ * stock on hand, what is already on order, how much it has sold, and how long
+ * its suppliers take. Four intelligence engines — Reorder, Overstock and
+ * Slow/Dead, plus any future one — read the same facts from here, so the window
+ * arithmetic and the ledger expression exist once and cannot drift apart.
  *
- * Four sources are combined, and each is deliberately narrow:
+ * This file began life as `reorder.repository.ts`, when Reorder was the only
+ * consumer and the name described its purpose. By the fourth consumer the name
+ * described only the first of them, which is how shared code ends up looking
+ * like private code. The query itself is unchanged: it moved verbatim.
+ *
+ * Each source is deliberately narrow:
  *
  *  - **Stock on hand** comes from the append-only inventory ledger via the
- *    shared `BALANCE_EXPRESSION`, the same one the Stock Risk Engine reads. There
- *    is no stored stock column to drift out of step with it.
+ *    shared `BALANCE_EXPRESSION_PLAIN`, the same one the Stock Risk Engine reads.
+ *    There is no stored stock column to drift out of step with it.
  *  - **On order** counts only purchase orders in `ordered` or
  *    `partially_received` state. A draft is not a commitment, a received order
  *    is already in the ledger, and a cancelled order never will be.
  *  - **Demand** uses the same UTC 30-day window as the Demand Intelligence
- *    Engine, so the rate passed to the engine and the evidence beside it can
- *    never describe different periods.
+ *    Engine, so a rate and the evidence beside it can never describe different
+ *    periods. The 90-day totals exist so the confidence ladder can see how much
+ *    history backs that rate.
  *  - **Lead time** comes only from fully received orders carrying both
- *    timestamps, and is returned as text so the driver hands the engine decimal
+ *    timestamps, and is returned as text so the driver hands the engines decimal
  *    strings rather than numbers.
  *
  * No write of any kind: this projection only selects.
@@ -30,7 +39,7 @@ import { BALANCE_EXPRESSION_PLAIN } from './inventory.repository.js';
 /** The demand window must be the Demand Engine's, not a second opinion on it. */
 const DEMAND_WINDOW_DAYS = DEMAND_POLICY.baselineDays;
 
-export interface ReorderFactRow {
+export interface ProductDemandFactRow {
   product_id: string;
   business_id: string;
   sku: string;
@@ -70,7 +79,7 @@ function demandWindowBounds(): [Date, Date] {
  * A function because the window placeholders depend on how many filter
  * parameters preceded this query.
  */
-function reorderProjection(windowStart: string, windowEnd: string): string {
+function demandFactsProjection(windowStart: string, windowEnd: string): string {
   return `
   SELECT p.id                                         AS product_id,
          p.business_id                               AS business_id,
@@ -146,7 +155,7 @@ function reorderProjection(windowStart: string, windowEnd: string): string {
       -- Fully received orders only, with both timestamps present. Drafts,
       -- in-flight orders, cancellations and timestamp gaps are all excluded.
       -- The ::text cast is load-bearing: the driver parses a numeric array into
-      -- JavaScript numbers, and the engine takes decimal strings.
+      -- JavaScript numbers, and the engines take decimal strings.
       SELECT array_agg(
                ROUND(EXTRACT(EPOCH FROM (po.received_at - po.ordered_at)) / 86400.0, 2)::text
                ORDER BY po.received_at - po.ordered_at
@@ -164,27 +173,29 @@ function reorderProjection(windowStart: string, windowEnd: string): string {
 `;
 }
 
-export interface ProductReorderFilter {
+export interface ProductDemandFilter {
   search?: string;
   categoryId?: string;
-  /**
-   * Defaults to active products only: an inactive product is not an
-   * operational replenishment candidate, so it is excluded from the list unless
-   * a caller explicitly asks for it.
-   */
+  /** Inactive products are excluded unless a caller explicitly asks for them. */
   isActive?: boolean;
   limit: number;
   offset: number;
 }
 
-function escapeLikePattern(term: string): string {
+/**
+ * Escape LIKE wildcards so a search term is always a literal.
+ *
+ * Shared because it is security-relevant: two copies of this helper can drift,
+ * and a fix applied to one would leave the other open to wildcard injection.
+ */
+export function escapeLikePattern(term: string): string {
   return term.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-export async function listReorderFacts(
+export async function listProductDemandFacts(
   businessId: string,
-  filter: ProductReorderFilter,
-): Promise<ReorderFactRow[]> {
+  filter: ProductDemandFilter,
+): Promise<ProductDemandFactRow[]> {
   const conditions: string[] = ['r.business_id = $1'];
   const params: unknown[] = [businessId];
 
@@ -213,8 +224,8 @@ export async function listReorderFacts(
   const limitPlaceholder = `$${pageParams.length - 1}`;
   const offsetPlaceholder = `$${pageParams.length}`;
 
-  const result = await query<ReorderFactRow>(
-    `SELECT * FROM (${reorderProjection(windowStart, windowEnd)}) r
+  const result = await query<ProductDemandFactRow>(
+    `SELECT * FROM (${demandFactsProjection(windowStart, windowEnd)}) r
       WHERE ${conditions.join(' AND ')}
       ORDER BY lower(name) ASC, product_id ASC
       LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}`,
@@ -225,12 +236,12 @@ export async function listReorderFacts(
 }
 
 /** Facts for a single product, or `null` when it does not exist in this business. */
-export async function getReorderFacts(
+export async function getProductDemandFact(
   businessId: string,
   productId: string,
-): Promise<ReorderFactRow | null> {
-  const result = await query<ReorderFactRow>(
-    `SELECT * FROM (${reorderProjection('$2', '$3')}) r
+): Promise<ProductDemandFactRow | null> {
+  const result = await query<ProductDemandFactRow>(
+    `SELECT * FROM (${demandFactsProjection('$2', '$3')} ) r
       WHERE r.business_id = $1 AND r.product_id = $4`,
     [businessId, ...demandWindowBounds(), productId],
   );
@@ -244,4 +255,4 @@ export function currentWindowEndDate(): string {
 }
 
 /** Guard so a runaway catalog cannot exhaust memory. */
-export const MAX_REORDER_PRODUCTS = REORDER_POLICY.maxProducts;
+export const MAX_PRODUCT_DEMAND_FACTS = REORDER_POLICY.maxProducts;

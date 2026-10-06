@@ -10,12 +10,12 @@
  * This service deliberately has **no repository of its own**. The facts it needs
  * — stock on hand from the ledger, the 90-day unit and active-day aggregates
  * over the same UTC window the Demand Intelligence Engine uses, and observable
- * history — are exactly what `reorder.repository` already gathers in a single
+ * history — are exactly what `demandFacts.repository` already gathers in a single
  * parameterised query. The on-order and lead-time columns arrive in that same
  * row at no extra cost and this module ignores them.
  *
- * That is a documented coupling rather than a tidy architecture: the query is
- * named for the first feature that needed it, and by now three modules read it.
+ * That query is named for what it returns, not for the first feature that needed
+ * it, and several modules now read it.
  * A second projection would mean two copies of the window arithmetic that could
  * drift apart, so the single implementation wins and the naming debt is recorded
  * here and in the Overstock service rather than paid for with an unrelated
@@ -35,10 +35,10 @@ import {
 } from '../intelligence/index.js';
 import { assessSlowDead } from '../intelligence/slowDead.js';
 import {
-  getReorderFacts,
-  listReorderFacts,
-  type ReorderFactRow,
-} from '../repositories/reorder.repository.js';
+  getProductDemandFact,
+  listProductDemandFacts,
+  type ProductDemandFactRow,
+} from '../repositories/demandFacts.repository.js';
 import type { ListSlowDeadQuery } from './slowDead.schemas.js';
 
 export interface SlowDeadEntry extends SlowDeadResult {
@@ -65,7 +65,7 @@ export interface SlowDeadPage {
  * calculations, through the same seams the Reorder and Overstock engines use.
  * Nothing is re-derived here.
  */
-function assess(row: ReorderFactRow): SlowDeadResult {
+function assess(row: ProductDemandFactRow): SlowDeadResult {
   const observableHistoryDays = String(row.observable_history_days);
 
   const facts: SlowDeadFacts = {
@@ -89,7 +89,7 @@ function assess(row: ReorderFactRow): SlowDeadResult {
   return assessSlowDead(facts, { confidence });
 }
 
-function toEntry(row: ReorderFactRow, result: SlowDeadResult): SlowDeadEntry {
+function toEntry(row: ProductDemandFactRow, result: SlowDeadResult): SlowDeadEntry {
   return {
     ...result,
     sku: row.sku,
@@ -115,7 +115,7 @@ export async function listSlowDead(
 ): Promise<SlowDeadPage> {
   // One wide read, classify, then filter and paginate in memory. Bounded by the
   // policy's product guard so a runaway catalog cannot exhaust memory.
-  const rows = await listReorderFacts(businessId, {
+  const rows = await listProductDemandFacts(businessId, {
     ...(query.search !== undefined ? { search: query.search } : {}),
     ...(query.categoryId !== undefined ? { categoryId: query.categoryId } : {}),
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
@@ -155,7 +155,7 @@ export async function getSlowDead(
   businessId: string,
   productId: string,
 ): Promise<SlowDeadEntry> {
-  const row = await getReorderFacts(businessId, productId);
+  const row = await getProductDemandFact(businessId, productId);
   if (!row) throw new NotFoundError('Product not found.');
 
   return toEntry(row, assess(row));

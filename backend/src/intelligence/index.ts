@@ -113,3 +113,26 @@ export type {
   SlowDeadResult,
   SlowDeadStatus,
 } from './types.js';
+
+// ---- Supplier Intelligence -------------------------------------------------
+
+export {
+  assessSupplier,
+  assessSupplierConfidence,
+  classifySupplierStability,
+  percentile90,
+  supplierCoefficientOfVariation,
+  SUPPLIER_POLICY,
+  SUPPLIER_PRIORITY,
+  SUPPLIER_STABILITIES,
+} from './supplier.js';
+
+export type { SupplierPriority } from './policies.js';
+
+export type {
+  SupplierEvidence,
+  SupplierFacts,
+  SupplierLeadTimeObservation,
+  SupplierResult,
+  SupplierStability,
+} from './types.js';

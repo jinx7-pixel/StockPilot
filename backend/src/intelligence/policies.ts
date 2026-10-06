@@ -350,3 +350,67 @@ export const SLOW_DEAD_PRIORITY = {
 } as const;
 
 export type SlowDeadPriority = typeof SLOW_DEAD_PRIORITY;
+
+// ---------------------------------------------------------------------------
+// Supplier Intelligence
+// ---------------------------------------------------------------------------
+
+/**
+ * Supplier Intelligence — v1 policy.
+ *
+ * What is measured here is **elapsed** lead time: how long a received order
+ * actually took. There is deliberately no on-time percentage, no late count and
+ * no SLA compliance anywhere in this module, because the schema records no
+ * promised delivery date to measure against. A supplier cannot be late against a
+ * promise the system never recorded, and inventing a benchmark would produce a
+ * confident number with nothing behind it.
+ */
+export const SUPPLIER_POLICY = {
+  /**
+   * Completed observations needed before variability is reported at all.
+   *
+   * Two deliveries give a spread but not a distribution; a coefficient of
+   * variation over two points is arithmetic dressed up as evidence.
+   */
+  minimumSamplesForVariability: 3,
+
+  /**
+   * Coefficient of variation at or below which lead time is `STABLE`.
+   *
+   * A quarter means the typical delivery is within ~25% of the mean. Above
+   * that, the spread is the story rather than the average.
+   */
+  stableMaxCoefficientOfVariation: '0.25',
+
+  /**
+   * Supplier-evidence confidence, counted purely in completed purchase orders.
+   *
+   * This ladder is **not** the Demand Intelligence ladder and never reuses it.
+   * They answer different questions — "how well do we know this supplier's
+   * speed" versus "how well do we know this product's demand" — and a supplier
+   * with six deliveries is not thereby well-measured demand.
+   */
+  confidence: {
+    insufficientBelowCompletedOrders: 1,
+    lowBelowCompletedOrders: 3,
+    mediumBelowCompletedOrders: 6,
+  },
+
+  /** Guard so a runaway supplier list cannot exhaust memory. */
+  maxSuppliers: 10_000,
+} as const;
+
+export type SupplierPolicy = typeof SUPPLIER_POLICY;
+
+/**
+ * Operational priority for supplier-performance findings, kept independent of
+ * the Stock Risk, Overstock, Reorder and Slow/Dead scales. A slow supplier is a
+ * different problem from slow-moving stock.
+ */
+export const SUPPLIER_PRIORITY = {
+  VARIABLE: 60,
+  STABLE: 0,
+  INSUFFICIENT_DATA: 20,
+} as const;
+
+export type SupplierPriority = typeof SUPPLIER_PRIORITY;

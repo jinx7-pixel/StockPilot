@@ -515,3 +515,112 @@ export interface SlowDeadResult {
   reason: string;
   evidence: SlowDeadEvidence;
 }
+
+// ---------------------------------------------------------------------------
+// Supplier Intelligence
+// ---------------------------------------------------------------------------
+
+/**
+ * How consistent a supplier's actual delivery times have been.
+ *
+ * `INSUFFICIENT_DATA` is not a third verdict on the supplier — it is an absence
+ * of enough observations to have one.
+ */
+export const SUPPLIER_STABILITIES = ['STABLE', 'VARIABLE', 'INSUFFICIENT_DATA'] as const;
+
+export type SupplierStability = (typeof SUPPLIER_STABILITIES)[number];
+
+/** One completed purchase order's measured delivery time. */
+export interface SupplierLeadTimeObservation {
+  purchaseOrderId: string;
+  /** UTC ISO-8601 instant the order was placed. */
+  orderedAt: string;
+  /** UTC ISO-8601 instant the order was received. */
+  receivedAt: string;
+  /** Measured elapsed days, exact decimal string. */
+  leadTimeDays: string;
+}
+
+/**
+ * Everything the supplier engine needs.
+ *
+ * Lead-time observations arrive already filtered to received orders carrying
+ * both timestamps; the engine never sees a draft, an in-flight order, a
+ * cancellation or a timestamp gap, and so cannot accidentally treat one as
+ * delivery evidence.
+ */
+export interface SupplierFacts {
+  supplierId: string;
+  supplierName: string;
+  isActive: boolean;
+
+  /** Purchase orders in `received` state. */
+  completedPOCount: number;
+  /** Purchase orders in `ordered` or `partially_received` state. */
+  openPOCount: number;
+  /** Purchase orders in `cancelled` state. */
+  cancelledPOCount: number;
+
+  /** Purchase orders in `draft` state: never counted as any of the above. */
+  draftPOCount: number;
+
+  totalUnitsOrdered: string;
+  totalUnitsReceived: string;
+
+  /** Measured elapsed days for each completed order, ascending. */
+  leadTimeDays: readonly string[];
+}
+
+export interface SupplierEvidence {
+  /** Observations behind every figure above. */
+  completedPOCount: number;
+  leadTimeSampleCount: number;
+
+  /** Minimum observations required before variability is reported. */
+  minimumSamplesForVariability: number;
+  /** Coefficient of variation at or below which lead time is STABLE. */
+  stableMaxCoefficientOfVariation: string;
+
+  /** Shortest and longest observed delivery, in days. */
+  minLeadTimeDays: string | null;
+  maxLeadTimeDays: string | null;
+
+  /**
+   * Stated explicitly so the absence is never mistaken for a clean record.
+   * The schema records no promised delivery date, so on-time delivery cannot be
+   * computed and is not estimated.
+   */
+  hasPromisedDeliveryDate: false;
+}
+
+export interface SupplierResult {
+  supplierId: string;
+  supplierName: string;
+  isActive: boolean;
+
+  completedPOCount: number;
+  openPOCount: number;
+  cancelledPOCount: number;
+  draftPOCount: number;
+
+  totalUnitsOrdered: string;
+  totalUnitsReceived: string;
+
+  /** `null` with no completed order to measure. */
+  medianLeadTimeDays: string | null;
+  /** `null` with no completed order to measure. */
+  p90LeadTimeDays: string | null;
+  leadTimeSampleCount: number;
+  /** Standard deviation over mean, or `null` when variability is not reported. */
+  leadTimeCV: string | null;
+
+  stability: SupplierStability;
+  /** Operational priority for this stability; separate from every other scale. */
+  priority: number;
+
+  /** Confidence in the supplier-performance evidence. Never the demand ladder. */
+  confidence: ConfidenceLevel;
+  /** Deterministic, human-readable explanation. Never generated. */
+  reason: string;
+  evidence: SupplierEvidence;
+}
