@@ -40,6 +40,13 @@ export class ApiError extends Error {
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /**
+   * Extra request headers.
+   *
+   * Exists for the cases a body cannot express — notably `Idempotency-Key`, which
+   * lets the server recognise a retried submission instead of performing it twice.
+   */
+  headers?: Record<string, string>;
 }
 
 interface ApiEnvelope<T> {
@@ -47,7 +54,7 @@ interface ApiEnvelope<T> {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body } = options;
+  const { method = 'GET', body, headers: extraHeaders } = options;
 
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
@@ -55,6 +62,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     credentials: 'include',
     headers: {
       Accept: 'application/json',
+      ...extraHeaders,
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),

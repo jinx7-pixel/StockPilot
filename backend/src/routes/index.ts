@@ -1,5 +1,6 @@
 import { Router } from 'express';
 
+import { actionsRouter } from './actions.routes.js';
 import { analyticsRouter } from './analytics.routes.js';
 import { authRouter } from './auth.routes.js';
 import { categoryRouter } from './category.routes.js';
@@ -33,3 +34,7 @@ apiRouter.use('/intelligence', intelligenceRouter);
 
 // Read-only: recommendations are derived from intelligence, never acted on here.
 apiRouter.use('/recommendations', recommendationsRouter);
+
+// Executes a reviewed recommendation and audits it. The only writable module
+// added after the intelligence work, and writable on exactly one route.
+apiRouter.use('/actions', actionsRouter);

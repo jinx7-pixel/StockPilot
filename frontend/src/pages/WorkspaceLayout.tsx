@@ -20,6 +20,9 @@ const NAV = [
   // Step 11.9. Sits directly after Intelligence because it is a renderer of
   // that view's decisions, not a new source of analysis. Read-only.
   { to: '/app/recommendations', label: 'Recommendations', end: true },
+  // Step 11.10. Sits after Recommendations because it executes one reviewed
+  // recommendation as a draft purchase order. The only writable screen here.
+  { to: '/app/actions', label: 'Actions', end: true },
   { to: '/app/slow-dead', label: 'Slow / Dead Stock', end: true },
   // The specification asked for `/app/suppliers`, but that path is already the
   // supplier CRUD page above. Shadowing it would break an approved screen, so

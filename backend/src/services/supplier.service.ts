@@ -7,6 +7,8 @@
  * refuse it anyway for any supplier that has history.
  */
 
+import type { PoolClient } from 'pg';
+
 import { ConflictError, NotFoundError } from '../errors.js';
 import {
   createSupplier,
@@ -112,8 +114,12 @@ export async function updateSupplierForBusiness(
  * A foreign supplier yields the same error as a non-existent one, so a caller
  * cannot probe for another tenant's suppliers.
  */
-export async function assertSupplierUsable(businessId: string, supplierId: string): Promise<void> {
-  const supplier = await findSupplierById(businessId, supplierId);
+export async function assertSupplierUsable(
+  businessId: string,
+  supplierId: string,
+  client?: PoolClient,
+): Promise<void> {
+  const supplier = await findSupplierById(businessId, supplierId, client);
 
   if (!supplier) {
     throw new NotFoundError('Supplier not found.', 'SUPPLIER_NOT_FOUND');

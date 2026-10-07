@@ -15,6 +15,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ProtectedRoute, PublicOnlyRoute } from './auth/ProtectedRoute';
+import { ActionsPage } from './pages/ActionsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { DemandPage } from './pages/DemandPage';
@@ -56,6 +57,7 @@ export function App() {
           <Route path="overstock" element={<OverstockPage />} />
           <Route path="intelligence" element={<UnifiedIntelligencePage />} />
           <Route path="recommendations" element={<RecommendationsPage />} />
+          <Route path="actions" element={<ActionsPage />} />
           <Route path="slow-dead" element={<SlowDeadPage />} />
           <Route path="supplier-intelligence" element={<SupplierIntelligencePage />} />
           <Route path="products" element={<ProductsPage />} />

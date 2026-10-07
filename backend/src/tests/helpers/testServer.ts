@@ -23,34 +23,65 @@ export interface JsonResponse<T = unknown> {
   setCookie: string[];
 }
 
+/**
+ * Per-request overrides.
+ *
+ * `headers` exists for the cases a plain body cannot express: sending an
+ * `Idempotency-Key` to prove a double-submitted action is not executed twice.
+ */
+export interface RequestOptions {
+  headers?: Record<string, string>;
+}
+
 /** Per-client cookie jar, so two clients in one test act as two browsers. */
 export class TestClient {
   private readonly cookies = new Map<string, string>();
 
   constructor(private readonly baseUrl: string) {}
 
-  async post<T = unknown>(path: string, body?: unknown): Promise<JsonResponse<T>> {
-    return this.request<T>('POST', path, body);
+  async post<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<JsonResponse<T>> {
+    return this.request<T>('POST', path, body, options);
   }
 
-  async patch<T = unknown>(path: string, body?: unknown): Promise<JsonResponse<T>> {
-    return this.request<T>('PATCH', path, body);
+  async put<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<JsonResponse<T>> {
+    return this.request<T>('PUT', path, body, options);
   }
 
-  async delete<T = unknown>(path: string): Promise<JsonResponse<T>> {
-    return this.request<T>('DELETE', path);
+  async patch<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<JsonResponse<T>> {
+    return this.request<T>('PATCH', path, body, options);
   }
 
-  async get<T = unknown>(path: string): Promise<JsonResponse<T>> {
-    return this.request<T>('GET', path);
+  async delete<T = unknown>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<JsonResponse<T>> {
+    return this.request<T>('DELETE', path, body, options);
+  }
+
+  async get<T = unknown>(path: string, options?: RequestOptions): Promise<JsonResponse<T>> {
+    return this.request<T>('GET', path, undefined, options);
   }
 
   private async request<T>(
     method: string,
     path: string,
     body?: unknown,
+    options?: RequestOptions,
   ): Promise<JsonResponse<T>> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: 'application/json', ...options?.headers };
 
     if (body !== undefined) headers['Content-Type'] = 'application/json';
 

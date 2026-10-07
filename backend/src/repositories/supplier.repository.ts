@@ -10,6 +10,8 @@
  * these statements.
  */
 
+import type { PoolClient } from 'pg';
+
 import { query } from '../db/pool.js';
 
 export interface Supplier {
@@ -120,11 +122,14 @@ export async function listSuppliers(
 export async function findSupplierById(
   businessId: string,
   supplierId: string,
+  client?: PoolClient,
 ): Promise<Supplier | null> {
-  const result = await query<SupplierRow>(`${SELECT} WHERE business_id = $1 AND id = $2`, [
-    businessId,
-    supplierId,
-  ]);
+  // The optional client mirrors `findPurchaseOrderById`: pass one to read inside
+  // a caller's transaction, omit it for an ordinary pool-scoped read.
+  const sql = `${SELECT} WHERE business_id = $1 AND id = $2`;
+  const result = client
+    ? await client.query<SupplierRow>(sql, [businessId, supplierId])
+    : await query<SupplierRow>(sql, [businessId, supplierId]);
 
   const row = result.rows[0];
   return row ? mapRow(row) : null;

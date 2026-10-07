@@ -131,61 +131,95 @@ export async function getPurchaseOrder(
 // Creation â€” deliberately inventory-free
 // ---------------------------------------------------------------------------
 
-export async function createPurchaseOrder(
+/**
+ * Create a purchase order inside a caller-supplied transaction.
+ *
+ * ## Why this is split out
+ *
+ * The Action Center must write a purchase order **and** its audit row atomically:
+ * if the audit insert fails, there must be no purchase order either. Nesting the
+ * existing `createPurchaseOrder` would open a second transaction and a second
+ * connection, which commits the order independently and defeats the guarantee.
+ *
+ * So the body lives here and is transaction-agnostic, and `createPurchaseOrder`
+ * wraps it in `withTransaction` exactly as before. The Action Center calls this
+ * variant with its own client.
+ *
+ * There is still only **one** implementation of order creation: the Action Center
+ * reuses this function rather than writing a second one, so the validation rules
+ * below apply identically no matter which door an order arrives through.
+ *
+ * Note the supplier check moved from before `BEGIN` to inside the transaction. It
+ * is a read, so the result is identical, and now it is evaluated against the same
+ * snapshot as the inserts it is protecting.
+ */
+export async function createPurchaseOrderIn(
+  client: PoolClient,
   businessId: string,
   userId: string,
   input: CreatePurchaseOrderInput,
 ): Promise<PurchaseOrderDetail> {
   // The supplier must exist in this business and be active.
-  await assertSupplierUsable(businessId, input.supplierId);
+  await assertSupplierUsable(businessId, input.supplierId, client);
 
-  return withTransaction(async (client) => {
-    // One query validates every product's ownership and activity, and computes
-    // each line total and the order total in exact `numeric`.
-    const lines = await resolveOrderItems(client, businessId, input.items);
+  // One query validates every product's ownership and activity, and computes
+  // each line total and the order total in exact `numeric`.
+  const lines = await resolveOrderItems(client, businessId, input.items);
 
-    // A line produced no row: the product does not exist, or it belongs to
-    // another business. Both are reported identically.
-    if (lines.length !== input.items.length) {
-      throw new NotFoundError(
-        'One or more products were not found in your business.',
-        'PRODUCT_NOT_FOUND',
-      );
-    }
+  // A line produced no row: the product does not exist, or it belongs to
+  // another business. Both are reported identically.
+  if (lines.length !== input.items.length) {
+    throw new NotFoundError(
+      'One or more products were not found in your business.',
+      'PRODUCT_NOT_FOUND',
+    );
+  }
 
-    const inactive = lines.find((line) => !line.isActive);
-    if (inactive) {
-      throw new ValidationError(
-        `Cannot order "${inactive.productName}" because the product is inactive.`,
-        'PRODUCT_INACTIVE',
-      );
-    }
+  const inactive = lines.find((line) => !line.isActive);
+  if (inactive) {
+    throw new ValidationError(
+      `Cannot order "${inactive.productName}" because the product is inactive.`,
+      'PRODUCT_INACTIVE',
+    );
+  }
 
-    const orderId = await insertPurchaseOrder(client, {
-      businessId,
-      supplierId: input.supplierId,
-      totalAmount: lines[0]!.orderTotal,
-      expectedAt: input.expectedAt ?? null,
-      notes: input.notes ?? null,
-      createdBy: userId,
-    });
-
-    for (const line of lines) {
-      await insertPurchaseOrderItem(client, {
-        purchaseOrderId: orderId,
-        businessId,
-        productId: line.productId,
-        quantity: line.quantity,
-        unitCost: line.unitCost,
-        lineTotal: line.lineTotal,
-      });
-    }
-
-    // No inventory movement here. Receiving is what moves stock.
-    const created = await findPurchaseOrderById(businessId, orderId, client);
-    if (!created) throw new Error('Purchase order disappeared inside its own transaction');
-    return created;
+  const orderId = await insertPurchaseOrder(client, {
+    businessId,
+    supplierId: input.supplierId,
+    totalAmount: lines[0]!.orderTotal,
+    expectedAt: input.expectedAt ?? null,
+    notes: input.notes ?? null,
+    createdBy: userId,
   });
+
+  for (const line of lines) {
+    await insertPurchaseOrderItem(client, {
+      purchaseOrderId: orderId,
+      businessId,
+      productId: line.productId,
+      quantity: line.quantity,
+      unitCost: line.unitCost,
+      lineTotal: line.lineTotal,
+    });
+  }
+
+  // No inventory movement here. Receiving is what moves stock.
+  const created = await findPurchaseOrderById(businessId, orderId, client);
+  if (!created) throw new Error('Purchase order disappeared inside its own transaction');
+  return created;
+}
+
+/**
+ * Create a purchase order in its own transaction.
+ *
+ * The public entry point used by `POST /api/purchase-orders`.
+ */
+export async function createPurchaseOrder(
+  businessId: string,
+  userId: string,
+  input: CreatePurchaseOrderInput,
+): Promise<PurchaseOrderDetail> {
+  return withTransaction((client) => createPurchaseOrderIn(client, businessId, userId, input));
 }
 
 // ---------------------------------------------------------------------------
