@@ -235,6 +235,55 @@ export async function listProductDemandFacts(
   return result.rows;
 }
 
+/**
+ * How many products match the same filters, ignoring pagination.
+ *
+ * Exists so the unified list can report a real `total` rather than the number
+ * of rows on the current page, which would report 25 for a catalog of 4,000 and
+ * make the last page look like the only one.
+ *
+ * Reuses the projection's filters verbatim so the count cannot disagree with the
+ * rows it is counting.
+ */
+export async function countProductDemandFacts(
+  businessId: string,
+  filter: Omit<ProductDemandFilter, 'limit' | 'offset'>,
+): Promise<number> {
+  const conditions: string[] = ['p.business_id = $1'];
+  const params: unknown[] = [businessId];
+
+  if (filter.search !== undefined) {
+    params.push(`%${escapeLikePattern(filter.search)}%`);
+    const placeholder = `$${params.length}`;
+    conditions.push(
+      `(p.name ILIKE ${placeholder} ESCAPE '\\' OR p.sku ILIKE ${placeholder} ESCAPE '\\')`,
+    );
+  }
+
+  if (filter.categoryId !== undefined) {
+    params.push(filter.categoryId);
+    conditions.push(`p.category_id = $${params.length}`);
+  }
+
+  if (filter.isActive !== undefined) {
+    params.push(filter.isActive);
+    conditions.push(`p.is_active = $${params.length}`);
+  }
+
+  // Counts rows, so it needs only the selection — none of the projection's
+  // window, lead-time or observable-history columns affect how many products
+  // match, and reusing the projection would force timestamp parameters onto
+  // placeholders that are compared against the ledger.
+  const result = await query<{ total: string }>(
+    `SELECT COUNT(*)::text AS total
+       FROM products p
+      WHERE ${conditions.join(' AND ')}`,
+    params,
+  );
+
+  return Number(result.rows[0]?.total ?? '0');
+}
+
 /** Facts for a single product, or `null` when it does not exist in this business. */
 export async function getProductDemandFact(
   businessId: string,

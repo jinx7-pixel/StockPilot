@@ -31,6 +31,7 @@ import { SaleDetailPage } from './pages/SaleDetailPage';
 import { SalesPage } from './pages/SalesPage';
 import { SlowDeadPage } from './pages/SlowDeadPage';
 import { StockRiskPage } from './pages/StockRiskPage';
+import { UnifiedIntelligencePage } from './pages/UnifiedIntelligencePage';
 import { SupplierIntelligencePage } from './pages/SupplierIntelligencePage';
 import { SuppliersPage } from './pages/SuppliersPage';
 import { WorkspaceLayout } from './pages/WorkspaceLayout';
@@ -52,6 +53,7 @@ export function App() {
           <Route path="demand" element={<DemandPage />} />
           <Route path="reorder" element={<ReorderPage />} />
           <Route path="overstock" element={<OverstockPage />} />
+          <Route path="intelligence" element={<UnifiedIntelligencePage />} />
           <Route path="slow-dead" element={<SlowDeadPage />} />
           <Route path="supplier-intelligence" element={<SupplierIntelligencePage />} />
           <Route path="products" element={<ProductsPage />} />

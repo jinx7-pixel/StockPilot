@@ -16,6 +16,7 @@ const NAV = [
   { to: '/app/demand', label: 'Demand', end: true },
   { to: '/app/reorder', label: 'Reorder', end: true },
   { to: '/app/overstock', label: 'Overstock', end: true },
+  { to: '/app/intelligence', label: 'Intelligence', end: true },
   { to: '/app/slow-dead', label: 'Slow / Dead Stock', end: true },
   // The specification asked for `/app/suppliers`, but that path is already the
   // supplier CRUD page above. Shadowing it would break an approved screen, so

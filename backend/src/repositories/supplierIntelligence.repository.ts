@@ -80,7 +80,16 @@ const PER_ORDER_UNITS = `
  * A function because the filter placeholders depend on how many parameters
  * preceded this query.
  */
-function supplierProjection(isActivePlaceholder?: string): string {
+/**
+ * The shared per-supplier projection.
+ *
+ * A function because the filter placeholders depend on how many parameters
+ * preceded this query. Exported so the unified intelligence view can join it
+ * to a product without a second copy of this SQL drifting apart from it.
+ *
+ * @param activePlaceholder optional `s.is_active = $n` placeholder.
+ */
+export function supplierProjection(isActivePlaceholder?: string): string {
   const activeClause = isActivePlaceholder === undefined ? '' : ` AND s.is_active = ${isActivePlaceholder}`;
 
   return `
@@ -226,6 +235,85 @@ export async function listSupplierLeadTimes(
       ORDER BY o.received_at - o.ordered_at ASC
       LIMIT $3`,
     [businessId, supplierId, SUPPLIER_POLICY.maxSuppliers],
+  );
+
+  return result.rows;
+}
+
+/**
+ * The primary supplier for each of a set of products, with that supplier's
+ * complete intelligence facts.
+ *
+ * Exists because a product snapshot has to name one supplier, and asking the
+ * supplier service once per product would be 25 queries for a 25-row page. This
+ * resolves the whole page in one.
+ *
+ * ## Which supplier is "primary"
+ *
+ * A product can be bought from several suppliers, so one has to be chosen. The
+ * rule, in order, and the `ORDER BY` below *is* the rule:
+ *
+ *   1. **Most completed orders.** The supplier that has actually delivered for
+ *      this product the most times, counted as distinct `received` orders. This
+ *      is the substance of the choice: it ranks proven, working supply above a
+ *      recent one-off.
+ *   2. **Most recent non-cancelled order.** The tie-break, because among
+ *      suppliers with equal history the most recent working relationship is the
+ *      relevant one. Cancelled orders are deliberately excluded: a cancellation
+ *      is the absence of a delivery, so letting the latest cancellation decide
+ *      would rank a supplier by their most recent failure.
+ *   3. **`supplier_id` ascending.** A final, stable tie-break so two suppliers
+ *      with identical history and identical order dates cannot make the answer
+ *      depend on row order.
+ *
+ * `COUNT(DISTINCT po.id)` rather than `COUNT(*)`: nothing prevents a product
+ * appearing on several lines of one order, and counting lines would inflate one
+ * supplier's score and change the winner.
+ *
+ * ## Suppliers with no completed orders
+ *
+ * A supplier that has never delivered is still returned when it is the only one
+ * — with `INSUFFICIENT` confidence and null lead-time metrics, which is a
+ * truthful "we cannot measure this" rather than a fabricated one. `supplier` is
+ * `null` only when the product has no purchase-order relationship at all.
+ *
+ * Reuses {@link supplierProjection} rather than restating the supplier
+ * aggregation, so the unified view and the Supplier Engine cannot disagree.
+ */
+export async function listPrimarySupplierFacts(
+  businessId: string,
+  productIds: readonly string[],
+): Promise<Array<SupplierFactRow & { product_id: string }>> {
+  if (productIds.length === 0) return [];
+
+  const result = await query<SupplierFactRow & { product_id: string }>(
+    `WITH supplier_totals AS (
+       SELECT poi.product_id,
+              po.supplier_id,
+              COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'received')
+                AS completed_order_count,
+              MAX(po.ordered_at) FILTER (WHERE po.status <> 'cancelled')
+                AS most_recent_order_at
+         FROM purchase_order_items poi
+         JOIN purchase_orders po
+           ON po.id = poi.purchase_order_id AND po.business_id = poi.business_id
+        WHERE poi.business_id = $1
+          AND poi.product_id = ANY($2::uuid[])
+        GROUP BY poi.product_id, po.supplier_id
+     ),
+     primary_supplier AS (
+       SELECT DISTINCT ON (product_id) product_id, supplier_id
+         FROM supplier_totals
+        ORDER BY product_id,
+                 completed_order_count DESC,
+                 most_recent_order_at DESC NULLS LAST,
+                 supplier_id ASC
+     )
+     SELECT primary_supplier.product_id AS product_id, sup.*
+       FROM (${supplierProjection()}) sup
+       JOIN primary_supplier ON primary_supplier.supplier_id = sup.supplier_id
+      WHERE sup.business_id = $1`,
+    [businessId, productIds],
   );
 
   return result.rows;

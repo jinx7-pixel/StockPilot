@@ -24,6 +24,8 @@ import {
 import { listOverstockQuerySchema } from '../services/overstock.schemas.js';
 import * as overstockService from '../services/overstock.service.js';
 import { listReorderQuerySchema } from '../services/reorder.schemas.js';
+import { listUnifiedIntelligenceQuerySchema } from '../services/unified.schemas.js';
+import * as unifiedService from '../services/unified.service.js';
 import * as reorderService from '../services/reorder.service.js';
 import { listSlowDeadQuerySchema } from '../services/slowDead.schemas.js';
 import * as slowDeadService from '../services/slowDead.service.js';
@@ -276,6 +278,49 @@ intelligenceRouter.get(
     const result = await supplierIntelligenceService.getSupplierIntelligence(
       req.auth.businessId,
       supplierId,
+    );
+    res.status(200).json({ data: result });
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Unified Intelligence
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/intelligence/products
+ *
+ * One row per product carrying all six complete engine results, including each
+ * one's 11.7 explanation envelope. Read-only, and capped at 25 products because
+ * a row is six verdicts rather than a summary line.
+ */
+intelligenceRouter.get(
+  '/products',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const query = parseOrThrow(listUnifiedIntelligenceQuerySchema, req.query);
+
+    const page = await unifiedService.listUnifiedIntelligence(req.auth.businessId, query);
+
+    res.status(200).json({
+      items: page.items,
+      pagination: page.pagination,
+    });
+  }),
+);
+
+/**
+ * GET /api/intelligence/products/:productId
+ *
+ * Orchestration only: every figure inside came from the engine that owns it. No
+ * verdict, quantity, confidence or limitation is computed here.
+ */
+intelligenceRouter.get(
+  '/products/:productId',
+  asyncHandler(async (req: AuthedRequest, res) => {
+    const { productId } = parseOrThrow(productIdParamSchema, req.params);
+    const result = await unifiedService.getUnifiedIntelligence(
+      req.auth.businessId,
+      productId,
     );
     res.status(200).json({ data: result });
   }),

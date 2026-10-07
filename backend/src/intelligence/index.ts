@@ -157,3 +157,22 @@ export {
   explainStockRisk,
   explainSupplier,
 } from './explanations.js';
+
+// ---- Unified Intelligence (orchestration) ------------------------------------
+
+export {
+  assembleUnifiedProduct,
+  summarise,
+} from './unified.js';
+
+export type {
+  ProductIdentity,
+  UnifiedDemand,
+  UnifiedOverstock,
+  UnifiedProductIntelligence,
+  UnifiedReorder,
+  UnifiedSlowDead,
+  UnifiedStockRisk,
+  UnifiedSummary,
+  UnifiedSupplier,
+} from './unified.js';
