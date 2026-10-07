@@ -13,6 +13,7 @@
  * screen starts disagreeing with the assessment behind it.
  */
 
+import { DecisionExplanationView } from '../components/DecisionExplanationView';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -433,6 +434,11 @@ export function ReorderPage() {
             <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               {selected.reason}
             </p>
+
+            <DecisionExplanationView
+              explanation={selected.explanation}
+              decisionLabel={DECISION_LABEL[selected.decision]}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric

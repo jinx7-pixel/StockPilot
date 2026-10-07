@@ -11,6 +11,7 @@
  * not exist yet.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const SUPPLIER_STABILITIES = ['STABLE', 'VARIABLE', 'INSUFFICIENT_DATA'] as const;
@@ -69,6 +70,9 @@ export interface Supplier {
 
   /** Only on the detail response. */
   leadTimeObservations?: SupplierLeadTimeObservation[];
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {

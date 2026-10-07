@@ -10,6 +10,7 @@
  * reorder action, no purchase order, no stock change.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const RISK_LEVELS = [
@@ -66,6 +67,9 @@ export interface StockRisk {
   reorderPoint: string | null;
 
   evidence: StockRiskEvidence;
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {

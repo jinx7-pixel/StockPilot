@@ -43,6 +43,7 @@ import {
   subtract,
   toScaled,
 } from './decimal.js';
+import { explainDemand } from './explanations.js';
 import { DEMAND_POLICY } from './policies.js';
 import {
   type ConfidenceLevel,
@@ -412,7 +413,9 @@ export function assessDemand(facts: DemandFacts): DemandResult {
     hasSufficientEvidence: hasSufficientEvidence(facts, totals),
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<DemandResult, 'explanation'> = {
     productId: facts.productId,
     unitsSold7d: fromScaled(totals.recent.units, 2),
     unitsSold30d: fromScaled(totals.baseline.units, 2),
@@ -431,6 +434,10 @@ export function assessDemand(facts: DemandFacts): DemandResult {
     reason: buildReason(trend, changePercent, totals),
     evidence,
   };
+
+  // Evidence is read from the finished result, so it can never describe a calculation
+  // this engine did not actually perform.
+  return { ...result, explanation: explainDemand(facts, result) };
 }
 
 export { DEMAND_POLICY } from './policies.js';

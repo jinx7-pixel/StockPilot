@@ -32,6 +32,7 @@
  */
 
 import { compareScaled, divide, fromScaled, isPositive, toScaled } from './decimal.js';
+import { explainOverstock } from './explanations.js';
 import { DEMAND_POLICY, OVERSTOCK_POLICY, OVERSTOCK_PRIORITY } from './policies.js';
 import {
   type ConfidenceLevel,
@@ -172,7 +173,9 @@ export function assessOverstock(
     hasSufficientEvidence,
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<OverstockResult, 'explanation'> = {
     productId: facts.productId,
     status,
     priority: OVERSTOCK_PRIORITY[status],
@@ -187,6 +190,10 @@ export function assessOverstock(
     reason: buildReason(status, facts, daysOfStock, unmetEvidenceGates),
     evidence,
   };
+
+  // Evidence is read from the finished result, so it can never describe a calculation
+  // this engine did not actually perform.
+  return { ...result, explanation: explainOverstock(facts, result) };
 }
 
 // Re-exported so callers get the policy and the vocabulary from the same module

@@ -136,3 +136,24 @@ export type {
   SupplierResult,
   SupplierStability,
 } from './types.js';
+
+// ---- Confidence & Evidence -------------------------------------------------
+
+export {
+  buildEvidence,
+  buildLimitations,
+  combineConfidence,
+  EVIDENCE_SOURCES,
+  evidence,
+} from './confidence.js';
+
+export type { DecisionExplanation, EvidenceItem, EvidenceSource } from './confidence.js';
+
+export {
+  explainDemand,
+  explainOverstock,
+  explainReorder,
+  explainSlowDead,
+  explainStockRisk,
+  explainSupplier,
+} from './explanations.js';

@@ -35,6 +35,7 @@
 
 import { calculateReorderPoint, calculateSafetyStock } from './calculations.js';
 import { add, compare, fromScaled, isPositive, median, subtract, toScaled } from './decimal.js';
+import { explainReorder } from './explanations.js';
 import { REORDER_POLICY, STOCK_RISK_POLICY } from './policies.js';
 import {
   type ConfidenceLevel,
@@ -303,7 +304,9 @@ export function assessReorder(
     safetyStockDays: SAFETY_STOCK_DAYS,
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<ReorderResult, 'explanation'> = {
     productId: facts.productId,
     currentStock: facts.currentStock,
     onOrderQuantity: facts.onOrderQuantity,
@@ -325,6 +328,10 @@ export function assessReorder(
     }),
     evidence,
   };
+
+  // Evidence is read from the finished result, so it can never describe a calculation
+  // this engine did not actually perform.
+  return { ...result, explanation: explainReorder(facts, result) };
 }
 
 // Re-exported so callers get the policy and the decision vocabulary from the

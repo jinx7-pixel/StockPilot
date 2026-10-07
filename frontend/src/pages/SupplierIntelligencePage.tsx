@@ -14,6 +14,7 @@
  * starts disagreeing with the assessment behind it.
  */
 
+import { DecisionExplanationView } from '../components/DecisionExplanationView';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import {
@@ -410,6 +411,11 @@ export function SupplierIntelligencePage() {
             <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               {selected.reason}
             </p>
+
+            <DecisionExplanationView
+              explanation={selected.explanation}
+              decisionLabel={STABILITY_LABEL[selected.stability]}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric

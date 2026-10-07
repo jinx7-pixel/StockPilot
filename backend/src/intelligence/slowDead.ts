@@ -39,6 +39,7 @@
  */
 
 import { isPositive, toScaled } from './decimal.js';
+import { explainSlowDead } from './explanations.js';
 import { SLOW_DEAD_POLICY, SLOW_DEAD_PRIORITY } from './policies.js';
 import {
   DataError,
@@ -210,7 +211,9 @@ export function assessSlowDead(
     classificationBasis: basis,
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<SlowDeadResult, 'explanation'> = {
     productId: facts.productId,
     status,
     priority: SLOW_DEAD_PRIORITY[status],
@@ -223,6 +226,10 @@ export function assessSlowDead(
     reason: buildReason(status, facts),
     evidence,
   };
+
+  // Evidence is read from the finished result, so it can never describe a calculation
+  // this engine did not actually perform.
+  return { ...result, explanation: explainSlowDead(facts, result) };
 }
 
 // Re-exported so callers get the policy and the vocabulary from the same module

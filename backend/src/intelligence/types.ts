@@ -30,6 +30,11 @@ export const CONFIDENCE_LEVELS = ['HIGH', 'MEDIUM', 'LOW', 'INSUFFICIENT'] as co
 
 export type ConfidenceLevel = (typeof CONFIDENCE_LEVELS)[number];
 
+// The normalised explanation envelope every engine attaches to its result.
+// Imported here rather than re-declared so the six result types cannot drift
+// apart, and so `confidence.ts` owns the contract it defines.
+import type { DecisionExplanation } from './confidence.js';
+
 /** Raised when the input facts are self-contradictory, e.g. negative stock. */
 export class DataError extends Error {
   constructor(message: string) {
@@ -119,6 +124,9 @@ export interface StockRiskResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: StockRiskEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +232,9 @@ export interface DemandResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: DemandEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }
 
 // ---------------------------------------------------------------------------
@@ -342,6 +353,9 @@ export interface ReorderResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: ReorderEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }
 
 // ---------------------------------------------------------------------------
@@ -435,6 +449,9 @@ export interface OverstockResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: OverstockEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }
 
 // ---------------------------------------------------------------------------
@@ -514,6 +531,9 @@ export interface SlowDeadResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: SlowDeadEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }
 
 // ---------------------------------------------------------------------------
@@ -623,4 +643,7 @@ export interface SupplierResult {
   /** Deterministic, human-readable explanation. Never generated. */
   reason: string;
   evidence: SupplierEvidence;
+
+  /** Normalised decision, confidence, evidence and limitations. Additive. */
+  explanation: DecisionExplanation;
 }

@@ -10,6 +10,7 @@
  * cannot change a sale, and it never places an order.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const DEMAND_TRENDS = [
@@ -71,6 +72,9 @@ export interface Demand {
   reason: string;
 
   evidence: DemandEvidence;
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {

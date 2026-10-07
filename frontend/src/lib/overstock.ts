@@ -10,6 +10,7 @@
  * recommendation and action modules that do not exist yet.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const OVERSTOCK_STATUSES = ['OVERSTOCK', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
@@ -57,6 +58,9 @@ export interface Overstock {
   reason: string;
 
   evidence: OverstockEvidence;
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {

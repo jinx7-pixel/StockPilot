@@ -18,6 +18,7 @@
 
 import { addDays, calculateReorderPoint, calculateSafetyStock } from './calculations.js';
 import { compare, divide, fromScaled, isPositive, median, toScaled } from './decimal.js';
+import { explainStockRisk } from './explanations.js';
 import { RISK_PRIORITY, STOCK_RISK_POLICY } from './policies.js';
 import {
   CONFIDENCE_LEVELS,
@@ -255,7 +256,9 @@ export function assessStockRisk(facts: StockRiskFacts): StockRiskResult {
     hasLeadTimeEvidence: leadTimeSampleCount > 0,
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<StockRiskResult, 'explanation'> = {
     productId: facts.productId,
     risk,
     priority: RISK_PRIORITY[risk],
@@ -273,6 +276,8 @@ export function assessStockRisk(facts: StockRiskFacts): StockRiskResult {
     reason: buildReason(risk, facts, daysOfStock, effectiveLeadTimeDays),
     evidence,
   };
+
+  return { ...result, explanation: explainStockRisk(facts, result) };
 }
 
 export { CONFIDENCE_LEVELS, RISK_LEVELS };

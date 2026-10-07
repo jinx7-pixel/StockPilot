@@ -12,6 +12,7 @@
  * quiet disagreement with the audit trail this architecture avoids.
  */
 
+import { DecisionExplanationView } from '../components/DecisionExplanationView';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -447,6 +448,11 @@ export function DemandPage() {
             <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               {selected.reason}
             </p>
+
+            <DecisionExplanationView
+              explanation={selected.explanation}
+              decisionLabel={TREND_LABEL[selected.trend]}
+            />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric

@@ -9,6 +9,7 @@
  * separate act, taken in a separate place, and this client has no way to do it.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const REORDER_DECISIONS = [
@@ -61,6 +62,9 @@ export interface Reorder {
   reason: string;
 
   evidence: ReorderEvidence;
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {

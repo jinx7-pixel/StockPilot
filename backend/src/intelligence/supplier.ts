@@ -31,6 +31,7 @@
 
 import { coefficientOfVariation } from './demand.js';
 import { compare, compareScaled, fromScaled, median, toScaled } from './decimal.js';
+import { explainSupplier } from './explanations.js';
 import { SUPPLIER_POLICY, SUPPLIER_PRIORITY } from './policies.js';
 import {
   type ConfidenceLevel,
@@ -212,7 +213,9 @@ export function assessSupplier(facts: SupplierFacts): SupplierResult {
     hasPromisedDeliveryDate: false,
   };
 
-  return {
+  // Built without its explanation, then enriched from the finished result so the
+  // evidence can never describe a calculation the engine did not perform.
+  const result: Omit<SupplierResult, 'explanation'> = {
     supplierId: facts.supplierId,
     supplierName: facts.supplierName,
     isActive: facts.isActive,
@@ -241,6 +244,10 @@ export function assessSupplier(facts: SupplierFacts): SupplierResult {
     }),
     evidence,
   };
+
+  // Evidence is read from the finished result, so it can never describe a calculation
+  // this engine did not actually perform.
+  return { ...result, explanation: explainSupplier(facts, result) };
 }
 
 // Re-exported so callers get the policy and the vocabulary from the same module

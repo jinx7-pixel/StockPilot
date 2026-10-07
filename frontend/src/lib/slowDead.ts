@@ -10,6 +10,7 @@
  * recommendation and action modules that do not exist yet.
  */
 
+import type { DecisionExplanation } from '../components/DecisionExplanationView';
 import { request } from './request';
 
 export const SLOW_DEAD_STATUSES = ['DEAD', 'SLOW', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
@@ -51,6 +52,9 @@ export interface SlowDead {
   reason: string;
 
   evidence: SlowDeadEvidence;
+
+  /** Decision, confidence, evidence and limitations, as decided by the server. */
+  explanation: DecisionExplanation;
 }
 
 export interface ListMeta {
