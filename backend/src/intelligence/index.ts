@@ -176,3 +176,15 @@ export type {
   UnifiedSummary,
   UnifiedSupplier,
 } from './unified.js';
+
+// ---- Recommendations (interpretation layer) ---------------------------------
+
+export {
+  buildRecommendations,
+  RECOMMENDATION_PRIORITIES,
+  RECOMMENDATION_TYPES,
+  recommendationPriority,
+  summariseRecommendations,
+} from './recommendations.js';
+
+export type { Recommendation, RecommendationPriority, RecommendationType } from './recommendations.js';

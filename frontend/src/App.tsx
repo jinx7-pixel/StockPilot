@@ -25,6 +25,7 @@ import { OverstockPage } from './pages/OverstockPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
+import { RecommendationsPage } from './pages/RecommendationsPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ReorderPage } from './pages/ReorderPage';
 import { SaleDetailPage } from './pages/SaleDetailPage';
@@ -54,6 +55,7 @@ export function App() {
           <Route path="reorder" element={<ReorderPage />} />
           <Route path="overstock" element={<OverstockPage />} />
           <Route path="intelligence" element={<UnifiedIntelligencePage />} />
+          <Route path="recommendations" element={<RecommendationsPage />} />
           <Route path="slow-dead" element={<SlowDeadPage />} />
           <Route path="supplier-intelligence" element={<SupplierIntelligencePage />} />
           <Route path="products" element={<ProductsPage />} />

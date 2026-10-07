@@ -7,6 +7,7 @@ import { healthRouter } from './health.routes.js';
 import { intelligenceRouter } from './intelligence.routes.js';
 import { inventoryRouter } from './inventory.routes.js';
 import { productRouter } from './product.routes.js';
+import { recommendationsRouter } from './recommendations.routes.js';
 import { purchaseOrderRouter } from './purchaseOrder.routes.js';
 import { salesRouter } from './sales.routes.js';
 import { supplierRouter } from './supplier.routes.js';
@@ -29,3 +30,6 @@ apiRouter.use('/suppliers', supplierRouter);
 apiRouter.use('/purchase-orders', purchaseOrderRouter);
 apiRouter.use('/analytics', analyticsRouter);
 apiRouter.use('/intelligence', intelligenceRouter);
+
+// Read-only: recommendations are derived from intelligence, never acted on here.
+apiRouter.use('/recommendations', recommendationsRouter);
