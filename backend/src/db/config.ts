@@ -12,7 +12,7 @@
 
 import type { ClientConfig } from 'pg';
 
-import { env } from '../config/env.js';
+import { env, type PgSslMode } from '../config/env.js';
 
 /**
  * The session timezone every PostgreSQL connection is pinned to.
@@ -39,6 +39,40 @@ import { env } from '../config/env.js';
  */
 const SESSION_TIMEZONE_OPTIONS = '-c timezone=UTC';
 
+/**
+ * Translate a validated `PGSSLMODE` into the value `pg` should use.
+ *
+ * ## Why this is explicit rather than delegated
+ *
+ * `pg` resolves SSL from `process.env.PGSSLMODE` on its own **only** when the
+ * caller passes `ssl: undefined`, and its fallback for a value it does not
+ * recognise is plaintext. That meant a typo silently downgraded an intended TLS
+ * connection, and a valid mode carrying stray whitespace was parsed as valid
+ * here but unknown to `pg` — so it went out in plaintext too.
+ *
+ * Passing an explicit value for every supported mode removes the dependency on
+ * `pg` reading the ambient environment. The mapping is deliberately identical to
+ * `pg`'s own, so no connection changes behaviour; only the previously silent
+ * typo becomes an error at startup.
+ */
+export function resolveSsl(mode: PgSslMode): ClientConfig['ssl'] {
+  switch (mode) {
+    case 'disable':
+      return false;
+    case 'allow':
+      return undefined; // `pg` treats an undefined `ssl` as no TLS request.
+    case 'require':
+    case 'no-verify':
+      // Encrypt, but do not validate the server certificate. Matches both
+      // `pg`'s mapping and StockPilot's pre-existing behaviour for `require`.
+      return { rejectUnauthorized: false };
+    case 'verify-ca':
+    case 'verify-full':
+    case 'prefer':
+      return true;
+  }
+}
+
 /** Resolve the env-driven database settings into a `pg` config object. */
 export function buildClientConfig(): ClientConfig {
   return {
@@ -49,7 +83,8 @@ export function buildClientConfig(): ClientConfig {
     database: env.database.database,
     user: env.database.user,
     password: env.database.password,
-    ssl: env.database.ssl === 'require' ? { rejectUnauthorized: false } : undefined,
+    // Always explicit, so `pg` never has to infer TLS from the environment.
+    ssl: resolveSsl(env.database.sslMode),
     connectionTimeoutMillis: env.database.connectionTimeoutMillis,
     // Sent as the startup packet by `pg`, before any query runs, so the very
     // first statement of a fresh connection already sees UTC.
