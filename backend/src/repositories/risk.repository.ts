@@ -71,7 +71,13 @@ function riskProjection(windowStart: string, windowEnd: string, windowDays: stri
     ) st ON true
     LEFT JOIN LATERAL (
       SELECT COALESCE(SUM(si.quantity), 0) AS units_sold,
-             count(DISTINCT date_trunc('day', s.sold_at))::int AS active_days
+             -- AT TIME ZONE 'UTC' turns the timestamptz into the UTC wall clock
+             -- before bucketing, so one distinct active day means one UTC day.
+             -- Without it this count silently depends on the session timezone, and
+             -- the same two sales can fall in one bucket or two depending on where
+             -- the database runs. The shared demand-facts projection is the
+             -- reference for this exact expression.
+             count(DISTINCT date_trunc('day', s.sold_at AT TIME ZONE 'UTC'))::int AS active_days
         FROM sales s
         JOIN sale_items si ON si.sale_id = s.id AND si.business_id = s.business_id
        WHERE s.business_id = p.business_id
@@ -85,9 +91,11 @@ function riskProjection(windowStart: string, windowEnd: string, windowDays: stri
       -- has one day of evidence, not ninety.
       --
       -- Extracting the DAY component is exact here because both sides are
-      -- truncated to midnight, so the difference is a whole number of days.
+      -- truncated to UTC midnight, so the difference is a whole number of days.
+      -- Both sides are pinned to UTC explicitly, matching the shared projection.
       SELECT GREATEST(0, EXTRACT(DAY FROM (
-               date_trunc('day', now()) - date_trunc('day', MIN(created_at))
+               date_trunc('day', now() AT TIME ZONE 'UTC') -
+               date_trunc('day', MIN(created_at) AT TIME ZONE 'UTC')
              ))::int) AS observable_days
         FROM inventory_movements im
        WHERE im.business_id = p.business_id AND im.product_id = p.id

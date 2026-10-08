@@ -99,6 +99,24 @@ export interface SalesWindowRow {
  * counted twice. Revenue uses the stored `total_amount` (exact `numeric`),
  * units come from summing the line quantities.
  */
+/**
+ * UTC midnight of "today", as a `timestamptz`.
+ *
+ * ## Why the round trip
+ *
+ * `date_trunc('day', now())` truncates in the **session** timezone, so "today" is
+ * a different calendar day depending on where the database runs — and a dashboard
+ * showing "sales today" would disagree with the intelligence window beside it.
+ *
+ * The trailing `AT TIME ZONE 'UTC'` is not decoration. Truncating produces a
+ * `timestamp` (a bare wall clock), and comparing a `timestamptz` column against a
+ * bare `timestamp` makes PostgreSQL reinterpret it **in the session timezone** —
+ * reintroducing the exact dependence we are removing. Converting back with
+ * `AT TIME ZONE 'UTC'` pins the instant itself, so the comparison is identical
+ * everywhere.
+ */
+const UTC_TODAY = "date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'";
+
 export async function getSalesWindows(
   businessId: string,
 ): Promise<SalesWindowRow | null> {
@@ -111,13 +129,13 @@ export async function getSalesWindows(
                 ON si.sale_id = s.id AND si.business_id = s.business_id
         WHERE s.business_id = $1
           AND s.status = 'completed'
-          AND s.sold_at >= date_trunc('day', now()) - interval '30 days'
+          AND s.sold_at >= ${UTC_TODAY} - interval '30 days'
         GROUP BY s.id, s.sold_at, s.total_amount
      )
      SELECT
-       count(*) FILTER (WHERE sold_at >= date_trunc('day', now()))::int                    AS sales_today,
-       COALESCE(SUM(units) FILTER (WHERE sold_at >= date_trunc('day', now())), 0.00)::numeric AS units_today,
-       COALESCE(SUM(total_amount) FILTER (WHERE sold_at >= date_trunc('day', now())), 0.00)::numeric AS revenue_today,
+       count(*) FILTER (WHERE sold_at >= ${UTC_TODAY})::int                              AS sales_today,
+       COALESCE(SUM(units) FILTER (WHERE sold_at >= ${UTC_TODAY}), 0.00)::numeric         AS units_today,
+       COALESCE(SUM(total_amount) FILTER (WHERE sold_at >= ${UTC_TODAY}), 0.00)::numeric  AS revenue_today,
 
        count(*) FILTER (WHERE sold_at >= now() - interval '7 days')::int                  AS sales_last_7_days,
        COALESCE(SUM(units) FILTER (WHERE sold_at >= now() - interval '7 days'), 0.00)::numeric AS units_last_7_days,
@@ -227,7 +245,9 @@ export async function getSalesSeries(
         GROUP BY s.id, s.sold_at, s.total_amount
      ),
      grouped AS (
-       SELECT to_char(date_trunc($4, sold_at), 'YYYY-MM-DD') AS period,
+       -- Bucket in UTC so a daily series is the same series everywhere. The unit
+       -- stays the validated parameter $4; only the value being bucketed is pinned.
+       SELECT to_char(date_trunc($4, sold_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS period,
               count(*)::int                AS sales_count,
               SUM(units)::numeric         AS units_sold,
               SUM(total_amount)::numeric   AS revenue
@@ -611,7 +631,7 @@ export async function getProductSalesHistory(
   groupBy: 'day' | 'week' | 'month',
 ): Promise<ProductSalesHistoryRow[]> {
   const result = await query<ProductSalesHistoryRow>(
-    `SELECT to_char(date_trunc($5, s.sold_at), 'YYYY-MM-DD') AS period,
+    `SELECT to_char(date_trunc($5, s.sold_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD') AS period,
             count(DISTINCT s.id)::int              AS sales_count,
             COALESCE(SUM(si.quantity), 0.00)::numeric  AS units_sold,
             COALESCE(SUM(si.line_total), 0.00)::numeric AS revenue
