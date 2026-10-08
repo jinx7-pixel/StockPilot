@@ -6,7 +6,7 @@
  * the tenant from the session. No request ever sends a `businessId`.
  */
 
-import { request } from './request';
+import { request, requestList } from './request';
 
 export interface Category {
   id: string;
@@ -102,8 +102,16 @@ export const catalogApi = {
     request<void>(`/api/categories/${id}`, { method: 'DELETE' }),
 
   // ---- Products -----------------------------------------------------------
+  /**
+   * Uses `requestList`, not `request`.
+   *
+   * The route answers `{ data: [...], meta: {...} }`. A plain `request` returns
+   * only the array and silently drops `meta`, so a caller reading `result.items`
+   * or `result.meta` would get `undefined` — the exact failure this layer exists
+   * to prevent. `requestList` folds the pair back into `{ items, meta }`.
+   */
   listProducts: (query: ProductQuery) =>
-    request<{ items: Product[]; meta: ListMeta }>(
+    requestList<Product>(
       `/api/products${buildQueryString(query)}`,
     ),
 
