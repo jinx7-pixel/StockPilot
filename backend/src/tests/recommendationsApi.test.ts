@@ -206,10 +206,20 @@ async function seedNoHistory(tenant: Tenant, sku: string): Promise<string> {
   return productId;
 }
 
+/**
+ * Fetch the recommendation list and return the **unwrapped** payload.
+ *
+ * The route answers with the standard `{ data }` envelope; unwrapping here keeps
+ * every assertion below reading `body.items` rather than `body.data.items`, which
+ * is exactly what a client does. The raw wire shape is asserted separately in the
+ * "envelope" test so the contract itself stays covered.
+ */
 async function list(tenant: Tenant, query = ''): Promise<ListResponse> {
-  const response = await tenant.client.get<ListResponse>(`/api/recommendations${query}`);
+  const response = await tenant.client.get<{ data: ListResponse }>(
+    `/api/recommendations${query}`,
+  );
   assert.equal(response.status, 200, `list failed: ${JSON.stringify(response.body)}`);
-  return response.body;
+  return response.body.data;
 }
 
 async function detail(tenant: Tenant, productId: string) {
@@ -231,6 +241,51 @@ function typesOf(body: ListResponse): string[] {
 // ---------------------------------------------------------------------------
 
 describe('Recommendations API — list', () => {
+  it('wraps the list in the standard { data } envelope', async () => {
+    const tenant = await createTenant(server);
+    await seedNeedingReorder(tenant, 'RC-ENVELOPE');
+
+    const response = await tenant.client.get<Record<string, unknown>>('/api/recommendations');
+
+    assert.equal(response.status, 200);
+
+    // This endpoint used to answer `{ items, pagination, recommendationCount }` at
+    // the top level, so a client that unwraps `data` received undefined.
+    assert.ok('data' in response.body, 'the response must have a top-level `data` key');
+    assert.ok(!('items' in response.body), '`items` must not leak to the top level');
+    assert.ok(!('pagination' in response.body), '`pagination` must not leak to the top level');
+    assert.ok(
+      !('recommendationCount' in response.body),
+      '`recommendationCount` must not leak to the top level',
+    );
+
+    const payload = response.body.data as {
+      items: unknown[];
+      pagination: Record<string, number>;
+      recommendationCount: number;
+    };
+    assert.ok(Array.isArray(payload.items));
+    assert.equal(typeof payload.pagination.total, 'number');
+    assert.equal(typeof payload.recommendationCount, 'number');
+  });
+
+  it('leaves the contents inside data unchanged', async () => {
+    const tenant = await createTenant(server);
+    const productId = await seedNeedingReorder(tenant, 'RC-ENVELOPE-ITEM');
+
+    const response = await tenant.client.get<{ data: ListResponse }>('/api/recommendations');
+    const payload = response.body.data;
+
+    // Only the outermost key changed; the recommendation documents are untouched.
+    assert.equal(payload.items.length, 1);
+    assert.equal(payload.items[0]!.product.id, productId);
+    assert.ok(payload.items[0]!.recommendations.length > 0);
+    assert.equal(
+      payload.recommendationCount,
+      payload.items[0]!.recommendations.length,
+    );
+  });
+
   it('returns an empty list when nothing needs attention', async () => {
     const tenant = await createTenant(server);
     await seedHealthy(tenant, 'RC-HEALTHY');

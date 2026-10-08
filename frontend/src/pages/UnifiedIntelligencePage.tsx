@@ -143,7 +143,7 @@ export function UnifiedIntelligencePage() {
     void (async () => {
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result.data);
+        if (!cancelled) setCategories(result);
       } catch {
         // The category filter is a convenience; a failure here must not take
         // the whole page down with it.

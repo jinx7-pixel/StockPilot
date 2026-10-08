@@ -78,9 +78,9 @@ export function InventoryDetailPage() {
 
     inventoryApi
       .detail(productId)
-      .then(({ data }) => {
+      .then((value) => {
         if (cancelled) return;
-        setDetail(data);
+        setDetail(value);
         setError(null);
       })
       .catch((cause: unknown) => {
@@ -106,9 +106,9 @@ export function InventoryDetailPage() {
         page,
         limit: PAGE_SIZE,
       })
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setMovements(data);
+        setMovements(items);
         setMeta(listMeta);
       })
       .catch(() => {

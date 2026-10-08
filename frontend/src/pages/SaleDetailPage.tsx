@@ -32,9 +32,9 @@ export function SaleDetailPage() {
 
     salesApi
       .detail(saleId)
-      .then(({ data }) => {
+      .then((value) => {
         if (cancelled) return;
-        setSale(data);
+        setSale(value);
         setError(null);
       })
       .catch((cause: unknown) => {

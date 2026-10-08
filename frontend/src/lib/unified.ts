@@ -95,6 +95,13 @@ function buildQueryString(query: UnifiedQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
+/**
+ * Both generics are the **unwrapped** payload.
+ *
+ * The route answers `{ data: { items, pagination } }`, so `request()` returns
+ * `{ items, pagination }` directly — which is why this client already read that
+ * way and why the same convention applies to `detail`.
+ */
 export const unifiedApi = {
   list: (query: UnifiedQuery) =>
     request<{ items: UnifiedProductIntelligence[]; pagination: UnifiedPagination }>(
@@ -102,7 +109,5 @@ export const unifiedApi = {
     ),
 
   detail: (productId: string) =>
-    request<{ data: UnifiedProductIntelligence }>(
-      `/api/intelligence/products/${productId}`,
-    ),
+    request<UnifiedProductIntelligence>(`/api/intelligence/products/${productId}`),
 };

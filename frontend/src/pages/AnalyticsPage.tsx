@@ -107,11 +107,11 @@ export function AnalyticsPage() {
 
       if (cancelled) return;
 
-      setOverview(overviewResult.data);
-      setSales(salesResult.data);
-      setInventory(inventoryResult.data);
-      setProducts(productsResult.data);
-      setSuppliers(suppliersResult.data);
+      setOverview(overviewResult);
+      setSales(salesResult);
+      setInventory(inventoryResult);
+      setProducts(productsResult.items);
+      setSuppliers(suppliersResult);
       setError(null);
     })()
       .catch((cause: unknown) => {

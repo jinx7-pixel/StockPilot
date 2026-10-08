@@ -113,8 +113,8 @@ export function CreateSaleForm({
     };
 
     try {
-      const { data } = await salesApi.create(input);
-      onCreated(data);
+      const created = await salesApi.create(input);
+      onCreated(created);
     } catch (cause) {
       // A 409 carries the server's own explanation, e.g. how much stock is
       // actually available, which is far more useful than a generic message.

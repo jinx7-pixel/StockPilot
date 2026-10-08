@@ -6,7 +6,7 @@
  * nothing more. An empty dataset arrives as zeros and `null`s, never `NaN`.
  */
 
-import { request } from './request';
+import { request, requestList } from './request';
 
 export interface Overview {
   products: { totalProducts: number; activeProducts: number; inactiveProducts: number };
@@ -188,14 +188,19 @@ export function formatAmount(value: string): string {
   });
 }
 
+/**
+ * Generics are the **unwrapped** payload: `request()` reads `{ data }` off the
+ * wire and returns what is inside it, so declaring the envelope here would be a
+ * double unwrap and every `.data` in a page would become `undefined`.
+ */
 export const analyticsApi = {
-  overview: () => request<{ data: Overview }>('/api/analytics/overview'),
+  overview: () => request<Overview>('/api/analytics/overview'),
 
   sales: (query: AnalyticsQuery = {}) =>
-    request<{ data: SalesAnalytics }>(`/api/analytics/sales${buildQueryString(query)}`),
+    request<SalesAnalytics>(`/api/analytics/sales${buildQueryString(query)}`),
 
   inventory: (query: AnalyticsQuery = {}) =>
-    request<{ data: InventoryAnalytics }>(`/api/analytics/inventory${buildQueryString(query)}`),
+    request<InventoryAnalytics>(`/api/analytics/inventory${buildQueryString(query)}`),
 
   products: (
     query: AnalyticsQuery & {
@@ -206,7 +211,7 @@ export const analyticsApi = {
       limit?: number;
     } = {},
   ) =>
-    request<{ data: ProductAnalytics[]; meta: ListMeta }>(
+    requestList<ProductAnalytics>(
       `/api/analytics/products${buildQueryString({
         search: query.search,
         categoryId: query.categoryId,
@@ -219,9 +224,9 @@ export const analyticsApi = {
     ),
 
   product: (productId: string, query: AnalyticsQuery = {}) =>
-    request<{ data: ProductAnalyticsDetail }>(
+    request<ProductAnalyticsDetail>(
       `/api/analytics/products/${productId}${buildQueryString(query)}`,
     ),
 
-  suppliers: () => request<{ data: SupplierAnalytics[] }>('/api/analytics/suppliers'),
+  suppliers: () => request<SupplierAnalytics[]>('/api/analytics/suppliers'),
 };

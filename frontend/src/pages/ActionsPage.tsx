@@ -373,7 +373,7 @@ export function ActionsPage() {
               })),
           ),
         );
-        setSuppliers(supplierList.data);
+        setSuppliers(supplierList.items);
       } catch {
         // The actionable list and the supplier picker are conveniences; a failure
         // must not hide the action history, which is the page's main purpose.

@@ -59,9 +59,9 @@ export function CategoriesPage() {
 
     catalogApi
       .listCategories()
-      .then(({ data }) => {
+      .then((categories) => {
         if (cancelled) return;
-        setCategories(data);
+        setCategories(categories);
         setError(null);
       })
       .catch((cause: unknown) => {

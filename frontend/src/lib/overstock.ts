@@ -11,7 +11,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const OVERSTOCK_STATUSES = ['OVERSTOCK', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
 
@@ -96,14 +96,18 @@ function buildQueryString(query: OverstockQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const overstockApi = {
-  list: (query: OverstockQuery) =>
-    request<{
-      data: Overstock[];
-      meta: ListMeta;
-      statusCounts: Partial<Record<OverstockStatus, number>>;
-    }>(`/api/intelligence/overstock${buildQueryString(query)}`),
+/** The count summary the overstock route sends beside `data` and `meta`. */
+interface OverstockCounts {
+  statusCounts?: Partial<Record<OverstockStatus, number>>;
+}
 
-  detail: (productId: string) =>
-    request<{ data: Overstock }>(`/api/intelligence/overstock/${productId}`),
+export const overstockApi = {
+  list: async (query: OverstockQuery) => {
+    const { items, meta, counts } = await requestList<Overstock, OverstockCounts>(
+      `/api/intelligence/overstock${buildQueryString(query)}`,
+    );
+    return { items, meta, statusCounts: counts?.statusCounts };
+  },
+
+  detail: (productId: string) => request<Overstock>(`/api/intelligence/overstock/${productId}`),
 };

@@ -10,7 +10,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const REORDER_DECISIONS = [
   'REORDER',
@@ -101,14 +101,18 @@ function buildQueryString(query: ReorderQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const reorderApi = {
-  list: (query: ReorderQuery) =>
-    request<{
-      data: Reorder[];
-      meta: ListMeta;
-      decisionCounts: Partial<Record<ReorderDecision, number>>;
-    }>(`/api/intelligence/reorder${buildQueryString(query)}`),
+/** The count summary the reorder route sends beside `data` and `meta`. */
+interface ReorderCounts {
+  decisionCounts?: Partial<Record<ReorderDecision, number>>;
+}
 
-  detail: (productId: string) =>
-    request<{ data: Reorder }>(`/api/intelligence/reorder/${productId}`),
+export const reorderApi = {
+  list: async (query: ReorderQuery) => {
+    const { items, meta, counts } = await requestList<Reorder, ReorderCounts>(
+      `/api/intelligence/reorder${buildQueryString(query)}`,
+    );
+    return { items, meta, decisionCounts: counts?.decisionCounts };
+  },
+
+  detail: (productId: string) => request<Reorder>(`/api/intelligence/reorder/${productId}`),
 };

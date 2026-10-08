@@ -41,7 +41,14 @@ export const recommendationsRouter: Router = Router();
 
 recommendationsRouter.use(requireAuth);
 
-/** GET /api/recommendations */
+/**
+ * GET /api/recommendations
+ *
+ * Wrapped in the application's standard `{ data }` envelope, like every other
+ * list route. The contents inside `data` — `items`, `pagination` and
+ * `recommendationCount` — are unchanged; only the outermost wrapping moved, so a
+ * client that unwraps `data` once sees exactly what it always did.
+ */
 recommendationsRouter.get(
   '/',
   asyncHandler(async (req: AuthedRequest, res) => {
@@ -50,9 +57,11 @@ recommendationsRouter.get(
     const page = await recommendationsService.listRecommendations(req.auth.businessId, query);
 
     res.status(200).json({
-      items: page.items,
-      pagination: page.pagination,
-      recommendationCount: page.recommendationCount,
+      data: {
+        items: page.items,
+        pagination: page.pagination,
+        recommendationCount: page.recommendationCount,
+      },
     });
   }),
 );

@@ -10,7 +10,7 @@
  * float. Use `formatAmount` / `formatQuantity` to display them.
  */
 
-import { request } from './request';
+import { request, requestList } from './request';
 
 export type PurchaseOrderStatus =
   | 'draft'
@@ -152,9 +152,14 @@ export function formatQuantity(value: string): string {
   return Number.isInteger(parsed) ? String(parsed) : formatAmount(value);
 }
 
+/**
+ * Generics are the **unwrapped** payload: `request()` reads `{ data }` off the
+ * wire and returns what is inside it, so declaring the envelope here would be a
+ * double unwrap and every `.data` in a page would become `undefined`.
+ */
 export const supplierApi = {
   list: (query: SuppliersQuery) =>
-    request<{ data: Supplier[]; meta: ListMeta }>(
+    requestList<Supplier>(
       `/api/suppliers${buildQueryString({
         search: query.search,
         isActive: query.isActive && query.isActive !== 'all' ? query.isActive : undefined,
@@ -164,10 +169,10 @@ export const supplierApi = {
     ),
 
   create: (input: SupplierInput) =>
-    request<{ data: Supplier }>('/api/suppliers', { method: 'POST', body: input }),
+    request<Supplier>('/api/suppliers', { method: 'POST', body: input }),
 
   update: (id: string, input: Partial<SupplierInput> & { isActive?: boolean }) =>
-    request<{ data: Supplier }>(`/api/suppliers/${id}`, { method: 'PATCH', body: input }),
+    request<Supplier>(`/api/suppliers/${id}`, { method: 'PATCH', body: input }),
 
   // There is deliberately no delete: purchase orders reference suppliers, so a
   // supplier with history can never be removed. Deactivate instead.
@@ -175,7 +180,7 @@ export const supplierApi = {
 
 export const purchaseOrderApi = {
   list: (query: PurchaseOrdersQuery) =>
-    request<{ data: PurchaseOrder[]; meta: ListMeta }>(
+    requestList<PurchaseOrder>(
       `/api/purchase-orders${buildQueryString({
         search: query.search,
         supplierId: query.supplierId,
@@ -187,15 +192,15 @@ export const purchaseOrderApi = {
       })}`,
     ),
 
-  detail: (id: string) => request<{ data: PurchaseOrder }>(`/api/purchase-orders/${id}`),
+  detail: (id: string) => request<PurchaseOrder>(`/api/purchase-orders/${id}`),
 
   /** Raises a draft. Does not move stock. */
   create: (input: PurchaseOrderInput) =>
-    request<{ data: PurchaseOrder }>('/api/purchase-orders', { method: 'POST', body: input }),
+    request<PurchaseOrder>('/api/purchase-orders', { method: 'POST', body: input }),
 
   /** `draft -> ordered`. Touches no inventory. */
   place: (id: string) =>
-    request<{ data: PurchaseOrder }>(`/api/purchase-orders/${id}/order`, { method: 'POST' }),
+    request<PurchaseOrder>(`/api/purchase-orders/${id}/order`, { method: 'POST' }),
 
   /**
    * Record an arrival. Each quantity is a **newly received increment**, not a new
@@ -203,14 +208,14 @@ export const purchaseOrderApi = {
    * all in one transaction.
    */
   receive: (id: string, items: { productId: string; quantity: string }[]) =>
-    request<{ data: PurchaseOrder }>(`/api/purchase-orders/${id}/receive`, {
+    request<PurchaseOrder>(`/api/purchase-orders/${id}/receive`, {
       method: 'POST',
       body: { items },
     }),
 
   /** Only `expectedAt`, `notes` and `status: 'cancelled'` are accepted. */
   update: (id: string, input: { expectedAt?: string | null; notes?: string | null; status?: 'cancelled' }) =>
-    request<{ data: PurchaseOrder }>(`/api/purchase-orders/${id}`, {
+    request<PurchaseOrder>(`/api/purchase-orders/${id}`, {
       method: 'PATCH',
       body: input,
     }),

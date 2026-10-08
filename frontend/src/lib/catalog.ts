@@ -78,30 +78,42 @@ export interface ProductInput {
   isActive?: boolean;
 }
 
+/**
+ * The catalog client.
+ *
+ * ## Why every generic here is the *unwrapped* shape
+ *
+ * `request<T>()` reads `{ data: T }` off the wire and returns `T`. So a client
+ * declares what it wants back, never the envelope. Declaring `request<{data: X}>`
+ * would be a double unwrap: the helper returns `X`, the type claims a wrapper,
+ * and every `.data` in a page silently becomes `undefined`.
+ */
 export const catalogApi = {
   // ---- Categories ---------------------------------------------------------
-  listCategories: () => request<{ data: Category[] }>('/api/categories'),
+  listCategories: () => request<Category[]>('/api/categories'),
 
   createCategory: (input: CategoryInput) =>
-    request<{ data: Category }>('/api/categories', { method: 'POST', body: input }),
+    request<Category>('/api/categories', { method: 'POST', body: input }),
 
   updateCategory: (id: string, input: Partial<CategoryInput>) =>
-    request<{ data: Category }>(`/api/categories/${id}`, { method: 'PATCH', body: input }),
+    request<Category>(`/api/categories/${id}`, { method: 'PATCH', body: input }),
 
   deleteCategory: (id: string) =>
     request<void>(`/api/categories/${id}`, { method: 'DELETE' }),
 
   // ---- Products -----------------------------------------------------------
   listProducts: (query: ProductQuery) =>
-    request<{ data: Product[]; meta: ListMeta }>(`/api/products${buildQueryString(query)}`),
+    request<{ items: Product[]; meta: ListMeta }>(
+      `/api/products${buildQueryString(query)}`,
+    ),
 
   createProduct: (input: ProductInput) =>
-    request<{ data: Product }>('/api/products', { method: 'POST', body: input }),
+    request<Product>('/api/products', { method: 'POST', body: input }),
 
   updateProduct: (id: string, input: Partial<ProductInput>) =>
-    request<{ data: Product }>(`/api/products/${id}`, { method: 'PATCH', body: input }),
+    request<Product>(`/api/products/${id}`, { method: 'PATCH', body: input }),
 
   /** Soft delete: deactivates the product. The row is retained. */
   deactivateProduct: (id: string) =>
-    request<{ data: Product }>(`/api/products/${id}`, { method: 'DELETE' }),
+    request<Product>(`/api/products/${id}`, { method: 'DELETE' }),
 };

@@ -11,7 +11,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const SLOW_DEAD_STATUSES = ['DEAD', 'SLOW', 'NORMAL', 'INSUFFICIENT_DATA'] as const;
 
@@ -90,14 +90,18 @@ function buildQueryString(query: SlowDeadQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const slowDeadApi = {
-  list: (query: SlowDeadQuery) =>
-    request<{
-      data: SlowDead[];
-      meta: ListMeta;
-      statusCounts: Partial<Record<SlowDeadStatus, number>>;
-    }>(`/api/intelligence/slow-dead${buildQueryString(query)}`),
+/** The count summary the slow/dead route sends beside `data` and `meta`. */
+interface SlowDeadCounts {
+  statusCounts?: Partial<Record<SlowDeadStatus, number>>;
+}
 
-  detail: (productId: string) =>
-    request<{ data: SlowDead }>(`/api/intelligence/slow-dead/${productId}`),
+export const slowDeadApi = {
+  list: async (query: SlowDeadQuery) => {
+    const { items, meta, counts } = await requestList<SlowDead, SlowDeadCounts>(
+      `/api/intelligence/slow-dead${buildQueryString(query)}`,
+    );
+    return { items, meta, statusCounts: counts?.statusCounts };
+  },
+
+  detail: (productId: string) => request<SlowDead>(`/api/intelligence/slow-dead/${productId}`),
 };

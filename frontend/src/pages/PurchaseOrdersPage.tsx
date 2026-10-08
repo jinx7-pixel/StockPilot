@@ -79,9 +79,9 @@ export function PurchaseOrdersPage() {
         page,
         limit: PAGE_SIZE,
       })
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setOrders(data);
+        setOrders(items);
         setMeta(listMeta);
         setError(null);
       })
@@ -108,8 +108,8 @@ export function PurchaseOrdersPage() {
           catalogApi.listProducts({ isActive: 'true', limit: 100 }),
         ]);
         if (cancelled) return;
-        setSuppliers(suppliersResult.data);
-        setProducts(productsResult.data);
+        setSuppliers(suppliersResult.items);
+        setProducts(productsResult.items);
       } catch {
         if (!cancelled) {
           setSuppliers([]);

@@ -81,9 +81,9 @@ export function InventoryPage() {
         page,
         limit: PAGE_SIZE,
       })
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setItems(data);
+        setItems(items);
         setMeta(listMeta);
         setError(null);
       })
@@ -105,8 +105,8 @@ export function InventoryPage() {
 
     inventoryApi
       .summary()
-      .then(({ data }) => {
-        if (!cancelled) setSummary(data);
+      .then((summary) => {
+        if (!cancelled) setSummary(summary);
       })
       .catch(() => {
         // The summary is a convenience; the list still works without it.
@@ -114,8 +114,8 @@ export function InventoryPage() {
 
     catalogApi
       .listCategories()
-      .then(({ data }) => {
-        if (!cancelled) setCategories(data);
+      .then((value) => {
+        if (!cancelled) setCategories(value);
       })
       .catch(() => {
         if (!cancelled) setCategories([]);

@@ -379,11 +379,11 @@ describe('Unified Intelligence — supplier selection', () => {
       'and the supplier id does not leak through the error body',
     );
 
-    const listB = await tenantB.client.get<{ items: Array<{ supplier: unknown }> }>(
+    const listB = await tenantB.client.get<{ data: { items: Array<{ supplier: unknown }> } }>(
       '/api/intelligence/products?limit=25',
     );
     assert.equal(listB.status, 200);
-    for (const row of listB.body.items) {
+    for (const row of listB.body.data.items) {
       assert.equal(row.supplier, null, 'and no supplier leaks into another tenant list');
     }
   });

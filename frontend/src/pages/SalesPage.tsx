@@ -65,9 +65,9 @@ export function SalesPage() {
         page,
         limit: PAGE_SIZE,
       })
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setSales(data);
+        setSales(items);
         setMeta(listMeta);
         setError(null);
       })
@@ -105,10 +105,10 @@ export function SalesPage() {
         if (cancelled) return;
 
         const stockByProduct = new Map<string, number>(
-          inventoryResult.data.map((item: InventoryItem) => [item.id, item.currentStock]),
+          inventoryResult.items.map((item: InventoryItem) => [item.id, item.currentStock]),
         );
 
-        const merged: SellableProduct[] = productsResult.data.map((product: Product) => ({
+        const merged: SellableProduct[] = productsResult.items.map((product: Product) => ({
           id: product.id,
           name: product.name,
           sku: product.sku,

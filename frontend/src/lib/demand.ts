@@ -11,7 +11,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const DEMAND_TRENDS = [
   'INCREASING',
@@ -114,13 +114,18 @@ function buildQueryString(query: DemandQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const demandApi = {
-  list: (query: DemandQuery) =>
-    request<{
-      data: Demand[];
-      meta: ListMeta;
-      trendCounts: Partial<Record<DemandTrend, number>>;
-    }>(`/api/intelligence/demand${buildQueryString(query)}`),
+/** The count summary the demand route sends beside `data` and `meta`. */
+interface DemandCounts {
+  trendCounts?: Partial<Record<DemandTrend, number>>;
+}
 
-  detail: (productId: string) => request<{ data: Demand }>(`/api/intelligence/demand/${productId}`),
+export const demandApi = {
+  list: async (query: DemandQuery) => {
+    const { items, meta, counts } = await requestList<Demand, DemandCounts>(
+      `/api/intelligence/demand${buildQueryString(query)}`,
+    );
+    return { items, meta, trendCounts: counts?.trendCounts };
+  },
+
+  detail: (productId: string) => request<Demand>(`/api/intelligence/demand/${productId}`),
 };

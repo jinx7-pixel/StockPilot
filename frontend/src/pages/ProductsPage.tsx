@@ -119,9 +119,9 @@ export function ProductsPage() {
 
     catalogApi
       .listProducts(buildQuery())
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setProducts(data);
+        setProducts(items);
         setMeta(listMeta);
         setError(null);
       })
@@ -143,8 +143,8 @@ export function ProductsPage() {
 
     catalogApi
       .listCategories()
-      .then(({ data }) => {
-        if (!cancelled) setCategories(data);
+      .then((value) => {
+        if (!cancelled) setCategories(value);
       })
       .catch(() => {
         // The category filter is optional; an empty list is a usable fallback.

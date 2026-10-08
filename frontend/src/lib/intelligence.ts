@@ -11,7 +11,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const RISK_LEVELS = [
   'OUT_OF_STOCK',
@@ -105,14 +105,28 @@ function buildQueryString(query: StockRiskQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const intelligenceApi = {
-  list: (query: StockRiskQuery) =>
-    request<{
-      data: StockRisk[];
-      meta: ListMeta;
-      riskCounts: Partial<Record<RiskLevel, number>>;
-    }>(`/api/intelligence/stock-risk${buildQueryString(query)}`),
+/**
+ * Generics are the **unwrapped** payload: `request()` reads `{ data }` off the
+ * wire and returns what is inside it, so declaring the envelope here would be a
+ * double unwrap and every `.data` in a page would become `undefined`.
+ *
+ * Note `requestList` below: the route sends `meta` as a **sibling** of `data`,
+ * not inside it, so a plain `request` would discard the pagination totals.
+ * `requestList` folds the pair back into `{ items, meta }` so no page has to know
+ * how the wire is shaped.
+ */
+/** The count summary the stock-risk route sends beside `data` and `meta`. */
+interface StockRiskCounts {
+  riskCounts?: Partial<Record<RiskLevel, number>>;
+}
 
-  detail: (productId: string) =>
-    request<{ data: StockRisk }>(`/api/intelligence/stock-risk/${productId}`),
+export const intelligenceApi = {
+  list: async (query: StockRiskQuery) => {
+    const { items, meta, counts } = await requestList<StockRisk, StockRiskCounts>(
+      `/api/intelligence/stock-risk${buildQueryString(query)}`,
+    );
+    return { items, meta, riskCounts: counts?.riskCounts };
+  },
+
+  detail: (productId: string) => request<StockRisk>(`/api/intelligence/stock-risk/${productId}`),
 };

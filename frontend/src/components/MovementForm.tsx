@@ -75,8 +75,11 @@ export function MovementForm({
     };
 
     try {
+      // `inventoryApi.record` uses `requestWithMeta` because this route pairs the new
+      // movement with the resulting balance; `meta` is absent only if the server
+      // ever stops sending it, so fall back rather than render "undefined units".
       const result = await inventoryApi.record(input);
-      onRecorded(result.meta.currentStock);
+      onRecorded(result.meta?.currentStock ?? product.currentStock);
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : 'Could not record the movement.');
     } finally {

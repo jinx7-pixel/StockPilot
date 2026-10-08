@@ -96,16 +96,18 @@ function buildQueryString(query: RecommendationsQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
+/**
+ * Both generics are the **unwrapped** payload: the routes answer
+ * `{ data: … }` and `request()` hands back what is inside it.
+ */
 export const recommendationsApi = {
   list: (query: RecommendationsQuery) =>
     request<RecommendationsPage>(`/api/recommendations${buildQueryString(query)}`),
 
   forProduct: (productId: string) =>
     request<{
-      data: {
-        product: RecommendationProductItem['product'];
-        recommendations: Recommendation[];
-        summary: RecommendationSummary;
-      };
+      product: RecommendationProductItem['product'];
+      recommendations: Recommendation[];
+      summary: RecommendationSummary;
     }>(`/api/recommendations/products/${productId}`),
 };

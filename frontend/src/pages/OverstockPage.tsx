@@ -120,9 +120,9 @@ export function OverstockPage() {
         });
         if (cancelled) return;
 
-        setItems(result.data);
+        setItems(result.items);
         setMeta(result.meta);
-        setStatusCounts(result.statusCounts);
+        setStatusCounts(result.statusCounts ?? {});
         setError(null);
       } catch (cause) {
         if (cancelled) return;
@@ -145,7 +145,7 @@ export function OverstockPage() {
     void (async () => {
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result.data);
+        if (!cancelled) setCategories(result);
       } catch {
         // The category filter is a convenience; a failure here must not take
         // the whole assessment list down with it.

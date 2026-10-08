@@ -66,9 +66,9 @@ export function SuppliersPage() {
         page,
         limit: PAGE_SIZE,
       })
-      .then(({ data, meta: listMeta }) => {
+      .then(({ items, meta: listMeta }) => {
         if (cancelled) return;
-        setSuppliers(data);
+        setSuppliers(items);
         setMeta(listMeta);
         setError(null);
       })

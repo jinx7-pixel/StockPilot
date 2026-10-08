@@ -9,7 +9,7 @@
  * from the ledger.
  */
 
-import { request } from './request';
+import { request, requestList, requestWithMeta } from './request';
 
 export type MovementType = 'in' | 'out' | 'adjustment';
 
@@ -108,9 +108,14 @@ function buildQueryString(values: Record<string, string | number | undefined>): 
   return serialised ? `?${serialised}` : '';
 }
 
+/**
+ * Generics are the **unwrapped** payload: `request()` reads `{ data }` off the
+ * wire and returns what is inside it, so declaring the envelope here would be a
+ * double unwrap and every `.data` in a page would become `undefined`.
+ */
 export const inventoryApi = {
   list: (query: InventoryQuery) =>
-    request<{ data: InventoryItem[]; meta: ListMeta }>(
+    requestList<InventoryItem>(
       `/api/inventory${buildQueryString({
         search: query.search,
         categoryId: query.categoryId,
@@ -121,13 +126,13 @@ export const inventoryApi = {
       })}`,
     ),
 
-  summary: () => request<{ data: InventorySummary }>('/api/inventory/summary'),
+  summary: () => request<InventorySummary>('/api/inventory/summary'),
 
   detail: (productId: string) =>
-    request<{ data: ProductInventory }>(`/api/inventory/${productId}`),
+    request<ProductInventory>(`/api/inventory/${productId}`),
 
   movements: (productId: string, query: MovementsQuery) =>
-    request<{ data: Movement[]; meta: ListMeta }>(
+    requestList<Movement>(
       `/api/inventory/${productId}/movements${buildQueryString({
         movementType: query.movementType && query.movementType !== 'all' ? query.movementType : undefined,
         page: query.page,
@@ -135,9 +140,14 @@ export const inventoryApi = {
       })}`,
     ),
 
-  /** Append one immutable movement. The response carries the new balance. */
+  /**
+   * Append one immutable movement. The route answers `{ data: movement, meta }`,
+   * where `meta.currentStock` is the resulting balance — so this is the one call
+   * that needs {@link requestWithMeta} rather than {@link request}. A plain
+   * `request` would discard `meta` and the caller could never show the new stock.
+   */
   record: (input: MovementInput) =>
-    request<{ data: Movement; meta: { currentStock: number } }>('/api/inventory/movements', {
+    requestWithMeta<Movement, { currentStock: number }>('/api/inventory/movements', {
       method: 'POST',
       body: input,
     }),

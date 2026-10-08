@@ -139,9 +139,12 @@ export function StockRiskPage() {
         const result = await intelligenceApi.list(query);
         if (cancelled) return;
 
-        setItems(result.data);
+        setItems(result.items);
         setMeta(result.meta);
-        setRiskCounts(result.riskCounts);
+        // The count summary is a sibling of `data` on the wire; the client folds
+        // it back into a named field. Default to `{}` so the breakdown renders
+        // zero rather than crashing if a deployment ever omits it.
+        setRiskCounts(result.riskCounts ?? {});
         setError(null);
       } catch (cause) {
         if (cancelled) return;
@@ -165,7 +168,7 @@ export function StockRiskPage() {
     void (async () => {
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result.data);
+        if (!cancelled) setCategories(result);
       } catch {
         // The category filter is a convenience; a failure here must not take the
         // whole risk list down with it.

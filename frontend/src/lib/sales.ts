@@ -10,7 +10,7 @@
  *    a JavaScript float. Use `formatAmount` to display them.
  */
 
-import { request } from './request';
+import { request, requestList } from './request';
 
 export type SaleStatus = 'completed';
 
@@ -101,9 +101,14 @@ export function formatQuantity(value: string): string {
   return Number.isInteger(parsed) ? String(parsed) : formatAmount(value);
 }
 
+/**
+ * Generics are the **unwrapped** payload: `request()` reads `{ data }` off the
+ * wire and returns what is inside it, so declaring the envelope here would be a
+ * double unwrap and every `.data` in a page would become `undefined`.
+ */
 export const salesApi = {
   list: (query: SalesQuery) =>
-    request<{ data: Sale[]; meta: ListMeta }>(
+    requestList<Sale>(
       `/api/sales${buildQueryString({
         search: query.search,
         status: query.status && query.status !== 'all' ? query.status : undefined,
@@ -114,12 +119,11 @@ export const salesApi = {
       })}`,
     ),
 
-  detail: (id: string) => request<{ data: Sale }>(`/api/sales/${id}`),
+  detail: (id: string) => request<Sale>(`/api/sales/${id}`),
 
   /**
    * Record a sale. Stock is reduced by the server as immutable `out` movements
    * in the same transaction, so an accepted sale has already moved stock.
    */
-  create: (input: CreateSaleInput) =>
-    request<{ data: Sale }>('/api/sales', { method: 'POST', body: input }),
+  create: (input: CreateSaleInput) => request<Sale>('/api/sales', { method: 'POST', body: input }),
 };

@@ -127,9 +127,9 @@ export function SupplierIntelligencePage() {
         });
         if (cancelled) return;
 
-        setItems(result.data);
+        setItems(result.items);
         setMeta(result.meta);
-        setStabilityCounts(result.stabilityCounts);
+        setStabilityCounts(result.stabilityCounts ?? {});
         setError(null);
       } catch (cause) {
         if (cancelled) return;
@@ -157,7 +157,7 @@ export function SupplierIntelligencePage() {
     setDetailLoading(true);
     try {
       const result = await supplierIntelligenceApi.detail(supplierId);
-      setSelected(result.data);
+      setSelected(result);
     } catch (cause) {
       setError(
         cause instanceof ApiError ? cause.message : 'Could not load supplier detail. Please try again.',

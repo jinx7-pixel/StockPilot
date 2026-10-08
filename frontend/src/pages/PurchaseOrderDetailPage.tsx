@@ -57,9 +57,9 @@ export function PurchaseOrderDetailPage() {
 
     purchaseOrderApi
       .detail(orderId)
-      .then(({ data }) => {
+      .then((value) => {
         if (cancelled) return;
-        setOrder(data);
+        setOrder(value);
         setError(null);
       })
       .catch((cause: unknown) => {

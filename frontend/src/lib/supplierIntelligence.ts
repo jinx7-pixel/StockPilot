@@ -12,7 +12,7 @@
  */
 
 import type { DecisionExplanation } from '../components/DecisionExplanationView';
-import { request } from './request';
+import { request, requestList } from './request';
 
 export const SUPPLIER_STABILITIES = ['STABLE', 'VARIABLE', 'INSUFFICIENT_DATA'] as const;
 
@@ -106,14 +106,18 @@ function buildQueryString(query: SupplierQuery): string {
   return serialised ? `?${serialised}` : '';
 }
 
-export const supplierIntelligenceApi = {
-  list: (query: SupplierQuery) =>
-    request<{
-      data: Supplier[];
-      meta: ListMeta;
-      stabilityCounts: Partial<Record<SupplierStability, number>>;
-    }>(`/api/intelligence/suppliers${buildQueryString(query)}`),
+/** The count summary the supplier route sends beside `data` and `meta`. */
+interface SupplierCounts {
+  stabilityCounts?: Partial<Record<SupplierStability, number>>;
+}
 
-  detail: (supplierId: string) =>
-    request<{ data: Supplier }>(`/api/intelligence/suppliers/${supplierId}`),
+export const supplierIntelligenceApi = {
+  list: async (query: SupplierQuery) => {
+    const { items, meta, counts } = await requestList<Supplier, SupplierCounts>(
+      `/api/intelligence/suppliers${buildQueryString(query)}`,
+    );
+    return { items, meta, stabilityCounts: counts?.stabilityCounts };
+  },
+
+  detail: (supplierId: string) => request<Supplier>(`/api/intelligence/suppliers/${supplierId}`),
 };

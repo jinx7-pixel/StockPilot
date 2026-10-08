@@ -293,6 +293,11 @@ intelligenceRouter.get(
  * One row per product carrying all six complete engine results, including each
  * one's 11.7 explanation envelope. Read-only, and capped at 25 products because
  * a row is six verdicts rather than a summary line.
+ *
+ * The body is wrapped in the application's standard `{ data }` envelope, like
+ * every other list route. The contents inside `data` are unchanged; only the
+ * outermost wrapping moved, so a client that unwraps `data` once sees the same
+ * `items` and `pagination` it always did.
  */
 intelligenceRouter.get(
   '/products',
@@ -302,8 +307,10 @@ intelligenceRouter.get(
     const page = await unifiedService.listUnifiedIntelligence(req.auth.businessId, query);
 
     res.status(200).json({
-      items: page.items,
-      pagination: page.pagination,
+      data: {
+        items: page.items,
+        pagination: page.pagination,
+      },
     });
   }),
 );

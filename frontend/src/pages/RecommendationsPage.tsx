@@ -193,7 +193,7 @@ export function RecommendationsPage() {
     void (async () => {
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result.data);
+        if (!cancelled) setCategories(result);
       } catch {
         // The category filter is a convenience; it must not take the page down.
       }
@@ -213,7 +213,7 @@ export function RecommendationsPage() {
     setDetailLoading(true);
     try {
       const result = await recommendationsApi.forProduct(productId);
-      setDetail(result.data);
+      setDetail(result);
     } catch (cause) {
       setError(
         cause instanceof ApiError ? cause.message : 'Could not load that product. Please try again.',

@@ -134,9 +134,9 @@ export function ReorderPage() {
         });
         if (cancelled) return;
 
-        setItems(result.data);
+        setItems(result.items);
         setMeta(result.meta);
-        setDecisionCounts(result.decisionCounts);
+        setDecisionCounts(result.decisionCounts ?? {});
         setError(null);
       } catch (cause) {
         if (cancelled) return;
@@ -159,7 +159,7 @@ export function ReorderPage() {
     void (async () => {
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result.data);
+        if (!cancelled) setCategories(result);
       } catch {
         // The category filter is a convenience; a failure here must not take
         // the whole assessment list down with it.

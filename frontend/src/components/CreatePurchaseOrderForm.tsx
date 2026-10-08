@@ -116,8 +116,8 @@ export function CreatePurchaseOrderForm({
     };
 
     try {
-      const { data } = await purchaseOrderApi.create(input);
-      onCreated(data);
+      const created = await purchaseOrderApi.create(input);
+      onCreated(created);
     } catch (cause) {
       setError(
         cause instanceof ApiError ? cause.message : 'Could not create the purchase order.',

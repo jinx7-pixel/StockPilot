@@ -28,6 +28,20 @@ interface UnifiedItem {
   summary: { attentionRequired: boolean; highestPriority: number; decisionCount: number };
 }
 
+/**
+ * The wire shape of `GET /api/intelligence/products`.
+ *
+ * The route answers with the application's standard `{ data }` envelope, exactly
+ * like every other list route. Tests type against this and read `body.data.*`,
+ * which is what a client does after unwrapping.
+ */
+interface UnifiedListResponse {
+  data: {
+    items: UnifiedItem[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+  };
+}
+
 interface TestTenant extends Tenant {
   productId: string;
   supplierId: string;
@@ -246,12 +260,51 @@ describe('Unified Intelligence — detail', () => {
 });
 
 describe('Unified Intelligence — list', () => {
-  it('defaults to a limit of 25', async () => {
-    const tenant = await createTenant(server);
-    const response = await tenant.client.get<{ pagination: { limit: number } }>('/api/intelligence/products');
+  it('wraps the list in the standard { data } envelope', async () => {
+    const tenant = await seedRichProduct(await createTenant(server));
+
+    const response = await tenant.client.get<Record<string, unknown>>(
+      '/api/intelligence/products',
+    );
 
     assert.equal(response.status, 200);
-    assert.equal(response.body.pagination.limit, 25);
+
+    // The contract this endpoint used to break: `items` and `pagination` sat at
+    // the top level, so a client that unwraps `data` received undefined.
+    assert.ok('data' in response.body, 'the response must have a top-level `data` key');
+    assert.ok(!('items' in response.body), '`items` must not leak to the top level');
+    assert.ok(!('pagination' in response.body), '`pagination` must not leak to the top level');
+
+    const payload = response.body.data as {
+      items: unknown[];
+      pagination: Record<string, number>;
+    };
+    assert.ok(Array.isArray(payload.items));
+    assert.equal(typeof payload.pagination.total, 'number');
+    assert.equal(typeof payload.pagination.page, 'number');
+    assert.equal(typeof payload.pagination.limit, 'number');
+  });
+
+  it('leaves the contents inside data unchanged', async () => {
+    const tenant = await seedRichProduct(await createTenant(server));
+
+    const wrapped = await tenant.client.get<UnifiedListResponse>('/api/intelligence/products');
+    const payload = wrapped.body.data;
+
+    // The six engine blocks and the summary must all survive the rewrapping —
+    // only the outermost key changed.
+    assert.equal(payload.items.length, 1);
+    const item = payload.items[0]!;
+    assert.ok(item.product && item.stockRisk && item.demand && item.reorder);
+    assert.ok(item.overstock && item.slowDead && item.summary);
+  });
+
+  it('defaults to a limit of 25', async () => {
+    const tenant = await createTenant(server);
+    const response = await tenant.client.get<UnifiedListResponse>('/api/intelligence/products');
+
+    assert.equal(response.status, 200);
+    assert.equal(response.body.data.pagination.limit, 25);
   });
 
   it('caps the limit at 25 and rejects anything larger', async () => {
@@ -282,17 +335,17 @@ describe('Unified Intelligence — list', () => {
       await tenant.client.post('/api/products', productBody({ sku: `UN-PAGE-${i}` }));
     }
 
-    const page1 = await tenant.client.get<{ items: unknown[]; pagination: { page: number; limit: number; total: number } }>(
+    const page1 = await tenant.client.get<UnifiedListResponse>(
       '/api/intelligence/products?limit=2&page=1',
     );
-    const page3 = await tenant.client.get<{ items: unknown[]; pagination: { page: number } }>(
+    const page3 = await tenant.client.get<UnifiedListResponse>(
       '/api/intelligence/products?limit=2&page=3',
     );
 
-    assert.equal(page1.body.pagination.total, 5, 'total is the catalog, not the page');
-    assert.equal(page1.body.items.length, 2);
-    assert.equal(page3.body.items.length, 1);
-    assert.equal(page3.body.pagination.page, 3);
+    assert.equal(page1.body.data.pagination.total, 5, 'total is the catalog, not the page');
+    assert.equal(page1.body.data.items.length, 2);
+    assert.equal(page3.body.data.items.length, 1);
+    assert.equal(page3.body.data.pagination.page, 3);
   });
 
   it('filters by search, category and active status', async () => {
@@ -302,19 +355,19 @@ describe('Unified Intelligence — list', () => {
     const brush = await tenant.client.post<{ data: { id: string } }>('/api/products', productBody({ sku: 'UN-BRUSH', name: 'Paint Brush' }));
     await tenant.client.delete(`/api/products/${brush.body.data.id}`);
 
-    const bySearch = await tenant.client.get<{ items: UnifiedItem[] }>('/api/intelligence/products?search=hammer');
-    assert.equal(bySearch.body.items.length, 1);
+    const bySearch = await tenant.client.get<UnifiedListResponse>('/api/intelligence/products?search=hammer');
+    assert.equal(bySearch.body.data.items.length, 1);
 
-    const byCategory = await tenant.client.get<{ items: UnifiedItem[] }>(
+    const byCategory = await tenant.client.get<UnifiedListResponse>(
       `/api/intelligence/products?categoryId=${category.body.data.id}`,
     );
-    assert.equal(byCategory.body.items.length, 1);
+    assert.equal(byCategory.body.data.items.length, 1);
 
-    const activeOnly = await tenant.client.get<{ items: UnifiedItem[] }>('/api/intelligence/products?isActive=true');
-    assert.equal(activeOnly.body.items.length, 1);
+    const activeOnly = await tenant.client.get<UnifiedListResponse>('/api/intelligence/products?isActive=true');
+    assert.equal(activeOnly.body.data.items.length, 1);
 
-    const inactiveOnly = await tenant.client.get<{ items: UnifiedItem[] }>('/api/intelligence/products?isActive=false');
-    assert.equal(inactiveOnly.body.items.length, 1);
+    const inactiveOnly = await tenant.client.get<UnifiedListResponse>('/api/intelligence/products?isActive=false');
+    assert.equal(inactiveOnly.body.data.items.length, 1);
   });
 });
 
@@ -347,9 +400,9 @@ describe('Unified Intelligence — security and read-only', () => {
     const tenantA = await seedRichProduct(await createTenant(server));
     const tenantB = await createTenant(server);
 
-    const list = await tenantB.client.get<{ items: UnifiedItem[] }>('/api/intelligence/products?limit=25');
+    const list = await tenantB.client.get<UnifiedListResponse>('/api/intelligence/products?limit=25');
     assert.equal(list.status, 200);
-    assert.equal(list.body.items.length, 0);
+    assert.equal(list.body.data.items.length, 0);
     assert.ok(!JSON.stringify(list.body).includes(tenantA.productId));
 
     const detail = await tenantB.client.get(`/api/intelligence/products/${tenantA.productId}`);
