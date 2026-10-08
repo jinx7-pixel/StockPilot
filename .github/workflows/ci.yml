@@ -59,6 +59,12 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # Runs before the build so a transport regression fails in ~2 seconds
+      # rather than after a full bundle. `vitest run` executes once and exits; it
+      # needs no service container, no database and no network.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
