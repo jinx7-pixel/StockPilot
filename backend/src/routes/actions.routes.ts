@@ -27,6 +27,7 @@ import { Router } from 'express';
 
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import type { AuthedRequest } from '../types/express.js';
 import { createAction, getBusinessAction, listBusinessActions } from '../services/actions.service.js';
 import {
@@ -42,6 +43,11 @@ const IDEMPOTENCY_HEADER = 'idempotency-key';
 export const actionsRouter: Router = Router();
 
 actionsRouter.use(requireAuth);
+
+// After authentication, so the rate-limit key is the session's user and business
+// rather than a shared IP. Executing an action is a write, so it draws from the
+// tighter mutation budget.
+actionsRouter.use(businessApiLimiter);
 
 /**
  * GET /api/actions

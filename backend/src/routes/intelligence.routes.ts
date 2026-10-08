@@ -15,6 +15,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import { listDemandQuerySchema } from '../services/demand.schemas.js';
 import * as demandService from '../services/demand.service.js';
 import {
@@ -37,6 +38,11 @@ import type { AuthedRequest } from '../types/express.js';
 export const intelligenceRouter: Router = Router();
 
 intelligenceRouter.use(requireAuth);
+
+// After authentication, so the rate-limit key is the session's user and business
+// rather than a shared IP. These are the heaviest reads in the system, so they
+// carry their own budget rather than borrowing the auth one.
+intelligenceRouter.use(businessApiLimiter);
 
 /** Translate a Zod failure into a 400 that names the offending parameter. */
 function parseOrThrow<T>(schema: ZodType<T>, value: unknown): T {

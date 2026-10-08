@@ -16,6 +16,7 @@ import { Router } from 'express';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import type { ZodType } from 'zod';
 
 import type { AuthedRequest } from '../types/express.js';
@@ -40,6 +41,10 @@ function parseOrThrow<T>(schema: ZodType<T>, value: unknown): T {
 export const recommendationsRouter: Router = Router();
 
 recommendationsRouter.use(requireAuth);
+
+// After authentication, so the rate-limit key is the session's user and business
+// rather than a shared IP.
+recommendationsRouter.use(businessApiLimiter);
 
 /**
  * GET /api/recommendations
