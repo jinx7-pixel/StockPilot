@@ -16,6 +16,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import {
   createMovementSchema,
@@ -62,6 +63,7 @@ inventoryRouter.get(
 /** POST /api/inventory/movements — record one immutable movement. */
 inventoryRouter.post(
   '/movements',
+  requirePolicy('inventory.movement.record'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createMovementSchema, req.body);
 

@@ -15,6 +15,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { assertPolicy, requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import * as purchaseOrderService from '../services/purchaseOrder.service.js';
 import {
@@ -62,6 +63,7 @@ purchaseOrderRouter.get(
 
 purchaseOrderRouter.post(
   '/',
+  requirePolicy('purchaseOrder.create'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createPurchaseOrderSchema, req.body);
     const order = await purchaseOrderService.createPurchaseOrder(
@@ -82,6 +84,7 @@ purchaseOrderRouter.post(
  */
 purchaseOrderRouter.post(
   '/:id/order',
+  requirePolicy('purchaseOrder.place'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(purchaseOrderIdParamSchema, req.params);
     const order = await purchaseOrderService.placePurchaseOrder(req.auth.businessId, id);
@@ -98,6 +101,7 @@ purchaseOrderRouter.post(
  */
 purchaseOrderRouter.post(
   '/:id/receive',
+  requirePolicy('purchaseOrder.receive'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(purchaseOrderIdParamSchema, req.params);
     const input = parseOrThrow(receivePurchaseOrderSchema, req.body);
@@ -123,9 +127,20 @@ purchaseOrderRouter.get(
 /** PATCH accepts only `expectedAt`, `notes` and `status: 'cancelled'`. */
 purchaseOrderRouter.patch(
   '/:id',
+  requirePolicy('purchaseOrder.update'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(purchaseOrderIdParamSchema, req.params);
     const input = parseOrThrow(updatePurchaseOrderSchema, req.body);
+
+    // PATCH is mostly routine — an expected date or a note — and staff may do
+    // that. Cancellation is the exception: it withdraws an order the supplier may
+    // already be fulfilling, so it is checked here against the validated input.
+    // The decision uses the session's role only; nothing the client asserts about
+    // its own role is consulted.
+    if (input.status === 'cancelled') {
+      assertPolicy(req, 'purchaseOrder.cancel');
+    }
+
     const order = await purchaseOrderService.updatePurchaseOrder(
       req.auth.businessId,
       id,

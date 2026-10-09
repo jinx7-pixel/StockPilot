@@ -14,7 +14,8 @@ import type { ZodType } from 'zod';
 
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
-import { requireAuth, requireRole } from '../middlewares/requireAuth.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import * as categoryService from '../services/category.service.js';
 import {
@@ -58,6 +59,7 @@ categoryRouter.get(
 
 categoryRouter.post(
   '/',
+  requirePolicy('category.create'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createCategorySchema, req.body);
     const category = await categoryService.createCategoryForBusiness(req.auth.businessId, input);
@@ -76,6 +78,7 @@ categoryRouter.get(
 
 categoryRouter.patch(
   '/:id',
+  requirePolicy('category.update'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(categoryIdParamSchema, req.params);
     const input = parseOrThrow(updateCategorySchema, req.body);
@@ -90,7 +93,9 @@ categoryRouter.patch(
 
 categoryRouter.delete(
   '/:id',
-  requireRole('owner'),
+  // Owner-only, unchanged in behaviour: this is the application's only hard
+  // delete, and removing shared reference data is an ownership decision.
+  requirePolicy('category.delete'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(categoryIdParamSchema, req.params);
     await categoryService.deleteCategoryForBusiness(req.auth.businessId, id);

@@ -15,6 +15,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import * as productService from '../services/product.service.js';
 import {
@@ -62,6 +63,7 @@ productRouter.get(
 
 productRouter.post(
   '/',
+  requirePolicy('product.create'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createProductSchema, req.body);
     const product = await productService.createProductForBusiness(req.auth.businessId, input);
@@ -80,6 +82,7 @@ productRouter.get(
 
 productRouter.patch(
   '/:id',
+  requirePolicy('product.update'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(productIdParamSchema, req.params);
     const input = parseOrThrow(updateProductSchema, req.body);
@@ -95,6 +98,7 @@ productRouter.patch(
 /** Soft delete: deactivates the product and returns its new state. */
 productRouter.delete(
   '/:id',
+  requirePolicy('product.deactivate'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(productIdParamSchema, req.params);
     const product = await productService.deactivateProduct(req.auth.businessId, id);

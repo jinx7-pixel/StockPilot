@@ -16,6 +16,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import { createSaleSchema, listSalesQuerySchema, saleIdParamSchema } from '../services/sales.schemas.js';
 import * as salesService from '../services/sales.service.js';
@@ -62,6 +63,7 @@ salesRouter.get(
 /** POST /api/sales — record a sale and reduce stock in one transaction. */
 salesRouter.post(
   '/',
+  requirePolicy('sale.create'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createSaleSchema, req.body);
 

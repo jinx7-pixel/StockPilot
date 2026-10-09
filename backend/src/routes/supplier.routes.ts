@@ -17,6 +17,7 @@ import type { ZodType } from 'zod';
 import { ValidationError } from '../errors.js';
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import * as supplierService from '../services/supplier.service.js';
 import {
@@ -65,6 +66,7 @@ supplierRouter.get(
 
 supplierRouter.post(
   '/',
+  requirePolicy('supplier.create'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const input = parseOrThrow(createSupplierSchema, req.body);
     const supplier = await supplierService.createSupplierForBusiness(req.auth.businessId, input);
@@ -83,6 +85,7 @@ supplierRouter.get(
 
 supplierRouter.patch(
   '/:id',
+  requirePolicy('supplier.update'),
   asyncHandler(async (req: AuthedRequest, res) => {
     const { id } = parseOrThrow(supplierIdParamSchema, req.params);
     const input = parseOrThrow(updateSupplierSchema, req.body);

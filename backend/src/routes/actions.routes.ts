@@ -27,6 +27,7 @@ import { Router } from 'express';
 
 import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { requirePolicy } from '../auth/policy.js';
 import { businessApiLimiter } from '../middlewares/rateLimit.js';
 import type { AuthedRequest } from '../types/express.js';
 import { createAction, getBusinessAction, listBusinessActions } from '../services/actions.service.js';
@@ -123,6 +124,10 @@ actionsRouter.get(
  */
 actionsRouter.post(
   '/',
+  // Deliberately the same policy as raising a purchase order directly: executing
+  // a recommendation *is* raising a draft order, so it must not be a second,
+  // quieter way for staff to do the same thing.
+  requirePolicy('action.execute'),
   asyncHandler(async (req, res) => {
     const typed = req as AuthedRequest;
     const input = parseOrThrow(createActionSchema, req.body);
