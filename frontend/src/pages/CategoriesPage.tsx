@@ -168,11 +168,11 @@ export function CategoriesPage() {
 
       <Card>
         {loading ? (
-          <Spinner label="Loading categoriesâ€¦" />
+          <Spinner label="Loading categories…" />
         ) : categories === null ? null : categories.length === 0 ? (
           <EmptyState
             title="No categories yet"
-            description="Categories are optional â€” a product can exist without one. Create one only if it helps you organise a large catalog."
+            description="Categories are optional — a product can exist without one. Create one only if it helps you organise a large catalog."
             action={<PrimaryButton onClick={openCreate}>Create the first category</PrimaryButton>}
           />
         ) : (
@@ -217,7 +217,7 @@ export function CategoriesPage() {
                 Cancel
               </SecondaryButton>
               <PrimaryButton type="submit" form="category-form" disabled={saving}>
-                {saving ? 'Savingâ€¦' : 'Save'}
+                {saving ? 'Saving…' : 'Save'}
               </PrimaryButton>
             </>
           }

@@ -1,5 +1,5 @@
 ﻿/**
- * Inventory overview â€” every product with its derived stock level.
+ * Inventory overview — every product with its derived stock level.
  *
  * Stock is computed by the server from the movement ledger. This page never
  * calculates a balance locally; it displays what the API reports.
@@ -66,7 +66,7 @@ export function InventoryPage() {
 
   /**
    * Fetching lives in the effect, but `loading` is raised by whichever
-   * interaction caused the fetch â€” setting it in the effect body would add a
+   * interaction caused the fetch — setting it in the effect body would add a
    * render on every mount.
    */
   useEffect(() => {
@@ -267,7 +267,7 @@ export function InventoryPage() {
 
       <Card>
         {loading ? (
-          <Spinner label="Loading inventoryâ€¦" />
+          <Spinner label="Loading inventory…" />
         ) : items === null ? null : items.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No products match those filters' : 'No products yet'}
@@ -314,7 +314,7 @@ export function InventoryPage() {
                       </td>
                       <td className="px-6 py-4 font-mono text-xs text-slate-700">{item.sku}</td>
                       <td className="px-6 py-4 text-slate-600">
-                        {item.category?.name ?? <span className="text-slate-400">â€”</span>}
+                        {item.category?.name ?? <span className="text-slate-400">—</span>}
                       </td>
                       <td className={`px-6 py-4 text-right ${stockTone(item.currentStock)}`}>
                         {item.currentStock} {item.unit}
@@ -350,8 +350,8 @@ export function InventoryPage() {
 
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
               <span>
-                {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : 'â€”'}
-                {meta && meta.total > PAGE_SIZE ? ` Â· page ${meta.page} of ${meta.totalPages}` : ''}
+                {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
+                {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
               </span>
 
               {meta && meta.totalPages > 1 ? (

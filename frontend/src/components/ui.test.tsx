@@ -13,10 +13,12 @@
 import { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   Badge,
+  Breadcrumbs,
   ConfirmDialog,
   DataTable,
   EmptyState,
@@ -828,5 +830,110 @@ describe('SubmitButton', () => {
       screen.queryByRole('button', { name: 'Create order' }),
       'the busy label replaces the idle one',
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Breadcrumbs — naming, link targets, current-page semantics
+// ---------------------------------------------------------------------------
+
+describe('Breadcrumbs', () => {
+  /**
+   * `Breadcrumbs` links through React Router, so every render needs a router.
+   */
+  function renderCrumbs(items: Parameters<typeof Breadcrumbs>[0]['items']) {
+    return render(
+      <MemoryRouter>
+        <Breadcrumbs items={items} />
+      </MemoryRouter>,
+    );
+  }
+
+  it('exposes a navigation landmark named "Breadcrumb"', () => {
+    renderCrumbs([{ label: 'Inventory', to: '/app/inventory' }, { label: 'Cable' }]);
+
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(nav).toBeInTheDocument();
+    // The name is what distinguishes this landmark from the workspace
+    // navigation; without it a detail page has two anonymous landmarks.
+    expect(nav.tagName).toBe('NAV');
+  });
+
+  it('links every ancestor to its own route', () => {
+    renderCrumbs([{ label: 'Inventory', to: '/app/inventory' }, { label: 'Cable' }]);
+
+    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute(
+      'href',
+      '/app/inventory',
+    );
+  });
+
+  it('marks the final entry as the current page and does not link it', () => {
+    renderCrumbs([{ label: 'Inventory', to: '/app/inventory' }, { label: 'Cable' }]);
+
+    // `aria-current` is what distinguishes "you are here" from a trail that
+    // simply stops.
+    const current = screen.getByRole('navigation', { name: 'Breadcrumb' }).querySelector(
+      '[aria-current="page"]',
+    );
+    expect(current).toHaveTextContent('Cable');
+    // A link to the page you are already on is a no-op that still announces as
+    // a destination.
+    expect(screen.queryByRole('link', { name: 'Cable' })).not.toBeInTheDocument();
+  });
+
+  it('renders exactly one current-page entry, however long the trail', () => {
+    renderCrumbs([
+      { label: 'Operations', to: '/app' },
+      { label: 'Inventory', to: '/app/inventory' },
+      { label: 'Cable' },
+    ]);
+
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(nav.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+    // Both ancestors stay navigable.
+    expect(screen.getByRole('link', { name: 'Operations' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Inventory' })).toBeInTheDocument();
+  });
+
+  it('keeps the separator out of the accessibility tree', () => {
+    const { container } = renderCrumbs([
+      { label: 'Inventory', to: '/app/inventory' },
+      { label: 'Cable' },
+    ]);
+
+    const separators = container.querySelectorAll('[aria-hidden="true"]');
+    // One separator between two entries, and none trailing the last one.
+    expect(separators).toHaveLength(1);
+
+    // The ordered list is the structural contract of the pattern.
+    const list = screen.getByRole('list');
+    expect(list.tagName).toBe('OL');
+    expect(list.querySelectorAll(':scope > li')).toHaveLength(2);
+  });
+
+  it('renders inside PageHeader above the title', () => {
+    render(
+      <MemoryRouter>
+        <PageHeader
+          title="Cable"
+          breadcrumbs={
+            <Breadcrumbs items={[{ label: 'Inventory', to: '/app/inventory' }, { label: 'Cable' }]} />
+          }
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    // The page still has exactly one h1; a breadcrumb must not become a heading.
+    expect(screen.getByRole('heading', { level: 1, name: 'Cable' })).toBeInTheDocument();
+  });
+
+  it('leaves PageHeader untouched when no breadcrumbs are supplied', () => {
+    render(<PageHeader title="Inventory" description="Current positions" />);
+
+    // Regression guard: the slot is optional and must not render an empty nav.
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Inventory' })).toBeInTheDocument();
   });
 });

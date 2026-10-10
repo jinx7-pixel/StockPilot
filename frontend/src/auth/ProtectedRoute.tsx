@@ -30,7 +30,7 @@ export function ProtectedRoute() {
   if (status === 'loading') {
     return (
       <FullPageMessage>
-        <p className="text-sm">Checking your sessionâ€¦</p>
+        <p className="text-sm">Checking your session…</p>
       </FullPageMessage>
     );
   }
@@ -49,7 +49,7 @@ export function PublicOnlyRoute() {
   if (status === 'loading') {
     return (
       <FullPageMessage>
-        <p className="text-sm">Checking your sessionâ€¦</p>
+        <p className="text-sm">Checking your session…</p>
       </FullPageMessage>
     );
   }

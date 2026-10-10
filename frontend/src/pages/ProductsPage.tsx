@@ -1,7 +1,7 @@
 ﻿/**
  * Products catalog.
  *
- * Products are catalog definitions only â€” nothing here displays or edits stock
+ * Products are catalog definitions only — nothing here displays or edits stock
  * quantities, availability or reorder points. Those belong to the inventory
  * module, which does not exist yet.
  */
@@ -352,7 +352,7 @@ export function ProductsPage() {
 
       <Card>
         {loading ? (
-          <Spinner label="Loading productsâ€¦" />
+          <Spinner label="Loading products…" />
         ) : products === null ? null : products.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No products match those filters' : 'No products yet'}
@@ -392,7 +392,7 @@ export function ProductsPage() {
                       <td className="px-6 py-4 font-mono text-xs text-slate-700">{product.sku}</td>
                       <td className="px-6 py-4 font-medium text-slate-900">{product.name}</td>
                       <td className="px-6 py-4 text-slate-600">
-                        {product.categoryName ?? <span className="text-slate-400">â€”</span>}
+                        {product.categoryName ?? <span className="text-slate-400">—</span>}
                       </td>
                       <td className="px-6 py-4 text-slate-600">{product.unit}</td>
                       <td className="px-6 py-4 text-right text-slate-600">
@@ -430,9 +430,9 @@ export function ProductsPage() {
 
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
               <span>
-                {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : 'â€”'}
+                {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
                 {meta && meta.total > PAGE_SIZE
-                  ? ` Â· page ${meta.page} of ${meta.totalPages}`
+                  ? ` · page ${meta.page} of ${meta.totalPages}`
                   : ''}
               </span>
 
@@ -464,7 +464,7 @@ export function ProductsPage() {
                 Cancel
               </SecondaryButton>
               <PrimaryButton type="submit" form="product-form" disabled={saving}>
-                {saving ? 'Savingâ€¦' : 'Save'}
+                {saving ? 'Saving…' : 'Save'}
               </PrimaryButton>
             </>
           }
@@ -514,7 +514,7 @@ export function ProductsPage() {
                 onChange={(unit) => setForm((f) => ({ ...f, unit }))}
                 maxLength={30}
                 placeholder="piece"
-                hint="piece, box, kgâ€¦"
+                hint="piece, box, kg…"
               />
 
               <Field

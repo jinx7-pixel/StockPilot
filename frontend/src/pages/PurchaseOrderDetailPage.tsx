@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import {
+  Breadcrumbs,
   Card,
   ErrorBanner,
   Field,
@@ -178,6 +179,14 @@ export function PurchaseOrderDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        breadcrumbs={
+          <Breadcrumbs
+            items={[
+              { label: 'Purchase orders', to: '/app/purchase-orders' },
+              { label: order.supplierName },
+            ]}
+          />
+        }
         title={order.supplierName}
         description={`Raised ${new Date(order.createdAt).toLocaleString()}`}
         actions={

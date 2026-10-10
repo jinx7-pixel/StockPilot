@@ -27,7 +27,7 @@ export function RegisterPage() {
 
     try {
       // The server creates the business and makes this user its owner, then
-      // signs them in â€” all in one transaction.
+      // signs them in — all in one transaction.
       await register({ businessName, name, email, password });
       navigate('/app', { replace: true });
     } catch (cause) {

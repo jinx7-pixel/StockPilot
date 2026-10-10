@@ -1,7 +1,7 @@
 ﻿/**
  * Inventory detail: current stock, a movement summary, and the immutable ledger.
  *
- * The ledger is presented as read-only by design â€” there is no edit or delete
+ * The ledger is presented as read-only by design — there is no edit or delete
  * control anywhere, because the API exposes none. A mistake is corrected by
  * recording another movement, which is offered here as the only way forward.
  */
@@ -11,6 +11,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { MovementForm } from '../components/MovementForm';
 import {
+  Breadcrumbs,
   Card,
   EmptyState,
   ErrorBanner,
@@ -53,8 +54,8 @@ function formatDate(iso: string): string {
 /** A ledger row shows the signed effect, which is what a reader cares about. */
 function signedQuantity(movement: Movement): string {
   if (movement.movementType === 'in') return `+${movement.quantity}`;
-  if (movement.movementType === 'out') return `âˆ’${movement.quantity}`;
-  return movement.quantity > 0 ? `+${movement.quantity}` : `âˆ’${Math.abs(movement.quantity)}`;
+  if (movement.movementType === 'out') return `−${movement.quantity}`;
+  return movement.quantity > 0 ? `+${movement.quantity}` : `−${Math.abs(movement.quantity)}`;
 }
 
 export function InventoryDetailPage() {
@@ -128,7 +129,7 @@ export function InventoryDetailPage() {
   const totalPages = meta?.totalPages ?? 1;
 
   if (loading) {
-    return <Spinner label="Loading inventoryâ€¦" />;
+    return <Spinner label="Loading inventory…" />;
   }
 
   if (error || !detail) {
@@ -147,8 +148,13 @@ export function InventoryDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        breadcrumbs={
+          <Breadcrumbs
+            items={[{ label: 'Inventory', to: '/app/inventory' }, { label: product.name }]}
+          />
+        }
         title={product.name}
-        description={`${product.sku}${product.categoryName ? ` Â· ${product.categoryName}` : ''}`}
+        description={`${product.sku}${product.categoryName ? ` · ${product.categoryName}` : ''}`}
         actions={
           <Link to="/app/inventory">
             <SecondaryButton>Back</SecondaryButton>
@@ -190,7 +196,7 @@ export function InventoryDetailPage() {
       <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
         <p className="text-sm text-slate-600">
           {detail.movementCount} ledger {detail.movementCount === 1 ? 'entry' : 'entries'}
-          {detail.lastMovementAt ? ` Â· last ${formatDate(detail.lastMovementAt)}` : ''}
+          {detail.lastMovementAt ? ` · last ${formatDate(detail.lastMovementAt)}` : ''}
         </p>
 
         <div className="flex flex-wrap gap-2">
@@ -205,7 +211,7 @@ export function InventoryDetailPage() {
           <div>
             <h2 className="font-semibold text-slate-900">Movement ledger</h2>
             <p className="text-sm text-slate-500">
-              Append-only. Entries are never edited or deleted â€” a correction is a new entry.
+              Append-only. Entries are never edited or deleted — a correction is a new entry.
             </p>
           </div>
 
@@ -228,7 +234,7 @@ export function InventoryDetailPage() {
         </header>
 
         {movements === null ? (
-          <Spinner label="Loading ledgerâ€¦" />
+          <Spinner label="Loading ledger…" />
         ) : movements.length === 0 ? (
           <EmptyState
             title="No movements recorded"
@@ -266,7 +272,7 @@ export function InventoryDetailPage() {
                         {signedQuantity(movement)} {product.unit}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        {movement.reason ?? <span className="text-slate-400">â€”</span>}
+                        {movement.reason ?? <span className="text-slate-400">—</span>}
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         {movement.referenceType ? (
@@ -277,7 +283,7 @@ export function InventoryDetailPage() {
                             </span>
                           </span>
                         ) : (
-                          <span className="text-slate-400">â€”</span>
+                          <span className="text-slate-400">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-slate-600">{movement.createdBy.name}</td>

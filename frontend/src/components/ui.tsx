@@ -30,6 +30,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
+import { Link } from 'react-router-dom';
 
 // ---------------------------------------------------------------------------
 // Focus helpers
@@ -93,18 +94,86 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   );
 }
 
+/**
+ * One entry in a breadcrumb trail.
+ *
+ * `to` is optional by design: the trail's final entry is the page the user is
+ * already on, and offering a link to the current page would be a no-op that
+ * still announces as a destination.
+ */
+export type Crumb = {
+  label: string;
+  to?: string;
+};
+
+/**
+ * Breadcrumb trail.
+ *
+ * Markup follows the WAI-ARIA breadcrumb pattern: a `nav` landmark labelled
+ * `Breadcrumb`, wrapping an ordered list. The label is what separates this from
+ * the workspace navigation introduced in Step 13.3.3 — a page carrying two
+ * `navigation` landmarks is unusable without distinct names.
+ *
+ * The final entry carries `aria-current="page"` and is **not** a link, which is
+ * what tells assistive tech the trail has reached the present page rather than
+ * simply ending.
+ *
+ * Separators are real elements rather than CSS `::after` content: a generated
+ * pseudo-element is invisible to the accessibility tree, and an unlabelled `/`
+ * read aloud between two links is noise. Marking it `aria-hidden` keeps the
+ * visual affordance without adding it to the announcement.
+ */
+export function Breadcrumbs({ items }: { items: readonly Crumb[] }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+
+          return (
+            <li key={item.label} className="flex items-center gap-1.5">
+              {item.to ? (
+                <Link
+                  to={item.to}
+                  className={`rounded text-slate-500 transition hover:text-slate-900 ${focusRing}`}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span aria-current="page" className="font-medium text-slate-900">
+                  {item.label}
+                </span>
+              )}
+
+              {isLast ? null : (
+                <span aria-hidden="true" className="text-slate-300">
+                  /
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 export function PageHeader({
   title,
   description,
   actions,
+  breadcrumbs,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** Rendered above the title; `PageHeader` owns the spacing either way. */
+  breadcrumbs?: ReactNode;
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div>
+        {breadcrumbs ? <div className="mb-2">{breadcrumbs}</div> : null}
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
         {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
       </div>

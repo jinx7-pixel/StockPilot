@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import {
+  Breadcrumbs,
   Card,
   ErrorBanner,
   PageHeader,
@@ -66,6 +67,14 @@ export function SaleDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        breadcrumbs={
+          <Breadcrumbs
+            items={[
+              { label: 'Sales', to: '/app/sales' },
+              { label: sale.customerName ?? 'Walk-in customer' },
+            ]}
+          />
+        }
         title={sale.customerName ?? 'Walk-in customer'}
         description={`Sale recorded ${new Date(sale.soldAt).toLocaleString()}`}
         actions={
