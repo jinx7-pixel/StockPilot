@@ -199,6 +199,10 @@ function ConfirmDialog({
   );
 
   // Changing what is being ordered is a different action, so it needs a new key.
+  // Both handlers are unreachable while `submitting` because the controls are
+  // disabled — that is deliberate. Regenerating the key mid-request would let a
+  // later submit become a *different* action while the original one is still
+  // completing, which is exactly how a duplicate order happens.
   function handleQuantity(value: string) {
     setQuantity(value);
     setIdempotencyKey(`${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
@@ -209,8 +213,25 @@ function ConfirmDialog({
     setIdempotencyKey(`${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
   }
 
+  /**
+   * Dismissal is blocked while the request is in flight.
+   *
+   * The idempotency key lives in this component's state, so unmounting discards
+   * it. If the dialog could close mid-request and the user then reopened and
+   * submitted again, the retry would carry a fresh key and create a second draft
+   * order even though the first one had already been created server-side. Escape
+   * and the backdrop both route through here, as does Cancel.
+   */
+  function handleDismiss() {
+    if (submitting) return;
+    onClose();
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // The submit button is already disabled while submitting; this guards the
+    // implicit-submission path (pressing Enter in a text field) as well.
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
 
@@ -241,7 +262,7 @@ function ConfirmDialog({
   const inactiveSelected = suppliers.find((supplier) => supplier.id === supplierId)?.isActive === false;
 
   return (
-    <Modal title="Create draft purchase order" onClose={onClose}>
+    <Modal title="Create draft purchase order" onClose={handleDismiss}>
       <form onSubmit={submit} className="space-y-4">
         <p className="text-sm text-slate-600">{productLabel}</p>
 
@@ -260,6 +281,7 @@ function ConfirmDialog({
           label="Quantity"
           value={quantity}
           onChange={handleQuantity}
+          disabled={submitting}
           hint={
             recommendation.recommendedQuantity
               ? `The engine suggested ${recommendation.recommendedQuantity}. Change it if you know better.`
@@ -271,6 +293,7 @@ function ConfirmDialog({
           label="Supplier"
           value={supplierId}
           onChange={handleSupplier}
+          disabled={submitting}
           options={[
             { value: '', label: 'Choose a supplier' },
             ...suppliers.map((supplier) => ({
@@ -287,7 +310,7 @@ function ConfirmDialog({
         ) : null}
 
         <div className="flex items-center justify-between gap-2">
-          <SecondaryButton onClick={onClose} disabled={submitting}>
+          <SecondaryButton onClick={handleDismiss} disabled={submitting}>
             Cancel
           </SecondaryButton>
           <button

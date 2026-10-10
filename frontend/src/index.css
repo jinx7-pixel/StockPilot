@@ -8,15 +8,55 @@
   --color-brand-500: oklch(0.62 0.16 255);
   --color-brand-600: oklch(0.55 0.17 255);
   --color-brand-700: oklch(0.48 0.16 255);
+
+  /*
+   * Semantic status tones.
+   *
+   * Added so "danger", "warning" and "success" mean the same thing on every
+   * screen. Before these existed each intelligence page picked its own colours
+   * for the same verdict, and `Badge` was redefined per page. Values are chosen
+   * to stay legible as text on their own tinted background — they are never the
+   * only carrier of meaning, and every `Badge` is paired with a text label.
+   */
+  --color-success-100: oklch(0.93 0.07 165);
+  --color-success-700: oklch(0.52 0.13 165);
+  --color-warning-100: oklch(0.95 0.09 85);
+  --color-warning-800: oklch(0.45 0.11 70);
+  --color-danger-100: oklch(0.93 0.05 25);
+  --color-danger-800: oklch(0.48 0.17 25);
 }
 
 @layer base {
   html {
-    color-scheme: light dark;
+    /*
+     * Light only.
+     *
+     * This previously declared `light dark`, telling the browser the page
+     * supports dark mode. It does not: every colour in the app is a hard-coded
+     * light value, so on an OS in dark mode the browser rendered form controls
+     * and scrollbars dark against a light page. Declaring `light` until a real
+     * dark theme exists is the honest fix; this is not a redesign.
+     */
+    color-scheme: light;
   }
 
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
     font-family: var(--font-sans);
   }
+
+  /*
+   * No global `:focus-visible` outline here, deliberately.
+   *
+   * An earlier draft added one, expecting it to cover every focusable element
+   * "without opting in". It does not: Tailwind's `focus:outline-none` compiles
+   * to a utilities-layer rule with higher specificity, so it wins and the outline
+   * never appeared on any control that used it — which is nearly all of them.
+   * The rule was therefore inert in practice while looking like a safety net.
+   *
+   * The single source of truth for focus styling is the `focusRing` class in
+   * `components/ui.tsx`, which renders a clearly visible `brand-500` ring with a
+   * 1px offset. Elements outside that system fall back to the browser default,
+   * which is visible. One mechanism, and it demonstrably works.
+   */
 }

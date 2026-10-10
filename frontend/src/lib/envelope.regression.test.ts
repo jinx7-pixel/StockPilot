@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Regression tests for the production-readiness finding.
  *

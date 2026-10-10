@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * API client shape tests.
  *
