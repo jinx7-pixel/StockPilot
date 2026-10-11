@@ -40,10 +40,25 @@ export function createApp(): Express {
   app.use((req, res, next) => {
     const startedAt = process.hrtime.bigint();
 
+    /**
+     * The path only — never the query string.
+     *
+     * `search` parameters are matched against customer names, phone numbers and
+     * free-text notes, so `req.originalUrl` wrote real personal data into stdout
+     * and from there into whatever log aggregator is attached, indefinitely.
+     * `req.path` is the pathname with the query already stripped.
+     *
+     * It is read here, before `next()`, rather than inside the `finish` handler:
+     * Express rewrites `req.url` while routing and restores it afterwards, so
+     * `req.path` inside the handler would be reading a value that had been
+     * mutated in between.
+     */
+    const requestPath = req.path;
+
     res.on('finish', () => {
       const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
       console.log(
-        `[http] ${req.method} ${req.originalUrl} ${res.statusCode} ${durationMs.toFixed(1)}ms`,
+        `[http] ${req.method} ${requestPath} ${res.statusCode} ${durationMs.toFixed(1)}ms`,
       );
     });
 

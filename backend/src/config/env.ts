@@ -225,6 +225,18 @@ export const env = {
     table: readString('PGMIGRATIONS_TABLE', 'pgmigrations'),
   },
 
+  /**
+   * Background job that removes expired sessions.
+   *
+   * `auth_sessions.expires_at` is indexed, and expired rows are never read back
+   * (the lookup filters `expires_at > now()`), so they are pure storage growth
+   * and are safe to delete at any time, from any process.
+   */
+  sessionCleanup: {
+    /** How often to sweep. An hour keeps dead-row lag invisible against a multi-day TTL. */
+    intervalMs: readPositiveInt('SESSION_CLEANUP_INTERVAL_MS', 60 * 60 * 1000),
+  },
+
   /** Log verbosity: 'debug' | 'info' | 'warn' | 'error' | 'silent' */
   logLevel: readString('LOG_LEVEL', nodeEnv === 'production' ? 'info' : 'debug'),
 } as const;
