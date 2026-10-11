@@ -8,6 +8,7 @@ import { healthRouter } from './health.routes.js';
 import { intelligenceRouter } from './intelligence.routes.js';
 import { inventoryRouter } from './inventory.routes.js';
 import { productRouter } from './product.routes.js';
+import { readyRouter } from './ready.routes.js';
 import { recommendationsRouter } from './recommendations.routes.js';
 import { purchaseOrderRouter } from './purchaseOrder.routes.js';
 import { salesRouter } from './sales.routes.js';
@@ -22,6 +23,9 @@ import { supplierRouter } from './supplier.routes.js';
 export const apiRouter: Router = Router();
 
 apiRouter.use(healthRouter);
+// Readiness: checks the database, so it is mounted beside — never in place of —
+// the liveness route above.
+apiRouter.use(readyRouter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/categories', categoryRouter);
 apiRouter.use('/products', productRouter);
