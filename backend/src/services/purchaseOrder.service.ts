@@ -10,11 +10,11 @@
  * ## The lifecycle
  *
  * ```
- *   draft â”€â”€orderâ”€â”€> ordered â”€â”€receive(all)â”€â”€â”€â”€> received
- *     â”‚                 â”‚                          (terminal)
- *     â”‚                 â””â”€â”€receive(some)â”€â”€> partially_received â”€â”€receive(rest)â”€â”€> received
- *     â””â”€â”€cancelâ”€â”€> cancelled   (terminal)
- *   ordered â”€â”€cancelâ”€â”€> cancelled   (terminal)
+ *   draft ──order──> ordered ──receive(all)────> received
+ *     │                 │                          (terminal)
+ *     │                 └──receive(some)──> partially_received ──receive(rest)──> received
+ *     └──cancel──> cancelled   (terminal)
+ *   ordered ──cancel──> cancelled   (terminal)
  * ```
  *
  * `cancelled` and `received` are terminal. A receipt is refused on both.
@@ -23,7 +23,7 @@
  *
  * Within a single transaction:
  *  1. load the order for this business and reject a terminal state;
- *  2. take the **purchase order's** advisory lock â€” the resource two concurrent
+ *  2. take the **purchase order's** advisory lock — the resource two concurrent
  *     receipts would contend for;
  *  3. re-read the lines inside the transaction, after the lock;
  *  4. check every requested product belongs to the order;
@@ -38,8 +38,8 @@
  *
  * ## Why two kinds of lock
  *
- * The **per-product** locks are the existing inventory mechanism â€” the same
- * advisory lock `appendMovement` takes â€” so a receipt serialises correctly
+ * The **per-product** locks are the existing inventory mechanism — the same
+ * advisory lock `appendMovement` takes — so a receipt serialises correctly
  * against a concurrent sale of the same product. The **per-purchase-order** lock
  * is what stops two receipts of the *same order* from both reading the same
  * `received_quantity` and over-receiving. Neither is global: two receipts of
@@ -128,7 +128,7 @@ export async function getPurchaseOrder(
 }
 
 // ---------------------------------------------------------------------------
-// Creation â€” deliberately inventory-free
+// Creation — deliberately inventory-free
 // ---------------------------------------------------------------------------
 
 /**

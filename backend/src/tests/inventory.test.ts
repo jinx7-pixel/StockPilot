@@ -116,7 +116,7 @@ describe('GET /api/inventory', () => {
     await record(tenant.client, { productId, movementType: 'out', quantity: '5' });
 
     const response = await tenant.client.get<{ data: InventoryItem[] }>('/api/inventory');
-    assert.equal(response.body.data[0]?.currentStock, 7, '12 in âˆ’ 5 out');
+    assert.equal(response.body.data[0]?.currentStock, 7, '12 in − 5 out');
   });
 
   it('includes category, unit and active status', async () => {
@@ -562,7 +562,7 @@ describe('concurrency', () => {
 
     // 7 + 7 = 14 > 10, so at most one may succeed. Both are issued without
     // awaiting in between, so they overlap in the server. If the two happen to
-    // serialise instead, the invariant below must still hold â€” the advisory lock
+    // serialise instead, the invariant below must still hold — the advisory lock
     // is what guarantees it when they genuinely run in parallel.
     const [first, second] = await Promise.all([
       tenant.client.post('/api/inventory/movements', {
@@ -587,7 +587,7 @@ describe('concurrency', () => {
     assert.equal(
       await readCurrentStock(tenant.client, productId),
       3,
-      'stock is 10 âˆ’ 7 = 3 and never negative',
+      'stock is 10 − 7 = 3 and never negative',
     );
   });
 
