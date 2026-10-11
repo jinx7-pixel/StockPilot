@@ -275,8 +275,13 @@ describe('Breadcrumbs alongside the existing shell', () => {
     renderAt('sales/:saleId', <SaleDetailPage />, 'sales/sale-1');
     await screen.findByRole('navigation', { name: 'Breadcrumb' });
 
-    // Breadcrumbs are additive; the approved Back button must survive.
-    const back = screen.getByRole('button', { name: 'Back' });
-    expect(back.closest('a')).toHaveAttribute('href', '/app/sales');
+    // Breadcrumbs are additive; the approved Back control must survive.
+    //
+    // It is a LINK, not a button nested inside an anchor: a `<button>` inside an
+    // `<a>` is invalid, gives the control two tab stops, and makes Enter
+    // activate the inner button rather than follow the link.
+    const back = screen.getByRole('link', { name: 'Back' });
+    expect(back).toHaveAttribute('href', '/app/sales');
+    expect(back.querySelector('button')).toBeNull();
   });
 });

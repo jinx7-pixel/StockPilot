@@ -414,6 +414,32 @@ export function Textarea({
 // Buttons
 // ---------------------------------------------------------------------------
 
+/**
+ * Styling for a control that *navigates*.
+ *
+ * `Link` renders the `<a>` itself, so a router link cannot be wrapped in a
+ * button component without putting a `<button>` inside an `<a>` — interactive
+ * content nested in interactive content. That markup is invalid, gives the
+ * control two tab stops, and makes Enter activate the inner button instead of
+ * following the link.
+ *
+ * The correct alternative is to style the `Link` itself, which is only safe if
+ * the link and the button cannot drift apart. That is what these exported
+ * constants are for: the button components below render from them, so a link
+ * styled here is identical to the button by construction rather than by
+ * convention. `WorkspacePage` previously kept a private hand-copied copy of
+ * `PrimaryButton`'s class string, and sixteen other call sites had no way to
+ * reuse it — which is exactly how the nesting spread.
+ *
+ * The `disabled:` variants are retained for exact parity with the buttons.
+ * They never match on an anchor, so they cost nothing, and omitting them would
+ * make the parity test in `ui.test.tsx` compare two different strings.
+ */
+export const primaryButtonClass = `rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
+
+/** Counterpart of {@link primaryButtonClass} for a `SecondaryButton`-styled link. */
+export const secondaryButtonClass = `rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
+
 export function PrimaryButton({
   type = 'button',
   onClick,
@@ -434,7 +460,7 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       form={form}
-      className={`rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={primaryButtonClass}
     >
       {children}
     </button>
@@ -482,7 +508,7 @@ export function SecondaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={secondaryButtonClass}
     >
       {children}
     </button>

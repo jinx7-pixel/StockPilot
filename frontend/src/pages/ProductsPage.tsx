@@ -23,6 +23,7 @@ import {
   Select,
   Spinner,
   Textarea,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi, type Category, type ListMeta, type Product, type ProductQuery } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -290,8 +291,8 @@ export function ProductsPage() {
         description="Your catalog. Stock levels arrive with the inventory module."
         actions={
           <>
-            <Link to="/app/categories">
-              <SecondaryButton>Manage categories</SecondaryButton>
+            <Link className={secondaryButtonClass} to="/app/categories">
+              Manage categories
             </Link>
             <PrimaryButton onClick={openCreate}>New product</PrimaryButton>
           </>

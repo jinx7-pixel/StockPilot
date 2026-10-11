@@ -20,6 +20,7 @@ import {
   PrimaryButton,
   SecondaryButton,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { ApiError } from '../lib/request';
 import {
@@ -162,8 +163,8 @@ export function PurchaseOrderDetailPage() {
     return (
       <div className="space-y-6">
         <ErrorBanner message={error} />
-        <Link to="/app/purchase-orders">
-          <SecondaryButton>Back to purchase orders</SecondaryButton>
+        <Link className={secondaryButtonClass} to="/app/purchase-orders">
+          Back to purchase orders
         </Link>
       </div>
     );
@@ -190,8 +191,8 @@ export function PurchaseOrderDetailPage() {
         title={order.supplierName}
         description={`Raised ${new Date(order.createdAt).toLocaleString()}`}
         actions={
-          <Link to="/app/purchase-orders">
-            <SecondaryButton>Back</SecondaryButton>
+          <Link className={secondaryButtonClass} to="/app/purchase-orders">
+            Back
           </Link>
         }
       />

@@ -20,6 +20,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  primaryButtonClass,
 } from '../components/ui';
 import { catalogApi, type Category } from '../lib/catalog';
 import {
@@ -280,8 +281,8 @@ export function InventoryPage() {
               hasFilters ? (
                 <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link to="/app/products">
-                  <PrimaryButton>Go to products</PrimaryButton>
+                <Link className={primaryButtonClass} to="/app/products">
+                  Go to products
                 </Link>
               )
             }

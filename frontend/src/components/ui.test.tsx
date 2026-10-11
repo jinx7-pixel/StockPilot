@@ -13,7 +13,7 @@
 import { useState } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,9 +26,13 @@ import {
   Field,
   Modal,
   PageHeader,
+  PrimaryButton,
+  SecondaryButton,
   Select,
   Spinner,
   SubmitButton,
+  primaryButtonClass,
+  secondaryButtonClass,
   type DataTableColumn,
 } from './ui';
 
@@ -935,5 +939,124 @@ describe('Breadcrumbs', () => {
     // Regression guard: the slot is optional and must not render an empty nav.
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Inventory' })).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Shared button classes — parity, and the nested-interactive guard
+// ---------------------------------------------------------------------------
+
+describe('shared button classes', () => {
+  /**
+   * These constants exist so a router `Link` can be styled like a button
+   * without wrapping a button component inside it. That only works if the link
+   * and the button cannot drift apart — which is exactly what these tests pin.
+   * A separate hand-copied string is what let the nesting spread to 17 call
+   * sites in the first place.
+   */
+  it('matches the classes PrimaryButton actually renders', () => {
+    const { container } = render(<PrimaryButton>Save</PrimaryButton>);
+    const button = container.querySelector('button');
+    expect(button).not.toBeNull();
+    expect(button).toHaveClass(primaryButtonClass);
+  });
+
+  it('matches the classes SecondaryButton actually renders', () => {
+    const { container } = render(<SecondaryButton>Cancel</SecondaryButton>);
+    const button = container.querySelector('button');
+    expect(button).not.toBeNull();
+    expect(button).toHaveClass(secondaryButtonClass);
+  });
+
+  it('gives a styled Link one tab stop and no nested control', () => {
+    render(
+      <MemoryRouter>
+        <Link className={secondaryButtonClass} to="/app/inventory">
+          Go to inventory
+        </Link>
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Go to inventory' });
+    expect(link).toHaveAttribute('href', '/app/inventory');
+    // The defect this prevents: interactive content inside an <a>.
+    expect(link.querySelector('button')).toBeNull();
+    // Exactly one focusable control for one visible button.
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('renders PageHeader and EmptyState actions as links, not nested buttons', () => {
+    render(
+      <MemoryRouter>
+        <PageHeader
+          title="Inventory"
+          actions={
+            <Link className={secondaryButtonClass} to="/app/inventory">
+              Back
+            </Link>
+          }
+        />
+        <EmptyState
+          title="Nothing here"
+          description="No products yet."
+          action={
+            <Link className={primaryButtonClass} to="/app/products">
+              Go to products
+            </Link>
+          }
+        />
+      </MemoryRouter>,
+    );
+
+    const headerAction = screen.getByRole('link', { name: 'Back' });
+    const emptyAction = screen.getByRole('link', { name: 'Go to products' });
+
+    for (const link of [headerAction, emptyAction]) {
+      expect(link.tagName).toBe('A');
+      expect(link.querySelector('button')).toBeNull();
+    }
+    expect(emptyAction).toHaveAttribute('href', '/app/products');
+    // Both are single focus stops.
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('rejects a button component nested inside a Link, everywhere in src', () => {
+    /**
+     * Structural guard over the real source tree.
+     *
+     * Sources are pulled in with `import.meta.glob(..., '?raw')`, the Vite-native
+     * way to read project files — it needs no Node APIs, so this test stays
+     * inside the app tsconfig (which declares only `vite/client`).
+     *
+     * Matching is on *structure* — a Link whose content includes a button
+     * component — rather than on line numbers or a fixed indentation, so
+     * reformatting the JSX can neither hide a regression nor raise a false
+     * alarm.
+     */
+    const sources = import.meta.glob('../**/*.tsx', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>;
+
+    const offenders: string[] = [];
+    const nested = /<(?:Link|NavLink)\b[^>]*>([\s\S]{0,300}?)<\/(?:Link|NavLink)>/g;
+
+    for (const [path, source] of Object.entries(sources)) {
+      // Test files legitimately assert on markup they build themselves.
+      if (path.endsWith('.test.tsx')) continue;
+
+      for (const match of source.matchAll(nested)) {
+        if (/<(PrimaryButton|SecondaryButton|DangerButton|SubmitButton|button)\b/.test(match[1])) {
+          const line = source.slice(0, match.index).split('\n').length;
+          offenders.push(`${path}:${line}`);
+        }
+      }
+    }
+
+    expect(
+      offenders,
+      `button component nested inside a Link — style the Link with the shared class instead:\n  ${offenders.join('\n  ')}`,
+    ).toEqual([]);
   });
 });

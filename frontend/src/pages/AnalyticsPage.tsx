@@ -18,6 +18,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import {
   analyticsApi,
@@ -187,8 +188,8 @@ export function AnalyticsPage() {
             title="Nothing to report yet"
             description="Once you add products, record stock movements and record a sale, the numbers will appear here."
             action={
-              <Link to="/app/products">
-                <SecondaryButton>Go to products</SecondaryButton>
+              <Link className={secondaryButtonClass} to="/app/products">
+                Go to products
               </Link>
             }
           />
@@ -337,8 +338,8 @@ export function AnalyticsPage() {
                   title="No products to report on"
                   description="Products appear here whether or not they have sold."
                   action={
-                    <Link to="/app/products">
-                      <SecondaryButton>Go to products</SecondaryButton>
+                    <Link className={secondaryButtonClass} to="/app/products">
+                      Go to products
                     </Link>
                   }
                 />
@@ -406,8 +407,8 @@ export function AnalyticsPage() {
                   title="No suppliers yet"
                   description="Add a supplier to start tracking order and lead-time history."
                   action={
-                    <Link to="/app/suppliers">
-                      <SecondaryButton>Go to suppliers</SecondaryButton>
+                    <Link className={secondaryButtonClass} to="/app/suppliers">
+                      Go to suppliers
                     </Link>
                   }
                 />

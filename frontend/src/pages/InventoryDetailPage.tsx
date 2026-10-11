@@ -21,6 +21,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import {
   inventoryApi,
@@ -136,8 +137,8 @@ export function InventoryDetailPage() {
     return (
       <div className="space-y-6">
         <ErrorBanner message={error ?? 'Product not found.'} />
-        <Link to="/app/inventory">
-          <SecondaryButton>Back to inventory</SecondaryButton>
+        <Link className={secondaryButtonClass} to="/app/inventory">
+          Back to inventory
         </Link>
       </div>
     );
@@ -156,8 +157,8 @@ export function InventoryDetailPage() {
         title={product.name}
         description={`${product.sku}${product.categoryName ? ` · ${product.categoryName}` : ''}`}
         actions={
-          <Link to="/app/inventory">
-            <SecondaryButton>Back</SecondaryButton>
+          <Link className={secondaryButtonClass} to="/app/inventory">
+            Back
           </Link>
         }
       />

@@ -27,6 +27,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -327,8 +328,8 @@ export function ReorderPage() {
               hasFilters ? (
                 <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link to="/app/purchase-orders">
-                  <SecondaryButton>Go to purchase orders</SecondaryButton>
+                <Link className={secondaryButtonClass} to="/app/purchase-orders">
+                  Go to purchase orders
                 </Link>
               )
             }

@@ -26,6 +26,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import {
@@ -336,8 +337,8 @@ export function StockRiskPage() {
               hasFilters ? (
                 <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link to="/app/products">
-                  <SecondaryButton>Go to products</SecondaryButton>
+                <Link className={secondaryButtonClass} to="/app/products">
+                  Go to products
                 </Link>
               )
             }

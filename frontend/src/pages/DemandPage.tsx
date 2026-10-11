@@ -26,6 +26,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import {
@@ -347,8 +348,8 @@ export function DemandPage() {
               hasFilters ? (
                 <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link to="/app/sales">
-                  <SecondaryButton>Go to sales</SecondaryButton>
+                <Link className={secondaryButtonClass} to="/app/sales">
+                  Go to sales
                 </Link>
               )
             }

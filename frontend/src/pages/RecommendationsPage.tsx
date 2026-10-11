@@ -26,6 +26,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -376,8 +377,8 @@ export function RecommendationsPage() {
               hasFilters ? (
                 <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link to="/app/intelligence">
-                  <SecondaryButton>View intelligence</SecondaryButton>
+                <Link className={secondaryButtonClass} to="/app/intelligence">
+                  View intelligence
                 </Link>
               )
             }

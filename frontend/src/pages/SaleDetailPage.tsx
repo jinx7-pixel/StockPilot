@@ -14,7 +14,7 @@ import {
   Card,
   ErrorBanner,
   PageHeader,
-  SecondaryButton,
+  secondaryButtonClass,
   Spinner,
 } from '../components/ui';
 import { ApiError } from '../lib/request';
@@ -57,8 +57,8 @@ export function SaleDetailPage() {
     return (
       <div className="space-y-6">
         <ErrorBanner message={error ?? 'Sale not found.'} />
-        <Link to="/app/sales">
-          <SecondaryButton>Back to sales</SecondaryButton>
+        <Link className={secondaryButtonClass} to="/app/sales">
+          Back to sales
         </Link>
       </div>
     );
@@ -78,8 +78,8 @@ export function SaleDetailPage() {
         title={sale.customerName ?? 'Walk-in customer'}
         description={`Sale recorded ${new Date(sale.soldAt).toLocaleString()}`}
         actions={
-          <Link to="/app/sales">
-            <SecondaryButton>Back</SecondaryButton>
+          <Link className={secondaryButtonClass} to="/app/sales">
+            Back
           </Link>
         }
       />
