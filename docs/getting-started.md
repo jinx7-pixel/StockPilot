@@ -88,10 +88,53 @@ Full workflow, naming rules and rollback: [`database/README.md`](../database/REA
 
 ## 5. Run the backend
 
+The API runs under a **restricted database role**, `stockpilot_app`, which holds
+only `SELECT`/`INSERT`/`UPDATE`/`DELETE` on the twelve runtime tables. It cannot
+read the migration history, alter the schema, or create databases.
+
+Those credentials live in `backend/.env.runtime` — a **local-only, gitignored**
+file (`.gitignore` matches `.env.*`). Create it from your protected credential
+file, which lives outside the repository:
+
+```bash
+# backend/.env.runtime — local only, gitignored. Shape, not a real credential:
+PGUSER=stockpilot_app
+PGPASSWORD=...        # from your out-of-repo credential file; never commit
+PGDATABASE=stockpilot
+```
+
+`.env.runtime` is intentionally **required**: if it is missing, Node refuses to
+start rather than quietly falling back to the owner account.
+
 ```bash
 cd backend
-npm run dev
+npm run dev:local     # development (no hot reload)
+# or, against a production build:
+npm run build
+npm run start:local
 ```
+
+`npm run dev` and `npm run start` are unchanged and still read `backend/.env`,
+which keeps the **owner/admin** role for:
+
+- migrations — `npm run migration:up`, `:down`, `:status`;
+- the test suite — `npm test`, which also needs to create and truncate
+  `stockpilot_test`.
+
+Neither of them reads `.env.runtime` — the restricted role has no DDL rights and
+cannot read the migration history, so they would fail if it did. Run them
+exactly as documented above; only the API uses the runtime credentials.
+
+For hot reload with the restricted role, export the two variables and then run
+`npm run dev` as normal.
+
+⚠️ **Shell variables win.** `--env-file` does not override a `PG*` variable that
+is already exported in your shell. If the API is not using the restricted role,
+check for stray `PG*` variables — check *whether they are set*, never print
+their values.
+
+**Never commit or share `.env.runtime`.** It is ignored by Git and holds a live
+credential.
 
 Expected output:
 

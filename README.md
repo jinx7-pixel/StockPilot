@@ -226,15 +226,29 @@ docker compose up -d db
 cp backend/.env.example  backend/.env
 cp frontend/.env.example frontend/.env.local
 
+# 3b. Create backend/.env.runtime — REQUIRED by step 5, see below
+#     It holds the restricted `stockpilot_app` credentials. Keep it out of git
+#     (it is ignored) and build it from your protected credential store, never
+#     from a password typed into chat or a tracked file. The API refuses to start
+#     without it.
+
 # 4. Apply database migrations
 cd backend && npm run migration:up && cd ..
 
 # 5. Run the API           (terminal 1 → http://localhost:4000)
-cd backend && npm run dev
+cd backend && npm run dev:local
 
 # 6. Run the web client    (terminal 2 → http://localhost:5173)
 cd frontend && npm run dev
 ```
+
+The API runs under the restricted `stockpilot_app` database role, configured in
+the gitignored `backend/.env.runtime` — **complete that setup before step 5**.
+Migrations (step 4) and the test suite keep using the owner/admin role from
+`backend/.env`; they never read `.env.runtime`. See
+[docs/getting-started.md](docs/getting-started.md#5-run-the-backend) for the full
+procedure — including why a missing `.env.runtime` is a deliberate startup
+failure, and why stray exported `PG*` variables can override it.
 
 Verify the foundation end to end:
 

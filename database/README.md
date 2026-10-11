@@ -358,7 +358,16 @@ database than the API.
 Copy `backend/.env.example` → `backend/.env`. All values below have working local
 defaults.
 
-### Connection (shared with the API)
+### Connection (settings shared, credentials separate)
+
+Migrations and the test suite always use the **owner/admin** role from
+`backend/.env`, never the restricted runtime role — the API's `stockpilot_app`
+role holds no DDL rights and cannot read `pgmigrations`. The two roles are
+configured separately; see
+[docs/getting-started.md](../docs/getting-started.md#5-run-the-backend).
+
+The *variables* below are shared by every entry point. Which credentials fill
+them is not.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
