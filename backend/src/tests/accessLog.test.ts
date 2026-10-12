@@ -70,7 +70,13 @@ describe('access log — query strings never logged', () => {
     const entry = lines.find((l) => l.includes('[http]'));
     assert.ok(entry, 'an access-log line was emitted');
 
-    assert.match(entry, /^\[http\] GET \/api\/health 200 \d+\.\d+ms$/);
+    // The line now leads with the correlation id (Step 12B). Everything the format
+// assertion actually protects — method, path, status, duration, and no query
+// string — is unchanged.
+    assert.match(
+      entry,
+      /^\[http\] [A-Za-z0-9_-]{8,64} GET \/api\/health 200 \d+\.\d+ms$/,
+    );
   });
 
   it('strips the query string but keeps multi-parameter URLs diagnosable', async () => {

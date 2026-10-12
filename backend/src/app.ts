@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
@@ -7,6 +9,15 @@ import { env } from './config/env.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 import { apiRouter } from './routes/index.js';
+
+/** Header carrying the correlation id, in and out. */
+export const REQUEST_ID_HEADER = 'X-Request-Id';
+
+/**
+ * The only shape of client id that is trusted. Deliberately narrow — see the
+ * middleware below for why each part matters.
+ */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
 /**
  * Build the Express application.
@@ -36,6 +47,40 @@ export function createApp(): Express {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 
+  /**
+   * Attach a correlation id to every request, before anything that might want
+   * to log or fail.
+   *
+   * A client-supplied `X-Request-Id` is honoured **only** when it matches
+   * `^[A-Za-z0-9_-]{8,64}$`. That single pattern is the whole safety story:
+   *
+   *  - bounded, so a client cannot inflate logs or the response header;
+   *  - no CR or LF, so a hostile value cannot forge an extra log line;
+   *  - no `<`, `>` or `"`, so the value is inert if anything ever reflects it;
+   *  - ASCII only, so it survives log aggregation and header round-trips.
+   *
+   * Anything else — empty, too short, too long, whitespace-bearing, non-ASCII,
+   * HTML-like — is discarded and replaced with a fresh UUID. A rejected value
+   * never reaches a log line or a response.
+   *
+   * The id lives in the **header**, never the body. Several tests require two
+   * different responses to be byte-identical (a cross-tenant 404 and an unknown
+   * id; an unknown email and a wrong password), and a per-request id in the
+   * body would make them differ.
+   */
+  app.use((req, res, next) => {
+    const supplied = req.header(REQUEST_ID_HEADER);
+    const requestId =
+      supplied !== undefined && REQUEST_ID_PATTERN.test(supplied)
+        ? supplied
+        : crypto.randomUUID();
+
+    req.requestId = requestId;
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+
+    next();
+  });
+
   // Baseline request logging. Kept dependency-free on purpose.
   app.use((req, res, next) => {
     const startedAt = process.hrtime.bigint();
@@ -58,7 +103,7 @@ export function createApp(): Express {
     res.on('finish', () => {
       const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
       console.log(
-        `[http] ${req.method} ${requestPath} ${res.statusCode} ${durationMs.toFixed(1)}ms`,
+        `[http] ${req.requestId} ${req.method} ${requestPath} ${res.statusCode} ${durationMs.toFixed(1)}ms`,
       );
     });
 

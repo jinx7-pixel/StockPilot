@@ -19,6 +19,14 @@ declare global {
        * Carries only safe fields: no `password_hash`, no session token.
        */
       auth?: AuthenticatedUser;
+      /**
+       * Correlation id for this request, attached by the request-id middleware.
+       *
+       * Always a validated `[A-Za-z0-9_-]{8,64}` value: either a safe client id
+       * or a freshly generated UUID. Never empty, never unbounded, and free of
+       * characters that could forge a log line.
+       */
+      requestId: string;
     }
   }
 }

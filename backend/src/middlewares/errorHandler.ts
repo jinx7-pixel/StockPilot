@@ -55,7 +55,10 @@ export function errorHandler(
 
   res.status(500).json({
     status: 'error',
-    // Deliberately generic: never leak internals in production.
+    // Deliberately generic: never leak internals in production. The full error
+    // — stack, SQL, driver text — went to the log line above, where the request
+    // id ties it back to what the client reported.
     error: 'Internal Server Error',
+    code: 'INTERNAL_ERROR',
   });
 }
