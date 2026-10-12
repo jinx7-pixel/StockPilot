@@ -101,3 +101,41 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 # shutdown (stop the session-cleanup job and drain it, close the server, drain
 # the pool) runs on `docker stop`.
 CMD ["node", "dist/server.js"]
+
+# -----------------------------------------------------------------------------
+# Stage 5 — migration job.
+#
+# Deliberately NOT derived from `runtime`:
+#
+#   - `runtime` has no devDependencies, and migrations need `tsx` and
+#     `node-pg-migrate`, which are devDependencies.
+#   - `runtime` has no TypeScript source, and `src/db/migrate.ts` is excluded
+#     from the production build, so it is not in `dist/`.
+#
+# `migrateConfig.ts` resolves the default MIGRATIONS_DIR from two levels above
+# `src/db`. With the layout below that is `/`, so the relative default lands on
+# `/database/migrations` — which is exactly where `database/` is copied. Setting
+# MIGRATIONS_DIR explicitly in the compose job makes that independent of this
+# arithmetic.
+#
+# This image carries NO credentials. They are injected at run time, so they are
+# never a build layer. It is also never published — `docker compose run --rm
+# migrate` builds it on demand and throws it away.
+#
+# It runs as tooling, not as a served process, so NODE_ENV is left unset:
+# `assertProductionSafe()` only applies to a served production API.
+FROM node:20-alpine AS migrate
+
+WORKDIR /app
+
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci
+
+COPY backend/tsconfig.json ./tsconfig.json
+COPY backend/src ./src
+COPY database /database
+
+# Fails loudly if MIGRATIONS_DIR is wrong, instead of silently migrating nothing.
+RUN test -d /database/migrations
+
+CMD ["npm", "run", "migration:up"]

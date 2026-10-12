@@ -1,0 +1,173 @@
+# =============================================================================
+# StockPilot — deployment rehearsal topology.
+#
+# This is NOT the development stack. `docker-compose.yml` remains the
+# developer database only and is unchanged.
+#
+#   frontend :8080  ──►  api:4000  ──►  db:5432
+#   (published)         (internal)     (internal)
+#
+# Only the frontend port reaches the host. `api` and `db` are reachable solely
+# over the internal Compose network, which is what makes the single trusted hop
+# that `TRUST_PROXY=1` asserts actually true.
+#
+# Migrations are a separate, explicit one-shot job behind the `migrate`
+# profile. `docker compose up` never runs them, and the API entrypoint does not
+# either — `src/db/migrate.ts` is excluded from the production build, so it
+# cannot be started accidentally from the API image.
+#
+# ============================ LOCAL REHEARSAL ONLY ==========================
+# The defaults below are a LOCAL REHEARSAL configuration and are deliberately
+# weaker than production:
+#
+#   * NODE_ENV=development, so assertProductionSafe() is skipped. The local
+#     `postgres:18-alpine` service has no TLS, and production validation
+#     *requires* a TLS-enforcing PGSSLMODE, so NODE_ENV=production cannot start
+#     against this database.
+#   * PGSSLMODE=disable — plaintext, acceptable only on a loopback rehearsal
+#     network.
+#   * COOKIE_SECURE=false — required only because the rehearsal serves plain
+#     HTTP.
+#   * CORS_ORIGINS is plain http.
+#
+# For a real deployment, every one of those becomes:
+#   NODE_ENV=production, PGSSLMODE=verify-full, COOKIE_SECURE=true,
+#   CORS_ORIGINS=https://…  — and PostgreSQL is managed, not this container.
+# Do not relax the code's production defaults to make a rehearsal work.
+# =============================================================================
+
+name: stockpilot
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL — local rehearsal only.
+  #
+  # Production should point at a managed database. Self-hosting means owning
+  # backups, failover, PITR and certificate rotation yourself.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE}
+      # Owner/admin role: owns the schema and is the ONLY role allowed to run
+      # migrations.
+      POSTGRES_USER: ${DB_ADMIN_USER}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    volumes:
+      - stockpilot_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Readiness of the *database*, distinct from the API's liveness probe.
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    # Deliberately no `ports:` — PostgreSQL is not exposed to the host.
+
+  # ---------------------------------------------------------------------------
+  # One-shot migration job. Opt-in: `docker compose run --rm migrate`.
+  #
+  # Uses the OWNER role, never the restricted runtime role. `stockpilot_app`
+  # holds only SELECT/INSERT/UPDATE/DELETE on the twelve runtime tables and
+  # cannot create or alter objects; widening it to run migrations would undo
+  # the least-privilege work outright.
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: .
+      target: migrate
+    profiles: ['migrate']
+    restart: 'no'
+    environment:
+      PGHOST: db
+      PGPORT: '5432'
+      PGDATABASE: ${PGDATABASE}
+      PGUSER: ${DB_ADMIN_USER}
+      PGPASSWORD: ${DB_ADMIN_PASSWORD}
+      # Local rehearsal database serves no TLS. See docs/deployment.md — in
+      # production this must be a TLS-enforcing mode against managed
+      # PostgreSQL.
+      PGSSLMODE: ${MIGRATE_PGSSLMODE:-disable}
+      MIGRATIONS_DIR: /database/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # API — the runtime image, connecting as the restricted role.
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    environment:
+      # See the LOCAL REHEARSAL banner above before changing these.
+      NODE_ENV: ${NODE_ENV:-development}
+      HOST: 0.0.0.0
+      PORT: '4000'
+
+      # Restricted runtime role. NOT the migration owner, and NOT
+      # stockpilot_app-by-accident: its grants are exactly the twelve runtime
+      # tables.
+      PGHOST: ${PGHOST:-db}
+      PGPORT: ${PGPORT:-5432}
+      PGDATABASE: ${PGDATABASE}
+      PGUSER: ${PG_RUNTIME_USER}
+      PGPASSWORD: ${PG_RUNTIME_PASSWORD}
+      PGSSLMODE: ${PGSSLMODE:-disable}
+      PGPOOL_MAX: ${PGPOOL_MAX:-10}
+
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+
+      # Exactly ONE trusted hop: Nginx. Never `true`, which would let any client
+      # forge X-Forwarded-For and therefore its rate-limit bucket.
+      TRUST_PROXY: '1'
+
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Liveness. Deliberately dependency-free, matching the existing
+      # /api/health contract: a database outage must not make Docker restart a
+      # healthy process. Readiness is a separate signal — see /api/ready.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||4000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # Deliberately no `ports:` — the API is reachable only through Nginx.
+
+  # ---------------------------------------------------------------------------
+  # Frontend — Nginx serving static assets and proxying /api/ to `api`.
+  # The upstream `api:4000` in frontend/nginx.conf matches this service name.
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      # The only published port in this stack.
+      - '${FRONTEND_PORT:-8080}:8080'
+    depends_on:
+      api:
+        # service_healthy here means "the API process is up", because the API
+        # healthcheck is liveness. It does NOT prove the database is reachable —
+        # poll /api/ready for that.
+        condition: service_healthy
+
+volumes:
+  # Named volume. Deliberately NOT marked with `external` and never removed by a
+  # compose command: a named volume survives `docker compose down`, which is
+  # what makes any backup taken of it meaningful.
+  stockpilot_pgdata:

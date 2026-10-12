@@ -358,6 +358,7 @@ Status of each planned module. Only those marked ✅ are built.
 | --- | --- |
 | [`docs/architecture.md`](./docs/architecture.md) | Layering, request lifecycle, module boundaries, scaling path |
 | [`docs/getting-started.md`](./docs/getting-started.md) | Local setup, quality checks, troubleshooting |
+| [`docs/deployment.md`](./docs/deployment.md) | Container topology, roles, probes, secrets, local rehearsal |
 | [`database/README.md`](./database/README.md) | Migration workflow, environment variables, rollback, troubleshooting |
 | [`database/migrations/README.md`](./database/migrations/README.md) | Migration file conventions and rules |
 
