@@ -1,0 +1,101 @@
+# ============================================================================
+# StockPilot — Docker build context exclusions
+#
+# `.gitignore` has NO effect on `docker build`. The build context is copied into
+# the daemon verbatim, and anything copied becomes an image layer: removing it in
+# a later layer does not remove it from `docker history`.
+#
+# The rule that matters most here is **no `.env*` file may ever enter the
+# context.** `backend/.env` holds the owner credentials and
+# `backend/.env.runtime` holds the restricted runtime-role credential. Both are
+# local-only and gitignored; neither may reach a build context, let alone an
+# image. Production secrets are injected as environment variables at run time.
+#
+# Sources are deliberately KEPT (backend/src, frontend/src, database) — together
+# they are about 2 MB, and keeping them leaves room for a future frontend image
+# and a migration image to share this context.
+# ============================================================================
+
+# --- Git metadata -------------------------------------------------------------
+.git
+.gitignore
+.gitattributes
+.github
+
+# --- Dependencies: installed inside the image, never copied in ---------------
+# This also guarantees the @node-rs/argon2 native binary is resolved for the
+# image's platform rather than inherited from a developer's host OS.
+**/node_modules
+**/jspm_packages
+**/web_modules
+**/.yarn
+**/.pnp
+**/.pnp.*
+**/pnpm-store
+
+# --- Build output: rebuilt inside the image ------------------------------------
+**/dist
+**/build
+**/out
+**/.vite
+**/.turbo
+**/.cache
+**/*.tsbuildinfo
+
+# --- Secrets and credentials (critical) ---------------------------------------
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
+**/credentials.json
+**/secrets
+**/secrets.*.json
+**/*service-account*.json
+
+# --- Logs and test output -----------------------------------------------------
+**/logs
+**/*.log
+npm-debug.log*
+yarn-error.log*
+**/coverage
+**/.nyc_output
+**/.vitest
+**/test-results
+**/playwright-report
+**/blob-report
+**/.playwright
+**/*.pid
+**/*.seed
+
+# --- Local database artefacts -------------------------------------------------
+# Migrations are the one exception: they are committed source.
+**/*.sql
+!database/migrations/**/*.sql
+**/*.dump
+**/*.backup
+**/pgdata
+**/.pgdata
+
+# --- Editor / IDE / OS --------------------------------------------------------
+**/.vscode
+**/.idea
+**/.zed
+**/*.swp
+**/*.swo
+**/*.suo
+.DS_Store
+Thumbs.db
+**/.tmp
+**/tmp
+**/.temp
+
+# --- Docker's own files -------------------------------------------------------
+# Excluded so they can never be baked into an image; the builder reads them
+# separately and does not need them in the context.
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose*.yml
