@@ -2,10 +2,11 @@
  * Application shell and route table.
  *
  * Route shape:
- *   /            → redirect to /app
+ *   /            → public landing shell (navbar only)
  *   /login       → public only; a signed-in user is bounced to /app
  *   /register    → public only
  *   /app/*       → protected; the session supplies the tenant
+ *   *            → redirect to the landing page
  *
  * There is deliberately no `/:businessId` segment. Business scope comes from the
  * server-side session, so there is no tenant identifier in the URL to tamper
@@ -21,6 +22,7 @@ import { CategoriesPage } from './pages/CategoriesPage';
 import { DemandPage } from './pages/DemandPage';
 import { InventoryDetailPage } from './pages/InventoryDetailPage';
 import { InventoryPage } from './pages/InventoryPage';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { OverstockPage } from './pages/OverstockPage';
 import { ProductsPage } from './pages/ProductsPage';
@@ -72,8 +74,21 @@ export function App() {
         </Route>
       </Route>
 
-      <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
+      {/*
+        Public landing page. It replaces the previous `/ -> /app` redirect, which
+        sent every anonymous visitor to a login screen with no way to learn what
+        the product is.
+
+        Deliberately placed OUTSIDE `PublicOnlyRoute`: a signed-in user opening
+        `/` should still see the marketing shell, not be bounced to the
+        workspace. `/app` remains reachable directly and is still fully protected.
+      */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Unknown URLs go to the landing page, not to the workspace: an
+          authenticated visitor who mistypes a URL would otherwise land in the
+          app, and an anonymous one would be bounced to /login with no context. */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

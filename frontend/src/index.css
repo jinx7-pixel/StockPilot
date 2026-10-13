@@ -24,6 +24,405 @@
   --color-warning-800: oklch(0.45 0.11 70);
   --color-danger-100: oklch(0.93 0.05 25);
   --color-danger-800: oklch(0.48 0.17 25);
+
+    /*
+     * Public landing page palette.
+     *
+     * These four values are a locked brand decision, so they are written as hex
+     * rather than borrowed from Tailwind's built-in `gray-*` / `emerald-*` ramps.
+     * Those ramps happen to match today (gray-900 is #111827, emerald-500 is
+     * #10b981), but a palette change upstream would silently move a colour this
+     * design system has fixed.
+     */
+    --color-navy-900: #111827;
+    --color-navy-800: #1f2937;
+    --color-accent-500: #10b981;
+    --color-accent-400: #34d399;
+
+    /*
+     * Landing typography only. `Inter` is listed first but is NOT bundled: no
+     * webfont is fetched, so the stack falls back to the system sans when Inter
+     * is not installed. Self-host it or add a <link> when the landing page
+     * ships, rather than taking on a runtime CDN dependency.
+     */
+    --font-landing: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+      sans-serif;
+
+    /*
+     * Orbiting border for the "Log in" control.
+     *
+     * The duration lives here as a token so the ring and the shine share one
+     * animation vocabulary, but the value is consumed as
+     * `--moving-border-duration` below — see `MovingBorder`.
+     */
+    --animate-moving-border: stockpilot-moving-border 4s linear infinite;
+  }
+
+/*
+ * Must be registered, or the browser cannot interpolate it.
+ *
+ * An unregistered custom property is just a string; animating one from `0deg` to
+ * `360deg` would snap between the two values at the halfway point instead of
+ * rotating. Registering it as an `<angle>` is what makes this a smooth turn.
+ */
+@property --sp-mb-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes stockpilot-moving-border {
+  to {
+    --sp-mb-angle: 360deg;
+  }
+}
+
+/*
+ * Hero motion.
+ *
+ * Every one of these animates only `transform` and `opacity`, so the whole hero
+ * stays on the compositor: nothing reflows, nothing shifts layout, and the main
+ * thread is free. The durations are deliberately long and the amplitudes small —
+ * this is meant to read as a slow drift, not as motion worth watching.
+ */
+@keyframes stockpilot-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stockpilot-hero-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/*
+ * Separate keyframes per card rather than one shared animation with different
+ * delays. Two cards sharing a keyframe and a phase would drift in lockstep and
+ * read as a single moving object; offsetting the midpoints keeps them apart.
+ *
+ * The `translateZ` is repeated in every keyframe on purpose. A running animation
+ * replaces the element's declared `transform` outright — it does not merge with
+ * it — so carrying the depth on the base rule alone left both cards flattened to
+ * Z=0 the instant they started moving. On a `preserve-3d` stage that drops them
+ * *behind* the panel, and the panel's rounded corner visibly sliced across the
+ * weekly card. Stating the depth in each keyframe keeps one source of truth.
+ */
+@keyframes stockpilot-hero-float-a {
+  0%,
+  100% {
+    transform: translateZ(56px) translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateZ(56px) translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes stockpilot-hero-float-b {
+  0%,
+  100% {
+    transform: translateZ(48px) translateY(0) rotate(1.5deg);
+  }
+  50% {
+    transform: translateZ(48px) translateY(9px) rotate(-1deg);
+  }
+}
+
+@keyframes stockpilot-hero-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate3d(-4%, 3%, 0) scale(1.08);
+  }
+}
+
+@layer components {
+  /*
+   * The orbiting ring. See `components/moving-border.tsx` for why it is built
+   * from a masked conic gradient rather than an SVG path and a JS animation.
+   *
+   * `inset: -1px` puts the ring one pixel outside the control's box, and the
+   * `padding: 1px` + `content-box`/`exclude` mask pair removes everything inside
+   * it — that difference is the 1px ring itself. Because the ring is entirely
+   * outside the box it can never overlap the label, and because it is absolutely
+   * positioned it cannot shift layout.
+   */
+  .moving-border {
+    --moving-border-duration: 4s;
+    position: relative;
+  }
+
+  .moving-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--sp-mb-angle),
+      transparent 0deg,
+      var(--color-accent-500) 50deg,
+      var(--color-accent-400) 85deg,
+      transparent 165deg,
+      transparent 360deg
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: stockpilot-moving-border var(--moving-border-duration) linear infinite;
+    /* Decoration only: never a hit-test target, never announced. */
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Freeze rather than remove. Turning the animation off leaves the gradient at
+     * `--sp-mb-angle: 0deg`, so the control keeps a static emerald highlight in
+     * one corner instead of losing its edge entirely — the same "at rest" look
+     * a user who dislikes motion still needs in order to recognise the control.
+     */
+    .moving-border::before {
+      animation: none;
+    }
+  }
+
+  /* --------------------------------------------------------------- Badge */
+
+  /*
+   * The light walking the badge's traced line.
+   *
+   * `offset-path` resolves in the element's own coordinate space, which is the
+   * same SVG user space the mask path is drawn in — so the light lands exactly on
+   * the line with no extra maths. This replaces the two CSS classes the reference
+   * relied on (`multiline`, `ml-light-1`), which were not part of the snippet and
+   * would have needed a motion runtime to reproduce.
+   *
+   * `offset-distance` alone is deliberate: a `transform` here would be taken about
+   * the SVG origin and slide the light off the line entirely.
+   */
+  .sp-badge-light {
+    offset-path: path(
+      'M 69 49.8 h -30 q -3 0 -3 -3 v -13 q 0 -3 -3 -3 h -23 q -3 0 -3 -3 v -13 q 0 -3 -3 -3 h -30'
+    );
+    offset-distance: 0%;
+    animation: stockpilot-badge-trace 6s linear infinite;
+  }
+
+  @keyframes stockpilot-badge-trace {
+    from {
+      offset-distance: 0%;
+      opacity: 0.9;
+    }
+    to {
+      offset-distance: 100%;
+      opacity: 0.9;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Park the light partway along the line rather than removing it. The light
+     * *is* the line here — without it the mask has nothing to reveal and the
+     * shape disappears entirely.
+     */
+    .sp-badge-light {
+      animation: none;
+      offset-distance: 18%;
+      opacity: 0.75;
+    }
+  }
+
+  /* ------------------------------------------------------------------ Hero */
+
+  .hero-root {
+    /*
+     * Flat navy to the bottom edge.
+     *
+     * This went through two intermediate versions that both tried to *blend* into
+     * the light page below, and neither was worth the cost. First a translucent
+     * `to-slate-50` panel over the content, which read as grey fog with a hard top
+     * edge. Then a six-stop ramp in the background, which hid the fog but left a
+     * desaturated band across the lower quarter — a navy-to-white blend has to
+     * pass through mud, and no number of stops changes that.
+     *
+     * So there is no blend. The hero is one flat navy field and it stops. Against
+     * the near-white page below, that edge is a strong, deliberate horizontal
+     * line, which is a perfectly good design decision on its own — and it leaves
+     * every label sitting on exactly the colour it was chosen against.
+     *
+     * The only gradient left is the emerald wash at the top, which is atmospheric
+     * light rather than a ramp, and fades to `transparent` well above the edge.
+     */
+    background-color: var(--color-navy-900);
+    background-image: radial-gradient(120% 80% at 50% 0%, rgba(52, 211, 153, 0.08) 0%, transparent 60%);
+  }
+
+  .hero-glow {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .hero-glow-a {
+    top: -18%;
+    right: -12%;
+    width: 34rem;
+    height: 34rem;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.28) 0%, transparent 70%);
+    animation: stockpilot-hero-glow 18s ease-in-out infinite;
+  }
+
+  .hero-glow-b {
+    bottom: -22%;
+    left: -10%;
+    width: 28rem;
+    height: 28rem;
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.18) 0%, transparent 70%);
+    animation: stockpilot-hero-glow 22s ease-in-out infinite reverse;
+  }
+
+  .hero-glow-panel {
+    inset: -18%;
+    width: auto;
+    height: auto;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, transparent 65%);
+    animation: stockpilot-hero-glow 14s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  /*
+   * The 3D read.
+   *
+   * `perspective` on the stage, and a rotated, depth-preserving child. This is
+   * real 3D — the cards genuinely sit on different planes and the browser
+   * composites them — rather than a rotated flat image faking it.
+   */
+  .hero-stage {
+    perspective: 1400px;
+  }
+
+  .hero-panel-3d {
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateY(-16deg) rotateX(7deg);
+    /* No transition: this is a fixed pose, not a state change. */
+  }
+
+  .hero-glass {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.09) 0%,
+      rgba(255, 255, 255, 0.03) 45%,
+      rgba(16, 185, 129, 0.05) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow:
+      0 40px 80px -20px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transform: translateZ(40px);
+    z-index: 1;
+  }
+
+  .hero-float {
+    /*
+     * Separation from the panel.
+     *
+     * These cards overlap the dashboard, so they have to read as sitting in
+     * *front* of it rather than being printed on it. Three things do that work:
+     * a surface a clear step lighter than the panel, a brighter edge, and a
+     * deeper shadow. The inset highlight along the top edge catches the same
+     * light as the panel's, which is what sells the distance.
+     *
+     * Still translucent, so the glassmorphism survives — the panel is visible
+     * through the card.
+     */
+    background: linear-gradient(145deg, rgba(51, 65, 85, 0.92) 0%, rgba(30, 41, 59, 0.94) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 30px 60px -12px rgba(0, 0, 0, 0.85),
+      0 10px 22px -10px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    will-change: transform;
+  }
+
+  /* Offset planes: the cards read as nearer/further than the panel itself. The
+     push is modest on purpose — on a perspective stage every extra pixel of Z
+     also scales the element up and drifts it sideways, so a large value throws
+     the card off the panel's corner instead of sitting on it.
+
+     The `transform` is declared here *as well as* in the keyframes, and that is
+     not a duplicate. A running animation replaces the declared transform, so the
+     keyframes must carry the depth themselves or the card flattens to Z=0 and
+     the panel's corner slices through it. But when reduced motion sets
+     `animation: none`, the keyframes stop applying altogether — and with the
+     depth living only there the card fell back to Z=0 and slid behind the panel
+     all over again. This declaration is the resting pose for exactly that case.
+
+     The `z-index` is a tiebreaker for the strip where a card and the panel are
+     coplanar, where paint order is not decided by Z alone. */
+  .hero-float-a {
+    transform: translateZ(56px);
+    animation: stockpilot-hero-float-a 7s ease-in-out infinite;
+    z-index: 2;
+  }
+
+  .hero-float-b {
+    transform: translateZ(48px);
+    animation: stockpilot-hero-float-b 9s ease-in-out infinite;
+    z-index: 3;
+  }
+
+  /*
+   * Entrance.
+   *
+   * Note there is no `opacity: 0` here. The keyframe starts at 0, so if the
+   * animation never runs the element is simply visible — content is never held
+   * hostage to an animation that might not fire.
+   */
+  .hero-rise {
+    animation: stockpilot-hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--hero-delay, 0s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Turn the motion off, not the content. The glows and float cards settle
+     * where they are, the rise animation is removed so the hero renders in its
+     * final state immediately, and only the hover lift on the CTAs is dropped —
+     * colour change on hover is kept, since it conveys the same state without
+     * moving anything.
+     */
+    .hero-rise,
+    .hero-glow,
+    .hero-float {
+      animation: none;
+    }
+  }
 }
 
 @layer base {
