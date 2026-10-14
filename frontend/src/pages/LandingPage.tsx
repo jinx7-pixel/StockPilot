@@ -31,12 +31,13 @@
  * it. Below `lg` the centre is `display:none`, the two sides simply split the row,
  * and brand/actions land at the edges.
  *
- * ## Why the wrapper sets its own height
+ * ## The wrapper sets its own height
  *
  * A sticky element is bounded by its containing block. The wrapper therefore
  * needs a height of its own: it is what makes the header stick across the whole
- * scroll, and what guarantees the light background fills the viewport before the
- * landing sections exist. Once they do, the wrapper simply grows with them.
+ * scroll. It is also `navy-900` rather than the `slate-50` it used to be — the
+ * hero and the product section are both dark, and a light wrapper showed through
+ * as a band below the last section.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -44,6 +45,8 @@ import { Link } from 'react-router-dom';
 
 import { HeroSection } from '../components/HeroSection';
 import { MovingBorder } from '../components/moving-border';
+import { ProductSection } from '../components/ProductSection';
+import { SectionDivider } from '../components/SectionDivider';
 
 /** Anchors for landing sections that do not exist yet. */
 const SECTIONS = [
@@ -141,7 +144,7 @@ export function LandingPage() {
   }, [drawerOpen]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-landing">
+    <div className="min-h-screen bg-navy-900 font-landing">
       <header className="sticky top-0 z-40 bg-navy-900">
         <nav
           aria-label="Main"
@@ -305,9 +308,18 @@ export function LandingPage() {
         The hero owns its own container and full-bleed background, so `<main>`
         stays a bare landmark rather than a layout wrapper. The navbar above is
         untouched.
+
+        `ProductSection` carries `id="product"`, which is the target the navbar's
+        Product link points at — so that anchor resolves for the first time.
+
+        `SectionDivider` sits between the two. Both sections are the same navy,
+        so the rule has to be drawn to exist at all; it is decorative and
+        announces nothing.
       */}
       <main id="main-content">
         <HeroSection />
+        <SectionDivider />
+        <ProductSection />
       </main>
     </div>
   );

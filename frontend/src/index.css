@@ -40,6 +40,15 @@
     --color-accent-400: #34d399;
 
     /*
+     * `accent-600` and `accent-700` used to live here, added so the product
+     * section could be *read* on the near-white surface it used to sit on. That
+     * section is dark now and reads its accents in `accent-400`, which measures
+     * about 9.3:1 on `navy-900` against `accent-500`'s ~7:1 — brightening, not
+     * darkening, is the direction a dark background needs. Nothing referenced the
+     * two steps, so they are gone rather than left as dead tokens.
+     */
+
+    /*
      * Landing typography only. `Inter` is listed first but is NOT bundled: no
      * webfont is fetched, so the stack falls back to the system sans when Inter
      * is not installed. Self-host it or add a <link> when the landing page
@@ -150,6 +159,26 @@
   }
 }
 
+/*
+ * Product section entrance.
+ *
+ * Deliberately the same shape as the hero's rise, and for the same reason: only
+ * `transform` and `opacity` are touched, so nothing reflows. A shorter travel
+ * (12px rather than 18px) and a slightly faster curve, because this section has
+ * six elements entering in sequence rather than one — a grander entrance here
+ * would still be running when the capability cards were already on screen.
+ */
+@keyframes stockpilot-product-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @layer components {
   /*
    * The orbiting ring. See `components/moving-border.tsx` for why it is built
@@ -248,6 +277,72 @@
       animation: none;
       offset-distance: 18%;
       opacity: 0.75;
+    }
+  }
+
+  /* --------------------------------------------------------------- Divider */
+
+  /*
+   * The traveling light on the hero/product rule.
+   *
+   * This runs on `stockpilot-badge-trace` rather than declaring keyframes of its
+   * own. That keyframes block is pure `offset-distance: 0% -> 100%` at a flat
+   * opacity, so it carries no information about *which* path it is running on —
+   * the hero badge and this rule are simply two elements riding the same
+   * timeline, which is the same arrangement the badge already uses with
+   * `--hero-delay` to join the hero's stagger.
+   *
+   * `offset-path` must stay byte-identical to `DIVIDER_PATH` in
+   * `SectionDivider.tsx`, exactly as `TRACE_PATH` and `.sp-badge-light` must
+   * agree: the mask decides where light can appear, the path decides where it
+   * travels, and if they disagree the light slides along nothing.
+   *
+   * Left-to-right, because the path is authored 0 -> 100. The badge's traces
+   * right-to-left, so this cannot inherit its direction.
+   */
+  .divider-light {
+    offset-path: path('M 0 6 H 100');
+    offset-distance: 0%;
+    animation: stockpilot-badge-trace 7s linear infinite;
+  }
+
+  /*
+   * A wider streak on narrow screens.
+   *
+   * The rect is 1.5 user units wide, and because only x stretches that is a flat
+   * 1.5% of the rule — 21.6px on a desktop, but just 5.6px on a phone, which is
+   * too small to read at all. Widening it to 4 units restores a visible length
+   * without making it any longer on the desktop, where it already looked right.
+   *
+   * `x` moves with it: `offset-path` positions the rect by its `fill-box` centre,
+   * so growing `width` without re-centring `x` would shift the whole travel one
+   * half-width off the line.
+   */
+  @media (max-width: 640px) {
+    .divider-light {
+      /*
+       * Units are required. `width` and `x` are SVG geometry properties, and a
+       * unitless value is invalid there — the declaration is dropped and the
+       * presentation attribute silently wins. Written without `px` this override
+       * did nothing at all, and a phone got the 1.5% width, which at 375px is
+       * 5.6px: too small to read.
+       */
+      x: -2px;
+      width: 4px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Park it rather than remove it. The streak is the only moving thing on the
+     * rule, so with `animation: none` it simply sits partway along the line —
+     * which still reads as "a line with a highlight on it" instead of leaving a
+     * flat grey rule that looks broken next to the hero's animated badge.
+     */
+    .divider-light {
+      animation: none;
+      offset-distance: 22%;
+      opacity: 0.8;
     }
   }
 
@@ -421,6 +516,94 @@
     .hero-glow,
     .hero-float {
       animation: none;
+    }
+  }
+
+  /* --------------------------------------------------------------- Product */
+
+  /*
+   * The product section's field.
+   *
+   * Flat `navy-900`, continuous with the hero above it, so the two dark sections
+   * meet without a seam. The only wash is a faint emerald at the *bottom*, the
+   * mirror of the hero's top wash — it gives the section a floor without
+   * introducing a gradient ramp, which on a navy-to-navy transition is the one
+   * thing that cannot be made to look deliberate.
+   */
+  .product-root {
+    background-color: var(--color-navy-900);
+    background-image: radial-gradient(120% 60% at 50% 100%, rgba(52, 211, 153, 0.07) 0%, transparent 62%);
+  }
+
+  /*
+   * Entrance.
+   *
+   * As with the hero, there is no `opacity: 0` on the base rule: the keyframe
+   * starts at 0, so an element whose animation never runs is simply visible.
+   * Content is never held hostage to an animation.
+   */
+  .product-rise {
+    animation: stockpilot-product-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--section-delay, 0s);
+  }
+
+  /*
+   * Capability card.
+   *
+   * The resting border and shadow are declared *here* rather than left to the
+   * element's Tailwind classes. `@layer components` is emitted before
+   * `utilities`, so a `shadow-sm` or `border-slate-200` class on the markup wins
+   * every cascade comparison — the hover rule below was silently reduced to a
+   * transform that moved the card while leaving its edge and shadow untouched.
+   * One owner per property is the fix, and it matches `.hero-glass` and
+   * `.moving-border`, which likewise carry their own appearance in CSS.
+   *
+   * No `scale` on hover: the cards sit in a three-column grid, and scaling would
+   * open a visible gap between neighbours that the grid spacing was not chosen
+   * for. A 4px lift plus a deeper shadow and an emerald edge is enough.
+   *
+   * The resting shadow is a black one. The light-theme value was a near-black
+   * `0.1` alpha, which is invisible against `navy-800`; a dark card needs a
+   * shadow that reads as depth *away* from the background, not as a grey haze.
+   *
+   * This class must never be combined with `.product-rise` on the same element —
+   * see the note in `ProductSection.tsx` about fill-mode and `transform`.
+   */
+  .product-card {
+    border-color: var(--color-slate-700);
+    box-shadow:
+      0 1px 2px 0 rgb(0 0 0 / 0.4),
+      inset 0 1px 0 rgb(255 255 255 / 0.04);
+    transition:
+      transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.25s ease,
+      border-color 0.25s ease;
+  }
+
+  .product-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-accent-500);
+    box-shadow:
+      0 24px 44px -20px rgb(0 0 0 / 0.7),
+      inset 0 1px 0 rgb(255 255 255 / 0.07);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /*
+     * Drop the movement, keep the state. The card still gets its emerald edge and
+     * deeper shadow on hover, which is the part that communicates anything — it
+     * just arrives without the lift.
+     */
+    .product-rise {
+      animation: none;
+    }
+
+    .product-card {
+      transition: none;
+    }
+
+    .product-card:hover {
+      transform: none;
     }
   }
 }
