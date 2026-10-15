@@ -15,9 +15,63 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { LandingPage } from './LandingPage';
+
+/*
+ * The navbar tests mount the full landing page. jsdom has no SVG path geometry,
+ * and the feature connector measures its paths after a short layout delay. Give
+ * those calls deterministic geometry here; this suite exercises navbar
+ * accessibility, not the browser's SVG animation. Keep motion disabled so no
+ * animation frame loop runs in jsdom.
+ */
+const svgPathPrototype = Object.getPrototypeOf(
+  document.createElementNS('http://www.w3.org/2000/svg', 'path'),
+) as object;
+const originalGetTotalLength = Object.getOwnPropertyDescriptor(
+  svgPathPrototype,
+  'getTotalLength',
+);
+const originalGetPointAtLength = Object.getOwnPropertyDescriptor(
+  svgPathPrototype,
+  'getPointAtLength',
+);
+
+beforeAll(() => {
+  Object.defineProperties(svgPathPrototype, {
+    getTotalLength: { configurable: true, value: () => 100 },
+    getPointAtLength: {
+      configurable: true,
+      value: (distance: number) => ({ x: distance, y: 0 }),
+    },
+  });
+
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  }));
+});
+
+afterAll(() => {
+  if (originalGetTotalLength) {
+    Object.defineProperty(svgPathPrototype, 'getTotalLength', originalGetTotalLength);
+  } else {
+    Reflect.deleteProperty(svgPathPrototype, 'getTotalLength');
+  }
+
+  if (originalGetPointAtLength) {
+    Object.defineProperty(svgPathPrototype, 'getPointAtLength', originalGetPointAtLength);
+  } else {
+    Reflect.deleteProperty(svgPathPrototype, 'getPointAtLength');
+  }
+
+  vi.unstubAllGlobals();
+});
 
 function renderNavbar() {
   return render(

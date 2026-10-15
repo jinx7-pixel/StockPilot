@@ -297,8 +297,8 @@
    * agree: the mask decides where light can appear, the path decides where it
    * travels, and if they disagree the light slides along nothing.
    *
-   * Left-to-right, because the path is authored 0 -> 100. The badge's traces
-   * right-to-left, so this cannot inherit its direction.
+   * The default is left-to-right because the path is authored 0 -> 100. An
+   * individual divider can reverse its animation without changing that path.
    */
   .divider-light {
     offset-path: path('M 0 6 H 100');
@@ -306,29 +306,78 @@
     animation: stockpilot-badge-trace 7s linear infinite;
   }
 
+  .divider-light--reverse {
+    animation-direction: reverse;
+  }
+
+  .divider-svg {
+    height: 12px;
+  }
+
+  /* Desktop-only: a shorter streak and slightly narrower glow band. */
+  @media (min-width: 1025px) {
+    .divider-light {
+      x: -0.9px;
+      width: 1.8px;
+      y: -5px;
+      height: 10px;
+    }
+
+    .divider-glow-outer {
+      stroke-width: 10px;
+    }
+
+    .divider-glow-inner {
+      stroke-width: 4px;
+    }
+  }
+
+  /* Tablet-only: a shorter streak with a thinner glow band. */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .divider-light {
+      x: -1.6px;
+      width: 3.2px;
+      y: -4px;
+      height: 8px;
+    }
+
+    .divider-glow-outer {
+      stroke-width: 8px;
+    }
+
+    .divider-glow-inner {
+      stroke-width: 3.5px;
+    }
+  }
+
   /*
-   * A wider streak on narrow screens.
+   * Mobile-only tuning for the traveling light.
    *
-   * The rect is 1.5 user units wide, and because only x stretches that is a flat
-   * 1.5% of the rule — 21.6px on a desktop, but just 5.6px on a phone, which is
-   * too small to read at all. Widening it to 4 units restores a visible length
-   * without making it any longer on the desktop, where it already looked right.
+   * On mobile, the streak is shorter and faster, and its glow band is reduced
+   * from 10px to 8px.
    *
-   * `x` moves with it: `offset-path` positions the rect by its `fill-box` centre,
-   * so growing `width` without re-centring `x` would shift the whole travel one
-   * half-width off the line.
+   * `x` and `y` keep its fill-box centre anchored on the line when its dimensions
+   * change, so the travel stays aligned to the rule.
    */
   @media (max-width: 640px) {
     .divider-light {
       /*
-       * Units are required. `width` and `x` are SVG geometry properties, and a
-       * unitless value is invalid there — the declaration is dropped and the
-       * presentation attribute silently wins. Written without `px` this override
-       * did nothing at all, and a phone got the 1.5% width, which at 375px is
-       * 5.6px: too small to read.
+       * Units are required for SVG geometry properties: without `px`, these
+       * mobile width, height, x and y overrides would be invalid.
        */
-      x: -2px;
-      width: 4px;
+      x: -2.5px;
+      width: 5px;
+      y: -4px;
+      height: 8px;
+      animation-duration: 4s;
+    }
+
+    .divider-glow-outer {
+      stroke-width: 8px;
+    }
+
+    .divider-glow-inner {
+      stroke-width: 3.5px;
     }
   }
 
@@ -605,6 +654,146 @@
     .product-card:hover {
       transform: none;
     }
+  }
+
+  /*
+   * Features section.
+   *
+   * The section background is the same navy as the product section above it, so
+   * a continuous flat fill is correct — no gradient. The eyebrow and preview
+   * chrome are deliberately kept off the Tailwind layer so the same one-owner
+   * rule used for `.product-card` holds here: nothing in markup overrides a
+   * hover or a focus ring.
+   */
+
+  /*
+   * Section field.
+   *
+   * Flat `navy-900`, the same as `.product-root`, so the two sections meet
+   * without a seam. No emerald wash at the top either: that would create a
+   * gradient ramp against the product section's bottom wash and look like a
+   * transition, which a "two more capabilities" section is not.
+   */
+  .features-root {
+    background-color: var(--color-navy-900);
+  }
+
+  /*
+   * Eyebrow label.
+   *
+   * The colour and tracking come from `.text-accent-400` and `.tracking-[0.18em]`
+   * already on the element — only the small caps lockup and the bottom mark stack
+   * need to live here.
+   */
+  .features-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* The card connectors are a desktop-only part of the staggered layout. */
+  .features-connectors {
+    display: none;
+  }
+
+  /* Keep the two supporting cards framed on tablet and mobile. */
+  @media (max-width: 1024px) {
+    .features-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .features-support-card {
+      border: 1px solid rgb(51 65 85 / 0.6);
+      border-radius: 0.75rem;
+      padding-inline: 1rem;
+    }
+  }
+
+  /* Lower only the Tracking preview beneath its text on desktop. */
+  @media (min-width: 1024px) {
+    .features-tracking-preview {
+      grid-column: 1;
+      grid-row: 2;
+    }
+  }
+
+  /* Stagger the three support cards on desktop. */
+  @media (min-width: 1025px) {
+    .features-journey {
+      position: relative;
+    }
+
+    .features-connectors {
+      position: absolute;
+      z-index: 0;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .features-connectors path {
+      fill: none;
+      stroke: rgb(71 85 105 / 0.9);
+      stroke-width: 1.25px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .features-travel-light {
+      pointer-events: none;
+    }
+
+    .features-rows {
+      position: relative;
+      z-index: 1;
+    }
+
+    .features-desktop-support-preview {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .features-support-card {
+      border: 1px solid rgb(51 65 85 / 0.6);
+      border-radius: 0.75rem;
+      /* Mask connector strokes beneath the card so they stop at its border. */
+      background-color: var(--color-navy-900);
+      width: 56%;
+      margin-top: 1.5rem;
+      padding-inline: 1.5rem;
+    }
+
+    .features-support-card--right {
+      margin-left: auto;
+      margin-right: -6.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .features-travel-light {
+      display: none;
+    }
+  }
+
+  /*
+   * Preview chrome.
+   *
+   * A flat recessed well — the same `navy-900` as the section background — with
+   * the same `border-slate-700/70` edge used by the cards above. The depth here
+   * is created by the inset highlight on the top edge and a long downward
+   * shadow, not by a lighter fill: against navy-800 a lighter well reads as a
+   * third tier of card rather than a window into the dashboard.
+   */
+  .features-preview {
+    box-shadow:
+      0 18px 36px -24px rgb(0 0 0 / 0.7),
+      inset 0 1px 0 rgb(255 255 255 / 0.05);
   }
 }
 

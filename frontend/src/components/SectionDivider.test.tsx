@@ -73,8 +73,8 @@ describe('SectionDivider', () => {
      * `fill-box` anchor — a rect offset from (0,0) would begin its travel one
      * box-width away from the line.
      */
-    expect(light?.getAttribute('x')).toBe('-0.75');
-    expect(light?.getAttribute('width')).toBe('1.5');
+    expect(light?.getAttribute('x')).toBe('-1.1');
+    expect(light?.getAttribute('width')).toBe('2.2');
   });
 
   it('makes the light at least as thick as the widest glow stroke', () => {

@@ -25,24 +25,23 @@
  *     So the light is a `<rect>` instead, sized in user units and centred on the
  *     origin so its `fill-box` anchor coincides with the circle's, which keeps
  *     `offset-path` placing it identically. After stretching, its width is a
- *     fixed *fraction* of the rule (2.5%), so the streak stays short at any
+ *     fixed *fraction* of the rule, so the streak stays short at any
  *     viewport width instead of scaling up on a wide screen.
  *
- * ## Why the vertical scale is exactly 1
+ * ## How vertical scale controls glow thickness
  *
- * `viewBox` height and the box height are both 12px (`h-3`), so `scaleY` is 1 and
- * every vertical measurement below is in real pixels regardless of viewport
- * width. Only x stretches — and stretching x along a horizontal line is
- * geometrically harmless. That is what keeps the halo band a true 5px instead of
- * becoming 72px tall on a desktop screen.
+ * The viewBox is 12 units tall and stays 12px tall at every breakpoint. Desktop,
+ * tablet and mobile CSS resize the light and mask together, keeping the streak
+ * centered on the path while changing its glow thickness. X stretches to the
+ * section width, so the streak length remains a fraction of the line.
  *
  * ## The glow
  *
  * The light is masked, so a blur applied inside the mask would simply be clipped
- * back to the 1px line. Instead the mask itself is two paths: a 5px stroke at
- * 16% for the halo, then the 1px stroke at full. Because the fill is a gradient
- * that fades along x, the halo fades with it — a glow that travels *with* the
- * streak rather than a line that glows everywhere.
+ * back to the 1px line. Instead the mask uses a 12px outer stroke at 48% and a
+ * 5px inner stroke at 82%, over the 1px core. Because the fill is a gradient
+ * that fades along x, the halo fades with it — a brighter glow that travels
+ * *with* the streak rather than a line that glows everywhere.
  */
 
 import { useId } from 'react';
@@ -53,12 +52,18 @@ import { useId } from 'react';
  * These must stay byte-identical or the light stops following the line — the
  * same constraint `TRACE_PATH` carries in `animated-badge.tsx`.
  *
- * It runs 0 -> 100 so `offset-distance` increases left-to-right, which is the
- * opposite of the badge's right-to-left travel.
+ * It runs 0 -> 100 so `offset-distance` increases left-to-right by default.
+ * `reverse` opts an instance into right-to-left travel without changing the path.
  */
 const DIVIDER_PATH = 'M 0 6 H 100';
 
-export function SectionDivider({ color = '#34d399' }: { color?: string }) {
+export function SectionDivider({
+  color = '#34d399',
+  reverse = false,
+}: {
+  color?: string;
+  reverse?: boolean;
+}) {
   // Two badges on one page would otherwise resolve to the first one's <defs>
   // and share its geometry.
   const uid = useId().replace(/:/g, '');
@@ -68,11 +73,11 @@ export function SectionDivider({ color = '#34d399' }: { color?: string }) {
   return (
     <div aria-hidden="true" className="pointer-events-none w-full">
       {/*
-        `h-3` matches the viewBox height of 12, which is what pins scaleY to 1.
-        See the note above — that equality is load-bearing.
+        The base height matches the 12-unit viewBox. Tablet CSS expands the SVG
+        vertically so its glow is thicker there.
       */}
       <svg
-        className="h-3 w-full"
+        className="divider-svg w-full"
         width="100%"
         height="100%"
         viewBox="0 0 100 12"
@@ -84,25 +89,24 @@ export function SectionDivider({ color = '#34d399' }: { color?: string }) {
 
         <g mask={`url(#${maskId})`}>
           {/*
-            Centred on the origin (x=-0.75/y=-3.5 about a 1.5x7 box) so the
+            Centred on the origin (x=-1.1/y=-6 about a 2.2x12 box) so the
             fill-box anchor is (0,0) and `offset-path` places it on the line. A rect
             offset from the origin would start its travel one box-width off.
 
-            Height is 7 to cover the widest mask stroke exactly. It must not be
-            *less*: the streak is what clips the halo, so a streak thinner than the
-            halo cuts the glow into a hard-edged wedge — the same failure the
-            capability-card light hit.
+            Base height 12 matches the widest mask stroke. Desktop and tablet CSS
+            reduce both to 10; mobile CSS reduces both to 8. Matching them keeps
+            the clipped glow soft at each breakpoint.
 
-            Width 1.5 is 1.5% of the rule: 21.6px on a desktop, short enough to read
-            as a light rather than a dash, and short enough that its gradient tail
-            cannot stretch into a long streak.
+            The base width is 2.2% of the rule. Desktop CSS shortens it to 1.8%;
+            tablet and mobile set their own widths. The x coordinate stays at
+            minus half the width so the streak remains centered on the path.
           */}
           <rect
-            className="divider-light"
-            x="-0.75"
-            y="-3.5"
-            width="1.5"
-            height="7"
+            className={reverse ? 'divider-light divider-light--reverse' : 'divider-light'}
+            x="-1.1"
+            y="-6"
+            width="2.2"
+            height="12"
             fill={`url(#${gradId})`}
           />
         </g>
@@ -110,8 +114,9 @@ export function SectionDivider({ color = '#34d399' }: { color?: string }) {
         <defs>
           <mask id={maskId}>
             {/*
-              Three strokes, widest first: a faint 7px halo, a tighter 3px one, then
-              the solid 1px line. Two stops give a falloff that reads as a glow —
+              Three strokes, widest first: a brighter 12px outer halo, a tighter
+              5px inner glow, then the solid 1px line. The halo stops give a
+              falloff that reads as a glow —
               a single faint stroke either disappears or blooms, and a blur inside
               a mask would just be clipped back to the line.
 
@@ -120,19 +125,35 @@ export function SectionDivider({ color = '#34d399' }: { color?: string }) {
               whole band is only revealed where the streak paints, which is why the
               glow travels with the light instead of lighting the entire rule.
             */}
-            <path d={DIVIDER_PATH} strokeWidth="7" stroke="white" strokeOpacity="0.16" />
-            <path d={DIVIDER_PATH} strokeWidth="3" stroke="white" strokeOpacity="0.42" />
-            <path d={DIVIDER_PATH} strokeWidth="1" stroke="white" />
+            <path
+              className="divider-glow-outer"
+              d={DIVIDER_PATH}
+              strokeWidth="12"
+              stroke="white"
+              strokeOpacity="0.48"
+            />
+            <path
+              className="divider-glow-inner"
+              d={DIVIDER_PATH}
+              strokeWidth="5"
+              stroke="white"
+              strokeOpacity="0.82"
+            />
+            <path className="divider-glow-core" d={DIVIDER_PATH} strokeWidth="1" stroke="white" />
           </mask>
           {/*
-            Brightest just before the leading (right) end, then a short fade *into*
-            it. With the peak sitting exactly on `100%` the opacity stepped from
-            full to nothing in one pixel and the head read as a hard vertical cut —
-            visible once the stroke is thicker. The last stop lands at 0.55, so the
-            front edge softens over roughly the last 2px of a 21px streak without
-            dimming the head itself.
+            The gradient flips with `reverse`, keeping the brightest end in front
+            of the moving light. The peak sits just before the leading edge, then
+            fades into it; ending at full opacity made the head read as a hard cut.
+            The last stop softens the edge without dimming the highlight itself.
           */}
-          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+          <linearGradient
+            id={gradId}
+            x1={reverse ? '1' : '0'}
+            y1="0"
+            x2={reverse ? '0' : '1'}
+            y2="0"
+          >
             <stop offset="0%" stopColor={color} stopOpacity="0" />
             <stop offset="50%" stopColor={color} stopOpacity="0.85" />
             <stop offset="88%" stopColor={color} />
