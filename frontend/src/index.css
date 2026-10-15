@@ -280,6 +280,45 @@
     }
   }
 
+  /* A small emerald light follows the two connectors between the three steps. */
+  .how-it-works-travel-bubble {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: var(--color-accent-400);
+    box-shadow: 0 0 8px rgb(52 211 153 / 70%);
+    transform: translateX(-50%);
+    animation: stockpilot-how-it-works-travel 7s linear infinite;
+  }
+
+  @keyframes stockpilot-how-it-works-travel {
+    0% {
+      top: 0;
+      opacity: 0;
+    }
+    5% {
+      opacity: 1;
+    }
+    42% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      top: calc(100% - 6px);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .how-it-works-travel-bubble {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
   /* --------------------------------------------------------------- Divider */
 
   /*

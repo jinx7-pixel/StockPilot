@@ -1,12 +1,9 @@
 /**
- * Public landing page shell — navbar only.
+ * Public landing page shell — navbar and marketing sections.
  *
- * Deliberately a shell: the hero, footer and every other marketing section
- * are future work. The anchor targets the navbar links point at (`#product`,
- * `#features`, `#how-it-works`, `#about`) do not exist yet, so the links are
- * wired and correct but currently land on the page top for everything except
- * `#product` (now provided by `ProductSection`) and `#features` (now provided
- * by `FeaturesSection`).
+ * The navbar's Product, Features and How It Works anchors resolve to their
+ * matching sections. About remains a future section and currently lands at the
+ * page top.
  *
  * ## Why this is a separate component from WorkspaceLayout
  *
@@ -50,6 +47,7 @@ import { MovingBorder } from '../components/moving-border';
 import { ProductSection } from '../components/ProductSection';
 import { SectionDivider } from '../components/SectionDivider';
 import { FeaturesSection } from '../components/FeaturesSection';
+import { HowItWorksSection } from '../components/HowItWorksSection';
 
 /** Anchors for landing sections that do not exist yet. */
 const SECTIONS = [
@@ -315,9 +313,9 @@ export function LandingPage() {
         `ProductSection` carries `id="product"`, which is the target the navbar's
         Product link points at — so that anchor resolves for the first time.
 
-        `SectionDivider` sits between Hero and Product, and another separates
-        Product from Features. The sections share the same navy, so the rule has
-        to be drawn to exist at all; it is decorative and announces nothing.
+        `SectionDivider` separates Hero, Product, Features and How It Works. The
+        sections share the same navy palette, so the rule has to be drawn to
+        exist at all; it is decorative and announces nothing.
 
         The features section expands each capability with its own dashboard
         preview. The navbar's `#features` anchor is satisfied by `id="features"`
@@ -329,6 +327,8 @@ export function LandingPage() {
         <ProductSection />
         <SectionDivider reverse />
         <FeaturesSection />
+        <SectionDivider />
+        <HowItWorksSection />
       </main>
     </div>
   );
