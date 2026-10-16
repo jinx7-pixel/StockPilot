@@ -48,6 +48,7 @@ import { ProductSection } from '../components/ProductSection';
 import { SectionDivider } from '../components/SectionDivider';
 import { FeaturesSection } from '../components/FeaturesSection';
 import { HowItWorksSection } from '../components/HowItWorksSection';
+import { BenefitsSection } from '../components/BenefitsSection';
 
 /** Anchors for landing sections that do not exist yet. */
 const SECTIONS = [
@@ -313,9 +314,9 @@ export function LandingPage() {
         `ProductSection` carries `id="product"`, which is the target the navbar's
         Product link points at — so that anchor resolves for the first time.
 
-        `SectionDivider` separates Hero, Product, Features and How It Works. The
-        sections share the same navy palette, so the rule has to be drawn to
-        exist at all; it is decorative and announces nothing.
+        `SectionDivider` separates Hero, Product, Features, How It Works and
+        Benefits. The sections share the same navy palette, so the rule has to
+        be drawn to exist at all; it is decorative and announces nothing.
 
         The features section expands each capability with its own dashboard
         preview. The navbar's `#features` anchor is satisfied by `id="features"`
@@ -329,6 +330,8 @@ export function LandingPage() {
         <FeaturesSection />
         <SectionDivider />
         <HowItWorksSection />
+        <SectionDivider reverse />
+        <BenefitsSection />
       </main>
     </div>
   );
