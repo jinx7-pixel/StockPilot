@@ -181,7 +181,7 @@ export function BenefitsSection() {
     <section
       id="benefits"
       aria-labelledby="benefits-heading"
-      className="relative isolate overflow-hidden border-b border-slate-700/40 bg-navy-900 py-20 font-landing sm:py-24 lg:py-28"
+      className="relative isolate overflow-hidden bg-navy-900 py-20 font-landing sm:py-24 lg:py-28"
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -right-20 top-0 h-72 w-72 rounded-full bg-accent-500/[0.035] blur-3xl" />

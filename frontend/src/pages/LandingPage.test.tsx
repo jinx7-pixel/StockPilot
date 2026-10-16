@@ -87,21 +87,37 @@ describe('landing navbar', () => {
   it('renders the brand, and it links to the landing page', () => {
     renderNavbar();
 
-    const brand = screen.getByRole('link', { name: /stockpilot/i });
+    const brand = screen.getByRole('link', { name: 'StockPilot' });
     expect(brand).toHaveAttribute('href', '/');
   });
 
-  it('exposes the four section links with their future anchor targets', () => {
+  it('exposes the four section links with their matching anchor targets', () => {
     renderNavbar();
 
     for (const [label, href] of [
       ['Product', '#product'],
       ['Features', '#features'],
       ['How It Works', '#how-it-works'],
-      ['About', '#about'],
+      ['Why StockPilot', '#benefits'],
     ]) {
       expect(screen.getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
     }
+  });
+
+  it('takes the Why StockPilot link to the Benefits section anchor', async () => {
+    const user = userEvent.setup();
+    renderNavbar();
+
+    const link = screen.getAllByRole('link', { name: 'Why StockPilot' })[0];
+    const benefits = document.getElementById('benefits');
+
+    expect(benefits).toBeInTheDocument();
+    expect(link).toHaveAttribute('href', '#benefits');
+
+    await user.click(link);
+
+    expect(window.location.hash).toBe('#benefits');
+    expect(document.getElementById('benefits')).toBe(benefits);
   });
 
   it('links both authentication entry points', () => {
@@ -275,7 +291,7 @@ describe('landing navbar', () => {
     renderNavbar();
 
     await user.tab(); // brand
-    expect(screen.getByRole('link', { name: /stockpilot/i })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'StockPilot' })).toHaveFocus();
 
     // Tab until the toggle has focus, then activate it with the keyboard.
     for (let i = 0; i < 12 && document.activeElement !== toggle(); i++) {

@@ -1,9 +1,8 @@
 /**
  * Public landing page shell — navbar and marketing sections.
  *
- * The navbar's Product, Features and How It Works anchors resolve to their
- * matching sections. About remains a future section and currently lands at the
- * page top.
+ * The navbar's Product, Features, How It Works and Why StockPilot anchors
+ * resolve to their matching sections. The FAQ follows the benefits section.
  *
  * ## Why this is a separate component from WorkspaceLayout
  *
@@ -49,13 +48,14 @@ import { SectionDivider } from '../components/SectionDivider';
 import { FeaturesSection } from '../components/FeaturesSection';
 import { HowItWorksSection } from '../components/HowItWorksSection';
 import { BenefitsSection } from '../components/BenefitsSection';
+import { FAQSection } from '../components/FAQSection';
 
-/** Anchors for landing sections that do not exist yet. */
+/** In-page anchors exposed in the landing navbar. */
 const SECTIONS = [
   { label: 'Product', href: '#product' },
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'About', href: '#about' },
+  { label: 'Why StockPilot', href: '#benefits' },
 ] as const;
 
 const MENU_ID = 'landing-drawer';
@@ -314,9 +314,8 @@ export function LandingPage() {
         `ProductSection` carries `id="product"`, which is the target the navbar's
         Product link points at — so that anchor resolves for the first time.
 
-        `SectionDivider` separates Hero, Product, Features, How It Works and
-        Benefits. The sections share the same navy palette, so the rule has to
-        be drawn to exist at all; it is decorative and announces nothing.
+        `SectionDivider` separates Hero, Product, Features, How It Works,
+        Benefits and FAQ. The divider is decorative and announces nothing.
 
         The features section expands each capability with its own dashboard
         preview. The navbar's `#features` anchor is satisfied by `id="features"`
@@ -332,6 +331,8 @@ export function LandingPage() {
         <HowItWorksSection />
         <SectionDivider reverse />
         <BenefitsSection />
+        <SectionDivider />
+        <FAQSection />
       </main>
     </div>
   );
