@@ -84,11 +84,29 @@ function renderNavbar() {
 const toggle = () => screen.getByRole('button', { name: /open menu|close menu/i });
 
 describe('landing navbar', () => {
-  it('renders the brand, and it links to the landing page', () => {
+  it('renders the brand and returns to the landing page top when clicked', async () => {
+    const user = userEvent.setup();
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
     renderNavbar();
 
     const brand = screen.getByRole('link', { name: 'StockPilot' });
     expect(brand).toHaveAttribute('href', '/');
+
+    await user.click(brand);
+
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+  });
+
+  it('uses a readable navy glass surface while keeping the mobile drawer opaque', () => {
+    renderNavbar();
+
+    const navbar = document.querySelector('.landing-page > header');
+    expect(navbar).toHaveClass('bg-navy-900/90', 'backdrop-blur-md');
+    expect(navbar?.className).toContain('shadow-[inset_0_-1px_0_rgb(51_65_85_/_0.6)]');
+    expect(navbar).not.toHaveClass('bg-transparent');
+    expect(document.getElementById('landing-drawer')).toHaveClass('bg-navy-900');
+    expect(document.getElementById('landing-drawer')).not.toHaveClass('backdrop-blur-md');
+    expect(document.querySelector('.landing-page')).toBeInTheDocument();
   });
 
   it('exposes the four section links with their matching anchor targets', () => {
@@ -100,7 +118,9 @@ describe('landing navbar', () => {
       ['How It Works', '#how-it-works'],
       ['Why StockPilot', '#benefits'],
     ]) {
-      expect(screen.getAllByRole('link', { name: label })[0]).toHaveAttribute('href', href);
+      const link = screen.getAllByRole('link', { name: label })[0];
+      expect(link).toHaveAttribute('href', href);
+      expect(document.getElementById(href.slice(1))).toBeInTheDocument();
     }
   });
 
@@ -118,6 +138,34 @@ describe('landing navbar', () => {
 
     expect(window.location.hash).toBe('#benefits');
     expect(document.getElementById('benefits')).toBe(benefits);
+  });
+
+  it('places the final CTA and footer after FAQ with links to real section anchors', () => {
+    renderNavbar();
+
+    const faq = document.getElementById('faq');
+    const cta = screen.getByRole('heading', {
+      level: 2,
+      name: 'Make your next stock decision with confidence.',
+    }).closest('section');
+    const footer = screen.getByRole('contentinfo');
+    const follows = Node.DOCUMENT_POSITION_FOLLOWING;
+
+    expect(faq).toBeInTheDocument();
+    expect(cta).toBeInTheDocument();
+    expect(faq!.compareDocumentPosition(cta!) & follows).toBeTruthy();
+    expect(cta!.compareDocumentPosition(footer) & follows).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Explore How It Works' })).toHaveAttribute(
+      'href',
+      '#how-it-works',
+    );
+
+    const footerNavigation = screen.getByRole('navigation', { name: 'Footer' });
+    for (const link of within(footerNavigation).getAllByRole('link')) {
+      const target = link.getAttribute('href')?.slice(1);
+      expect(target).toBeTruthy();
+      expect(document.getElementById(target!)).toBeInTheDocument();
+    }
   });
 
   it('links both authentication entry points', () => {

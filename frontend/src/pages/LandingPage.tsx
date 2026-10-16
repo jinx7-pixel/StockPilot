@@ -49,6 +49,8 @@ import { FeaturesSection } from '../components/FeaturesSection';
 import { HowItWorksSection } from '../components/HowItWorksSection';
 import { BenefitsSection } from '../components/BenefitsSection';
 import { FAQSection } from '../components/FAQSection';
+import { FinalCTASection } from '../components/FinalCTASection';
+import { Footer } from '../components/Footer';
 
 /** In-page anchors exposed in the landing navbar. */
 const SECTIONS = [
@@ -146,8 +148,8 @@ export function LandingPage() {
   }, [drawerOpen]);
 
   return (
-    <div className="min-h-screen bg-navy-900 font-landing">
-      <header className="sticky top-0 z-40 bg-navy-900">
+    <div className="landing-page min-h-screen bg-navy-900 font-landing">
+      <header className="sticky top-0 z-40 bg-navy-900/90 backdrop-blur-md shadow-[inset_0_-1px_0_rgb(51_65_85_/_0.6)]">
         <nav
           aria-label="Main"
           className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6 lg:px-8"
@@ -156,6 +158,14 @@ export function LandingPage() {
           <div className="flex min-w-0 flex-1 justify-start">
             <Link
               to="/"
+              onClick={() => {
+                // Keep `/` as the brand destination while making repeat clicks
+                // from this page return to its top. `auto` follows the landing
+                // page's CSS scroll behavior, including reduced-motion rules.
+                if (window.location.pathname === '/') {
+                  window.scrollTo({ top: 0, behavior: 'auto' });
+                }
+              }}
               className={`flex shrink-0 items-center gap-2 rounded-md text-base font-semibold tracking-tight text-white ${focusRing}`}
             >
               <span
@@ -333,7 +343,10 @@ export function LandingPage() {
         <BenefitsSection />
         <SectionDivider />
         <FAQSection />
+        <SectionDivider reverse />
+        <FinalCTASection />
       </main>
+      <Footer />
     </div>
   );
 }

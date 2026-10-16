@@ -60,9 +60,12 @@ const DIVIDER_PATH = 'M 0 6 H 100';
 export function SectionDivider({
   color = '#34d399',
   reverse = false,
+  gradientReverse = reverse,
 }: {
   color?: string;
   reverse?: boolean;
+  /** Flip the streak's bright side independently from its travel direction. */
+  gradientReverse?: boolean;
 }) {
   // Two badges on one page would otherwise resolve to the first one's <defs>
   // and share its geometry.
@@ -142,16 +145,18 @@ export function SectionDivider({
             <path className="divider-glow-core" d={DIVIDER_PATH} strokeWidth="1" stroke="white" />
           </mask>
           {/*
-            The gradient flips with `reverse`, keeping the brightest end in front
-            of the moving light. The peak sits just before the leading edge, then
-            fades into it; ending at full opacity made the head read as a hard cut.
-            The last stop softens the edge without dimming the highlight itself.
+            By default the gradient flips with `reverse`, keeping the brightest
+            end in front of the moving light. `gradientReverse` can decouple the
+            streak's travel direction from its bright-side orientation. The peak
+            sits just before the leading edge, then fades into it; ending at full
+            opacity made the head read as a hard cut. The last stop softens the
+            edge without dimming the highlight itself.
           */}
           <linearGradient
             id={gradId}
-            x1={reverse ? '1' : '0'}
+            x1={gradientReverse ? '1' : '0'}
             y1="0"
-            x2={reverse ? '0' : '1'}
+            x2={gradientReverse ? '0' : '1'}
             y2="0"
           >
             <stop offset="0%" stopColor={color} stopOpacity="0" />
