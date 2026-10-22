@@ -19,7 +19,6 @@ import { Link } from 'react-router-dom';
 import {
   Card,
   EmptyState,
-  ErrorBanner,
   Field,
   Modal,
   PageHeader,
@@ -53,6 +52,13 @@ const TREND_BADGE: Record<DemandTrend, string> = {
   STABLE: 'bg-slate-100 text-slate-700',
   DECREASING: 'bg-amber-100 text-amber-700',
   INSUFFICIENT_DATA: 'bg-slate-100 text-slate-500',
+};
+
+const TREND_BADGE_DARK: Record<DemandTrend, string> = {
+  INCREASING: 'bg-emerald-400/10 text-emerald-200',
+  STABLE: 'bg-slate-700/70 text-slate-200',
+  DECREASING: 'bg-amber-400/10 text-amber-200',
+  INSUFFICIENT_DATA: 'bg-slate-700/70 text-slate-300',
 };
 
 const VARIABILITY_LABEL: Record<DemandVariability, string> = {
@@ -99,6 +105,10 @@ function optional(value: string | null): string {
   return value === null ? '—' : value;
 }
 
+function optionalPercent(value: string | null): string {
+  return value === null ? '—' : `${value}%`;
+}
+
 export function DemandPage() {
   const [searchInput, setSearchInput] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -110,9 +120,10 @@ export function DemandPage() {
   const [page, setPage] = useState(1);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoriesError, setCategoriesError] = useState(false);
   const [items, setItems] = useState<Demand[] | null>(null);
   const [meta, setMeta] = useState<ListMeta | null>(null);
-  const [trendCounts, setTrendCounts] = useState<Partial<Record<DemandTrend, number>>>({});
+  const [trendCounts, setTrendCounts] = useState<Partial<Record<DemandTrend, number>> | null>(null);
   const [selected, setSelected] = useState<Demand | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -123,6 +134,8 @@ export function DemandPage() {
     let cancelled = false;
 
     void (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const result = await demandApi.list({
           ...(appliedSearch ? { search: appliedSearch } : {}),
@@ -138,10 +151,14 @@ export function DemandPage() {
 
         setItems(result.items);
         setMeta(result.meta);
-        setTrendCounts(result.trendCounts ?? {});
-        setError(null);
+        // The API returns an empty map for a real zero-count result. A missing
+        // summary is unavailable and must not be rendered as zero.
+        setTrendCounts(result.trendCounts ?? null);
       } catch (cause) {
         if (cancelled) return;
+        setItems(null);
+        setMeta(null);
+        setTrendCounts(null);
         setError(
           cause instanceof ApiError ? cause.message : 'Could not load demand data. Please try again.',
         );
@@ -159,10 +176,18 @@ export function DemandPage() {
     let cancelled = false;
 
     void (async () => {
+      setCategoriesError(false);
       try {
         const result = await catalogApi.listCategories();
-        if (!cancelled) setCategories(result);
+        if (!cancelled) {
+          setCategories(result);
+          setCategoriesError(false);
+        }
       } catch {
+        if (!cancelled) {
+          setCategories([]);
+          setCategoriesError(true);
+        }
         // The category filter is a convenience; a failure here must not take
         // the whole demand list down with it.
       }
@@ -230,38 +255,59 @@ export function DemandPage() {
     variability !== 'all' ||
     confidence !== 'all';
 
-  if (loading) return <Spinner label="Assessing demand…" />;
-
-  const hasAnyCounts = TREND_ORDER.some((level) => (trendCounts[level] ?? 0) > 0);
   const totalPages = meta?.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Demand intelligence"
-        description="How this product actually sold over the last 7, 30 and 90 days. Historical facts only — this page does not forecast, and it does not place orders."
-        actions={<SecondaryButton onClick={reload}>Refresh</SecondaryButton>}
+        title="Demand Planning"
+        description="Understand product demand and plan inventory with confidence."
+        darkSurface
+        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
       />
 
-      {error ? <ErrorBanner message={error} /> : null}
-
-      {hasAnyCounts ? (
+      {loading ? (
+        <Card darkSurface className="flex min-h-32 items-center justify-center p-6">
+          <Spinner darkSurface label="Loading historical demand…" />
+        </Card>
+      ) : error ? (
+        <Card darkSurface className="border-red-400/20 bg-red-400/[0.06] p-5">
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-red-200">Demand data could not be loaded</h2>
+              <p className="mt-1 text-sm text-red-100">{error}</p>
+            </div>
+            <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          </div>
+        </Card>
+      ) : (
+        <>
+      {trendCounts !== null ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Summary</h2>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold tracking-wide text-slate-400 uppercase">Demand by trend</h2>
+              <p className="mt-1 text-xs text-slate-500">Latest 7 days versus the 30-day baseline, using up to 90 days of history.</p>
+            </div>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {TREND_ORDER.map((level) => (
-              <Card key={level} className="p-3">
-                <p className="text-xs tracking-wide text-slate-500 uppercase">
+              <Card darkSurface key={level} className="p-3">
+                <p className="text-xs tracking-wide text-slate-400 uppercase">
                   {TREND_LABEL[level]}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{trendCounts[level] ?? 0}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-100">{trendCounts[level] ?? 0}</p>
               </Card>
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-sm text-amber-200">
+          Demand trend counts are unavailable.
+        </p>
+      )}
 
-      <Card className="p-4">
+      <Card darkSurface className="p-4">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
             label="Search"
@@ -269,11 +315,14 @@ export function DemandPage() {
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
+            darkSurface
           />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
+            darkSurface
+            hint={categoriesError ? 'Category options could not be loaded.' : undefined}
             options={[
               { value: '', label: 'All categories' },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
@@ -283,6 +332,7 @@ export function DemandPage() {
             label="Trend"
             value={trend}
             onChange={handleTrend}
+            darkSurface
             options={[
               { value: 'all', label: 'Any trend' },
               ...TREND_ORDER.map((level) => ({ value: level, label: TREND_LABEL[level] })),
@@ -292,6 +342,7 @@ export function DemandPage() {
             label="Variability"
             value={variability}
             onChange={handleVariability}
+            darkSurface
             options={[
               { value: 'all', label: 'Any variability' },
               { value: 'LOW_VARIABILITY', label: 'Low variability' },
@@ -304,6 +355,7 @@ export function DemandPage() {
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
+            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -316,6 +368,7 @@ export function DemandPage() {
             label="Status"
             value={status}
             onChange={handleStatus}
+            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
@@ -326,18 +379,19 @@ export function DemandPage() {
           <div className="flex items-end gap-2 lg:col-span-3">
             <button
               type="submit"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]"
             >
               Apply
             </button>
-            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
       {items === null || items.length === 0 ? (
-        <Card>
+        <Card darkSurface>
           <EmptyState
+            darkSurface
             title={hasFilters ? 'No products match these filters' : 'No demand data yet'}
             description={
               hasFilters
@@ -346,9 +400,9 @@ export function DemandPage() {
             }
             action={
               hasFilters ? (
-                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link className={secondaryButtonClass} to="/app/sales">
+                <Link className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]" to="/app/sales">
                   Go to sales
                 </Link>
               )
@@ -356,54 +410,97 @@ export function DemandPage() {
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <>
+          <div className="space-y-3 lg:hidden">
+            {items.map((item) => (
+              <Card darkSurface key={item.productId} className="p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-slate-100">{item.name}</h3>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      {item.sku}{item.category ? ` · ${item.category.name}` : ''}
+                      {!item.isActive ? ' · inactive' : ''}
+                    </p>
+                  </div>
+                  <Badge className={TREND_BADGE_DARK[item.trend]} label={TREND_LABEL[item.trend]} />
+                </div>
+
+                <dl className="mt-4 grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Units · 7d', value: item.unitsSold7d },
+                    { label: 'Units · 30d', value: item.unitsSold30d },
+                    { label: 'Units · 90d', value: item.unitsSold90d },
+                  ].map((metric) => (
+                    <div key={metric.label} className="min-w-0 rounded-lg border border-slate-700 bg-[#0c1523] p-2.5">
+                      <dt className="text-[11px] text-slate-400">{metric.label}</dt>
+                      <dd className="mt-1 truncate text-sm font-semibold text-slate-100 tabular-nums">{metric.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
+                  <div className="space-y-1 text-xs text-slate-300">
+                    <p>Change vs 30-day baseline: <span className="font-semibold text-slate-100">{optionalPercent(item.trendChangePercent)}</span></p>
+                    <p>{VARIABILITY_LABEL[item.variability]} variability · {CONFIDENCE_LABEL[item.confidence]}</p>
+                  </div>
+                  <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+        <Card darkSurface className="hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+              <thead className="bg-[#0c1523] text-xs tracking-wide text-slate-400 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Trend</th>
-                  <th scope="col" className="px-4 py-3 text-right">7-day</th>
-                  <th scope="col" className="px-4 py-3 text-right">30-day</th>
-                  <th scope="col" className="px-4 py-3 text-right">90-day</th>
+                  <th scope="col" className="px-4 py-3 text-right">Units · 7 days</th>
+                  <th scope="col" className="px-4 py-3 text-right">Units · 30 days</th>
+                  <th scope="col" className="px-4 py-3 text-right">Units · 90 days</th>
+                  <th scope="col" className="px-4 py-3 text-right">Change vs baseline</th>
                   <th scope="col" className="px-4 py-3">Variability</th>
                   <th scope="col" className="px-4 py-3">Confidence</th>
                   <th scope="col" className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800">
                 {items.map((item) => (
-                  <tr key={item.productId} className="hover:bg-slate-50">
+                  <tr key={item.productId} className="transition-colors hover:bg-white/[0.025]">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">
+                      <p className="font-medium text-slate-100">
                         {item.name}
                         {!item.isActive ? (
-                          <span className="ml-2 text-xs text-slate-400">inactive</span>
+                          <span className="ml-2 text-xs text-slate-500">inactive</span>
                         ) : null}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-400">
                         {item.sku}
                         {item.category ? ` · ${item.category.name}` : ''}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={TREND_BADGE[item.trend]} label={TREND_LABEL[item.trend]} />
+                      <Badge className={TREND_BADGE_DARK[item.trend]} label={TREND_LABEL[item.trend]} />
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.averageDailySales7d}
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                      {item.unitsSold7d}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.averageDailySales30d}
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                      {item.unitsSold30d}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.averageDailySales90d}
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                      {item.unitsSold90d}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                      {optionalPercent(item.trendChangePercent)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-300">
                       {VARIABILITY_LABEL[item.variability]}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-3 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-3 text-right">
-                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -411,27 +508,26 @@ export function DemandPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
             <span>
               {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
               {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
-              <span className="ml-2 text-xs text-slate-400">
-                rates are units per day
-              </span>
+              <span className="ml-2 text-xs text-slate-500">units sold in rolling windows</span>
             </span>
 
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
                   Next
                 </SecondaryButton>
               </div>
             ) : null}
           </footer>
         </Card>
+        </>
       )}
 
       {selected ? (
@@ -454,6 +550,12 @@ export function DemandPage() {
               explanation={selected.explanation}
               decisionLabel={TREND_LABEL[selected.trend]}
             />
+
+            <div>
+              <Link className={secondaryButtonClass} to={`/app/inventory/${selected.productId}`}>
+                View inventory and stock history
+              </Link>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric
@@ -512,6 +614,8 @@ export function DemandPage() {
           </div>
         </Modal>
       ) : null}
+        </>
+      )}
     </div>
   );
 }

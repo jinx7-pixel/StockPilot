@@ -20,14 +20,12 @@ import { Link } from 'react-router-dom';
 import {
   Card,
   EmptyState,
-  ErrorBanner,
   Field,
   Modal,
   PageHeader,
   SecondaryButton,
   Select,
   Spinner,
-  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -49,10 +47,17 @@ const DECISION_LABEL: Record<ReorderDecision, string> = {
 };
 
 const DECISION_BADGE: Record<ReorderDecision, string> = {
-  REORDER: 'bg-orange-100 text-orange-700',
-  NO_REORDER: 'bg-emerald-100 text-emerald-700',
-  INSUFFICIENT_DATA: 'bg-slate-100 text-slate-500',
-  DATA_ERROR: 'bg-red-100 text-red-700',
+  REORDER: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
+  NO_REORDER: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
+  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
+  DATA_ERROR: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
+};
+
+const DECISION_ICON: Record<ReorderDecision, string> = {
+  REORDER: '↻',
+  NO_REORDER: '✓',
+  INSUFFICIENT_DATA: '?',
+  DATA_ERROR: '!',
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -80,12 +85,23 @@ function Badge({ className, label }: { className: string; label: string }) {
   );
 }
 
+function DecisionBadge({ decision }: { decision: ReorderDecision }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${DECISION_BADGE[decision]}`}
+    >
+      <span aria-hidden="true" className="font-bold">{DECISION_ICON[decision]}</span>
+      {DECISION_LABEL[decision]}
+    </span>
+  );
+}
+
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs tracking-wide text-slate-500 uppercase">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
+      <p className="text-xs tracking-wide text-slate-400 uppercase">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-100 tabular-nums">{value}</p>
+      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
     </div>
   );
 }
@@ -107,12 +123,14 @@ export function ReorderPage() {
   const [confidence, setConfidence] = useState<ConfidenceLevel | 'all'>('all');
   const [page, setPage] = useState(1);
 
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[] | null>(null);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [items, setItems] = useState<Reorder[] | null>(null);
   const [meta, setMeta] = useState<ListMeta | null>(null);
   const [decisionCounts, setDecisionCounts] = useState<
-    Partial<Record<ReorderDecision, number>>
-  >({});
+    Partial<Record<ReorderDecision, number>> | null
+  >(null);
   const [selected, setSelected] = useState<Reorder | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -123,6 +141,8 @@ export function ReorderPage() {
     let cancelled = false;
 
     void (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const result = await reorderApi.list({
           ...(appliedSearch ? { search: appliedSearch } : {}),
@@ -137,10 +157,13 @@ export function ReorderPage() {
 
         setItems(result.items);
         setMeta(result.meta);
-        setDecisionCounts(result.decisionCounts ?? {});
+        setDecisionCounts(result.decisionCounts ?? null);
         setError(null);
       } catch (cause) {
         if (cancelled) return;
+        setItems(null);
+        setMeta(null);
+        setDecisionCounts(null);
         setError(
           cause instanceof ApiError ? cause.message : 'Could not load reorder data. Please try again.',
         );
@@ -158,12 +181,22 @@ export function ReorderPage() {
     let cancelled = false;
 
     void (async () => {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
       try {
         const result = await catalogApi.listCategories();
         if (!cancelled) setCategories(result);
-      } catch {
+      } catch (cause) {
         // The category filter is a convenience; a failure here must not take
         // the whole assessment list down with it.
+        if (!cancelled) {
+          setCategories(null);
+          setCategoriesError(
+            cause instanceof ApiError ? cause.message : 'Could not load category options.',
+          );
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
       }
     })();
 
@@ -174,6 +207,7 @@ export function ReorderPage() {
 
   const reload = useCallback(() => {
     setLoading(true);
+    setError(null);
     setReloadToken((token) => token + 1);
   }, []);
 
@@ -222,59 +256,90 @@ export function ReorderPage() {
     decision !== 'all' ||
     confidence !== 'all';
 
-  if (loading) return <Spinner label="Assessing reorder needs…" />;
-
-  const hasAnyCounts = DECISION_ORDER.some((level) => (decisionCounts[level] ?? 0) > 0);
   const totalPages = meta?.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reorder"
-        description="What needs reordering, and how much — from stock on hand, what is already on order, and how fast each product sells. Recommendations only: nothing here places an order or changes stock."
-        actions={<SecondaryButton onClick={reload}>Refresh</SecondaryButton>}
+        description="Identify replenishment needs and manage restocking through purchase orders."
+        darkSurface
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/app/purchase-orders"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]"
+            >
+              Create Purchase Order
+            </Link>
+            <SecondaryButton darkSurface disabled={loading} onClick={reload}>
+              Refresh
+            </SecondaryButton>
+          </div>
+        }
       />
 
-      {error ? <ErrorBanner message={error} /> : null}
+      <p className="text-sm text-slate-400">
+        Recommendations are read-only. Creating an order and receiving stock happen through Purchase Orders.
+      </p>
 
-      {hasAnyCounts ? (
+      {decisionCounts !== null ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Summary</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-300 uppercase">Decision summary</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Counts follow search, category, and product status. Decision and confidence filters only narrow the list.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {DECISION_ORDER.map((level) => (
-              <Card key={level} className="p-3">
-                <p className="text-xs tracking-wide text-slate-500 uppercase">
-                  {DECISION_LABEL[level]}
+              <Card key={level} darkSurface className="min-w-0 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs tracking-wide text-slate-400 uppercase">{DECISION_LABEL[level]}</p>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-sm font-bold ${DECISION_BADGE[level]}`} aria-hidden="true">
+                    {DECISION_ICON[level]}
+                  </span>
+                </div>
+                <p className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">
+                  {decisionCounts[level] ?? 0}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{decisionCounts[level] ?? 0}</p>
               </Card>
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+          Reorder decision totals are unavailable. Product recommendations may still load below.
+        </p>
+      )}
 
-      <Card className="p-4">
-        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Card darkSurface className="p-4">
+        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
             label="Search"
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
+            darkSurface
           />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
+            disabled={categoriesLoading || categoriesError !== null}
+            hint={categoriesError ? 'Category options are unavailable until the lookup succeeds.' : undefined}
+            darkSurface
             options={[
               { value: '', label: 'All categories' },
-              ...categories.map((category) => ({ value: category.id, label: category.name })),
+              ...(categories ?? []).map((category) => ({ value: category.id, label: category.name })),
             ]}
           />
           <Select
             label="Decision"
             value={decision}
             onChange={handleDecision}
+            darkSurface
             options={[
               { value: 'all', label: 'Any decision' },
               ...DECISION_ORDER.map((level) => ({ value: level, label: DECISION_LABEL[level] })),
@@ -284,6 +349,7 @@ export function ReorderPage() {
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
+            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -296,6 +362,7 @@ export function ReorderPage() {
             label="Product status"
             value={status}
             onChange={handleStatus}
+            darkSurface
             options={[
               { value: 'active', label: 'Active only' },
               { value: 'inactive', label: 'Inactive only' },
@@ -303,20 +370,47 @@ export function ReorderPage() {
             ]}
           />
 
-          <div className="flex items-end gap-2 lg:col-span-3">
+          <div className="flex flex-wrap items-end gap-2 xl:col-span-3">
             <button
               type="submit"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="min-h-10 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]"
             >
-              Apply
+              Search
             </button>
-            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      {items === null || items.length === 0 ? (
-        <Card>
+      {categoriesError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+          <span>Category options could not be loaded: {categoriesError}</span>
+          <SecondaryButton darkSurface disabled={loading} onClick={reload}>Retry</SecondaryButton>
+        </div>
+      ) : null}
+
+      {loading ? (
+        <Card darkSurface className="p-8">
+          <Spinner darkSurface label="Assessing reorder needs…" />
+        </Card>
+      ) : error ? (
+        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div role="alert" className="min-w-0">
+            <h2 className="font-semibold text-rose-200">Reorder recommendations could not be loaded</h2>
+            <p className="mt-1 break-words text-sm text-rose-300">{error}</p>
+          </div>
+          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+        </Card>
+      ) : items === null ? (
+        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <h2 className="font-semibold text-slate-100">Reorder data is unavailable</h2>
+            <p className="mt-1 text-sm text-slate-400">The recommendation list has not returned data yet.</p>
+          </div>
+          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+        </Card>
+      ) : items.length === 0 ? (
+        <Card darkSurface>
           <EmptyState
             title={hasFilters ? 'No products match these filters' : 'Nothing to assess yet'}
             description={
@@ -324,22 +418,55 @@ export function ReorderPage() {
                 ? 'Try widening the search, or clear the filters to see the full catalog.'
                 : 'Once you add products, record sales, and complete a purchase order, each product gets a reorder recommendation here.'
             }
-            action={
-              hasFilters ? (
-                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
-              ) : (
-                <Link className={secondaryButtonClass} to="/app/purchase-orders">
-                  Go to purchase orders
-                </Link>
-              )
-            }
+            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
+            darkSurface
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {items.map((item) => (
+            <Card key={item.productId} darkSurface className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="break-words font-semibold text-slate-100">
+                    {item.name}
+                    {!item.isActive ? <span className="ml-2 text-xs font-normal text-slate-500">inactive</span> : null}
+                  </h2>
+                  <p className="mt-1 break-words text-xs text-slate-400">
+                    {item.sku}{item.category ? ` · ${item.category.name}` : ''}
+                  </p>
+                </div>
+                <DecisionBadge decision={item.decision} />
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <div><dt className="text-xs text-slate-400">On hand</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.currentStock}</dd></div>
+                <div><dt className="text-xs text-slate-400">On order</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.onOrderQuantity}</dd></div>
+                <div><dt className="text-xs text-slate-400">Available</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.netAvailable}</dd></div>
+                <div><dt className="text-xs text-slate-400">Reorder point</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{optional(item.reorderPoint)}</dd></div>
+                <div><dt className="text-xs text-slate-400">Suggested quantity</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{item.reorder ? optional(item.recommendedQuantity) : '—'}</dd></div>
+                <div><dt className="text-xs text-slate-400">Confidence</dt><dd className="mt-0.5 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
+              </dl>
+              <div className="mt-4 border-t border-slate-800 pt-3">
+                <SecondaryButton darkSurface onClick={() => setSelected(item)}>View details</SecondaryButton>
+              </div>
+            </Card>
+          ))}
+          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-400">
+            <span>{meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}{meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}</span>
+            {meta && meta.totalPages > 1 ? (
+              <div className="flex gap-2">
+                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
+                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
+              </div>
+            ) : null}
+          </footer>
+        </div>
+
+        <Card darkSurface className="hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+              <thead className="bg-[#0c1523] text-xs tracking-wide text-slate-400 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Decision</th>
@@ -352,45 +479,42 @@ export function ReorderPage() {
                   <th scope="col" className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800">
                 {items.map((item) => (
-                  <tr key={item.productId} className="hover:bg-slate-50">
+                  <tr key={item.productId} className="transition-colors hover:bg-white/[0.025]">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">
+                      <p className="font-medium text-slate-100">
                         {item.name}
                         {!item.isActive ? (
-                          <span className="ml-2 text-xs text-slate-400">inactive</span>
+                          <span className="ml-2 text-xs text-slate-500">inactive</span>
                         ) : null}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-400">
                         {item.sku}
                         {item.category ? ` · ${item.category.name}` : ''}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge
-                        className={DECISION_BADGE[item.decision]}
-                        label={DECISION_LABEL[item.decision]}
-                      />
+                      <DecisionBadge decision={item.decision} />
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {item.currentStock}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {item.onOrderQuantity}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {item.netAvailable}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {optional(item.reorderPoint)}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right font-semibold text-slate-100 tabular-nums">
                       {item.reorder ? optional(item.recommendedQuantity) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-3 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-3 text-right">
-                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -398,7 +522,7 @@ export function ReorderPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
             <span>
               {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
               {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -406,39 +530,41 @@ export function ReorderPage() {
 
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
                   Next
                 </SecondaryButton>
               </div>
             ) : null}
           </footer>
         </Card>
+        </>
       )}
 
       {selected ? (
-        <Modal title={selected.name} onClose={() => setSelected(null)}>
+        <Modal title={selected.name} darkSurface onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 className={DECISION_BADGE[selected.decision]}
                 label={DECISION_LABEL[selected.decision]}
               />
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-slate-300">
                 {CONFIDENCE_LABEL[selected.confidence]}
               </span>
             </div>
 
             {/* The server's own words. Not paraphrased, not re-worded. */}
-            <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm text-slate-300">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={DECISION_LABEL[selected.decision]}
+              darkSurface
             />
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -483,10 +609,10 @@ export function ReorderPage() {
             </div>
 
             <section className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
                 Evidence
               </h3>
-              <ul className="space-y-1 text-sm text-slate-600">
+              <ul className="space-y-1 text-sm text-slate-300">
                 <li>Units sold in the 30-day window: {selected.evidence.unitsSold30d}</li>
                 <li>Days with a sale in the 30-day window: {selected.evidence.activeSalesDays30d}</li>
                 <li>Completed purchase orders behind the lead time: {selected.evidence.leadTimeSamples}</li>
@@ -497,14 +623,14 @@ export function ReorderPage() {
                     : `${selected.evidence.leadTimeSpreadDays} days`}
                 </li>
                 {selected.evidence.leadTimeUnreliable ? (
-                  <li className="text-amber-700">
+                  <li className="text-amber-200">
                     Lead time is unusually long or inconsistent, which caps confidence.
                   </li>
                 ) : null}
               </ul>
             </section>
 
-            <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-200">
               This is a recommendation, not an order. Nothing on this page has been placed with a
               supplier, and no stock has been changed.
             </p>

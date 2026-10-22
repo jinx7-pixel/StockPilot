@@ -67,6 +67,12 @@ export interface CategoryInput {
   description?: string;
 }
 
+export interface CategoryUpdateInput {
+  name?: string;
+  /** `null` clears a description; omitting the field leaves it unchanged. */
+  description?: string | null;
+}
+
 export interface ProductInput {
   sku: string;
   name: string;
@@ -95,7 +101,7 @@ export const catalogApi = {
   createCategory: (input: CategoryInput) =>
     request<Category>('/api/categories', { method: 'POST', body: input }),
 
-  updateCategory: (id: string, input: Partial<CategoryInput>) =>
+  updateCategory: (id: string, input: CategoryUpdateInput) =>
     request<Category>(`/api/categories/${id}`, { method: 'PATCH', body: input }),
 
   deleteCategory: (id: string) =>
@@ -114,6 +120,8 @@ export const catalogApi = {
     requestList<Product>(
       `/api/products${buildQueryString(query)}`,
     ),
+
+  getProduct: (id: string) => request<Product>(`/api/products/${id}`),
 
   createProduct: (input: ProductInput) =>
     request<Product>('/api/products', { method: 'POST', body: input }),

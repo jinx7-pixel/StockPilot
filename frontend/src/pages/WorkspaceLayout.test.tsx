@@ -83,7 +83,7 @@ describe('Workspace navigation — structure', () => {
       nav().querySelectorAll<HTMLElement>('span[id^="workspace-nav-group-"]'),
     ).map((node) => node.textContent);
 
-    expect(labels).toEqual(['Overview', 'Intelligence', 'Operations', 'Catalogue']);
+    expect(labels).toEqual(['Overview', 'Inventory', 'Operations', 'Intelligence']);
   });
 
   it('gives each group list an accessible name that resolves to its visible label', () => {
@@ -115,18 +115,17 @@ describe('Workspace navigation — structure', () => {
     expect(new Set(hrefs).size).toBe(17);
   });
 
-  it('preserves every pre-existing destination and label', () => {
+  it('keeps every existing route available in the sidebar', () => {
     renderAt('/app');
 
     const pairs = within(nav())
       .getAllByRole('link')
       .map((link) => [link.textContent, link.getAttribute('href')]);
 
-    // The exact set that existed before grouping, so a regroup cannot quietly
-    // drop or rename a destination.
+    // The same route set stays available after reorganising the navigation.
     expect(pairs).toEqual(
       expect.arrayContaining([
-        ['Overview', '/app'],
+        ['Dashboard', '/app'],
         ['Analytics', '/app/analytics'],
         ['Stock risk', '/app/stock-risk'],
         ['Demand', '/app/demand'],
@@ -158,32 +157,31 @@ describe('Workspace navigation — structure', () => {
       return document.getElementById(list.getAttribute('aria-labelledby')!)!.textContent;
     };
 
-    expect(groupOf('Overview')).toBe('Overview');
+    expect(groupOf('Dashboard')).toBe('Overview');
     expect(groupOf('Analytics')).toBe('Overview');
+    expect(groupOf('Products')).toBe('Inventory');
+    expect(groupOf('Categories')).toBe('Inventory');
+    expect(groupOf('Inventory')).toBe('Inventory');
     expect(groupOf('Stock risk')).toBe('Intelligence');
     expect(groupOf('Actions')).toBe('Intelligence');
-    expect(groupOf('Inventory')).toBe('Operations');
+    expect(groupOf('Sales')).toBe('Operations');
     expect(groupOf('Suppliers')).toBe('Operations');
-    expect(groupOf('Products')).toBe('Catalogue');
-    expect(groupOf('Categories')).toBe('Catalogue');
   });
 
-  it('lets each group wrap instead of forcing horizontal overflow', () => {
+  it('keeps the sidebar groups and links constrained to their available width', () => {
     renderAt('/app');
 
     const lists = within(nav()).getAllByRole('list');
-
-    // Every list level must be allowed to wrap. Without it the seventeen links
-    // overflowed the header, which is the defect this milestone fixes.
     for (const list of lists) {
-      expect(list.className).toContain('flex-wrap');
+      expect(list.className).toContain('min-w-0');
     }
+    expect(within(nav()).getAllByRole('link')).toHaveLength(17);
   });
 });
 
 describe('Workspace navigation — active destination', () => {
   const cases: Array<[string, string]> = [
-    ['/app', 'Overview'],
+    ['/app', 'Dashboard'],
     ['/app/actions', 'Actions'],
     ['/app/products', 'Products'],
     ['/app/supplier-intelligence', 'Supplier Intelligence'],
@@ -255,12 +253,30 @@ describe('Workspace navigation — shell', () => {
     renderAt('/app');
 
     const signOut = screen.getByRole('button', { name: 'Sign out' });
-    const classes = signOut.className;
 
-    // Guards the Step 13.3.1 fix from being undone by a later restyle, and guards
-    // the near-invisible `ring-brand-100` from creeping back.
-    expect(classes).toContain('focus-visible:ring-brand-500');
-    expect(classes).not.toContain('ring-brand-100');
+    /*
+     * Every focusable control in the nav pulls its ring from one shared
+     * constant, so this asserts the *property* rather than one hard-coded
+     * string on one button: a visible ring on keyboard focus, and specifically
+     * not the near-invisible `ring-brand-100` that once made the control look
+     * unfocusable.
+     */
+    const nav = screen.getByRole('navigation', { name: 'Workspace' });
+    const focusables = Array.from(
+      nav.querySelectorAll<HTMLElement>('button, a[href]'),
+    ).filter((el) => el.getAttribute('aria-hidden') !== 'true');
+
+    expect(focusables.length).toBeGreaterThan(0);
+    for (const el of focusables) {
+      expect(el.className).toMatch(/focus-visible:ring-/);
+      expect(el.className).not.toContain('ring-brand-100');
+    }
+
+    // The workspace rail is dark navy; a brand-blue ring reads as a shadow
+    // there rather than as focus, so the ring must be the emerald one.
+    expect(signOut.className).toContain('focus-visible:ring-emerald-400');
+    // The ring is only announced on keyboard focus, not on mouse press.
+    expect(signOut.className).toContain('focus-visible:');
   });
 
   it('keeps the header navigation and the routed body as separate landmarks', () => {
@@ -353,19 +369,28 @@ describe('Workspace navigation — mobile disclosure', () => {
     await user.click(toggle());
     expect(toggle()).toHaveAttribute('aria-expanded', 'true');
 
-    // Tab *into* the menu first. This is the only sequence where restoring focus
-    // is observable: had focus never left the toggle, the assertion below would
-    // pass whether or not the component restored it, and the test would prove
-    // nothing. A keyboard user reaches Escape from inside the menu, and if focus
-    // is not moved back the user is left focused on a hidden element.
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'Overview' })).toHaveFocus();
+    /*
+     * Tab *into* the menu, and stop the moment focus lands on a real
+     * navigation link. Hard-coding which intermediate control receives focus
+     * (a collapse button, a dismiss button, ...) couples this test to the
+     * current control layout, so any later restyle would break it without the
+     * behaviour having changed. What matters is that a keyboard user can get
+     * from the toggle into the menu and back out again.
+     */
+    let reachedLink = false;
+    for (let step = 0; step < 10 && !reachedLink; step += 1) {
+      await user.tab();
+      reachedLink =
+        document.activeElement?.tagName === 'A' &&
+        document.activeElement.getAttribute('href') !== null;
+    }
+    expect(reachedLink).toBe(true);
 
-    await user.keyboard('{Escape}')
+    await user.keyboard('{Escape}');
 
-    expect(toggle()).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle()).toHaveAttribute('aria-expanded', 'false');
     // Without this the keyboard user is stranded on a collapsed menu.
-    expect(toggle()).toHaveFocus()
+    expect(toggle()).toHaveFocus();
   });
 
   it('ignores Escape while already closed', async () => {
@@ -410,26 +435,48 @@ describe('Workspace navigation — mobile disclosure', () => {
     expect(toggle()).toHaveFocus();
   });
 
-  it('bounds the menu height without hiding the desktop presentation', () => {
+  it('bounds the menu to the viewport and keeps the nav scrollable', () => {
     renderAt('/app');
 
-    const container = document.getElementById(toggle().getAttribute('aria-controls')!);
-    const classes = container!.className;
+    // The region the toggle controls must resolve to the nav itself.
+    const nav = document.getElementById(toggle().getAttribute('aria-controls')!);
+    expect(nav).not.toBeNull();
+    expect(nav!.getAttribute('aria-label')).toBe('Workspace');
 
-    // Scrollable and bounded on a short screen...
-    expect(classes).toContain('overflow-y-auto');
-    expect(classes).toContain('max-h-[60vh]');
-    // ...but lifted at desktop so the grouped nav behaves exactly as in 13.3.3.
-    expect(classes).toContain('lg:block');
-    expect(classes).toContain('lg:max-h-none');
-    expect(classes).toContain('lg:overflow-visible');
+    /*
+     * Scroll affordance: on a short screen a long nav must scroll rather than
+     * overflow the panel.
+     */
+    expect(nav!.className).toContain('overflow-y-auto');
+
+    /*
+     * The bounding is now done by the panel rather than by a max-height on the
+     * nav: the drawer is fixed to the full viewport height (`inset-y-0`), so it
+     * cannot exceed the screen, and it takes over from a sticky, screen-height
+     * panel at desktop. Asserting `max-h-[60vh]` here would have pinned a
+     * mechanism the design deliberately replaced.
+     */
+    const panel = nav!.closest('aside')!;
+    expect(panel.className).toContain('fixed');
+    expect(panel.className).toContain('inset-y-0');
+    expect(panel.className).toContain('lg:sticky');
+    expect(panel.className).toContain('lg:h-screen');
   });
 
   it('hides the toggle at desktop and keeps the named landmark either way', () => {
     renderAt('/app');
 
-    // The button must never appear beside the permanently visible desktop nav.
-    expect(toggle().className).toContain('lg:hidden');
+    /*
+     * The desktop sidebar is permanently visible, so the mobile header that
+     * carries the toggle is hidden at `lg`. The rule lives on the header, not
+     * on the button — asserting the button's own classes would miss the
+     * behaviour if the wrapper changed.
+     */
+    const header = toggle().closest('header');
+    expect(header).not.toBeNull();
+    expect(header!.className).toContain('lg:hidden');
+
+    // The nav stays a single, named landmark at every width.
     expect(screen.getAllByRole('navigation')).toHaveLength(1);
     expect(screen.getByRole('navigation', { name: 'Workspace' })).toBeInTheDocument();
   });

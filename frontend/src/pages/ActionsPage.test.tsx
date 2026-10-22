@@ -290,8 +290,12 @@ describe('Action Center - the dialog cannot be dismissed mid-request', () => {
 
     // Both change handlers regenerate the idempotency key, so both controls must be
     // unreachable while the original request may still complete.
+    //
+    // The supplier control's accessible name is "Active supplier" — the label
+    // ActionsPage gives the <Select>. Asserting the real name keeps this a
+    // genuine accessibility check rather than a match against a prefix.
     expect(screen.getByLabelText('Quantity')).toBeDisabled();
-    expect(screen.getByLabelText('Supplier')).toBeDisabled();
+    expect(screen.getByLabelText('Active supplier')).toBeDisabled();
 
     const keySent = mocks.execute.mock.calls[0]![1] as string;
     expect(typeof keySent).toBe('string');

@@ -85,6 +85,17 @@ export interface SupplierInput {
   notes?: string;
 }
 
+/** PATCH accepts null for optional fields so an edit can explicitly clear them. */
+export interface SupplierUpdateInput {
+  name?: string;
+  contactName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  isActive?: boolean;
+}
+
 export interface PurchaseOrderItemInput {
   productId: string;
   quantity: string;
@@ -171,7 +182,7 @@ export const supplierApi = {
   create: (input: SupplierInput) =>
     request<Supplier>('/api/suppliers', { method: 'POST', body: input }),
 
-  update: (id: string, input: Partial<SupplierInput> & { isActive?: boolean }) =>
+  update: (id: string, input: SupplierUpdateInput) =>
     request<Supplier>(`/api/suppliers/${id}`, { method: 'PATCH', body: input }),
 
   // There is deliberately no delete: purchase orders reference suppliers, so a

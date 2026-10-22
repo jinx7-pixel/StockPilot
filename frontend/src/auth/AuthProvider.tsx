@@ -11,14 +11,35 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { api, ApiError, type AuthenticatedUser, type LoginInput, type RegisterInput } from '../lib/api';
 import { AuthContext, type AuthContextValue, type AuthStatus } from './authContext';
 
+const isDevelopmentPreview =
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  window.location.pathname === '/app' &&
+  new URLSearchParams(window.location.search).get('preview') === '1';
+
+const developmentPreviewUser: AuthenticatedUser = {
+  id: 'dev-preview-user',
+  businessId: 'dev-preview-business',
+  name: 'Demo User',
+  email: 'demo@stockpilot.local',
+  role: 'owner',
+  business: { id: 'dev-preview-business', name: 'StockPilot Demo Workspace' },
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>('loading');
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [status, setStatus] = useState<AuthStatus>(isDevelopmentPreview ? 'authenticated' : 'loading');
+  const [user, setUser] = useState<AuthenticatedUser | null>(
+    isDevelopmentPreview ? developmentPreviewUser : null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Restore the session on load. A 401 here is the expected "not signed in"
   // path, not a failure.
   useEffect(() => {
+    // This explicit Vite-development-only entry lets the workspace UI be previewed
+    // without a running backend. It never changes production authentication.
+    if (isDevelopmentPreview) return;
+
     let cancelled = false;
 
     api

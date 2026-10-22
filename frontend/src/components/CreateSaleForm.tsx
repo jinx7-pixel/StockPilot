@@ -39,14 +39,18 @@ interface DraftLine {
   quantity: string;
 }
 
+const MAX_SALE_LINES = 200;
+
 export function CreateSaleForm({
   products,
   onClose,
   onCreated,
+  darkSurface = false,
 }: {
   products: SellableProduct[];
   onClose: () => void;
   onCreated: (sale: Sale) => void;
+  darkSurface?: boolean;
 }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -66,6 +70,8 @@ export function CreateSaleForm({
   }
 
   function addLine() {
+    if (lines.length >= MAX_SALE_LINES) return;
+
     const unused = products.find(
       (product) => !lines.some((line) => line.productId === product.id),
     );
@@ -98,7 +104,7 @@ export function CreateSaleForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || saving) return;
 
     setSaving(true);
     setError(null);
@@ -127,9 +133,9 @@ export function CreateSaleForm({
   if (products.length === 0) {
     return (
       <div className="space-y-4">
-        <ErrorBanner message="Add at least one product before recording a sale." />
+        <ErrorBanner message="Add at least one product before recording a sale." darkSurface={darkSurface} />
         <div className="flex justify-end">
-          <SecondaryButton onClick={onClose}>Close</SecondaryButton>
+          <SecondaryButton onClick={onClose} darkSurface={darkSurface}>Close</SecondaryButton>
         </div>
       </div>
     );
@@ -137,7 +143,7 @@ export function CreateSaleForm({
 
   return (
     <form id="create-sale-form" onSubmit={handleSubmit} className="space-y-4">
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} darkSurface={darkSurface} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -147,6 +153,7 @@ export function CreateSaleForm({
           required={false}
           maxLength={150}
           placeholder="Walk-in customer"
+          darkSurface={darkSurface}
         />
         <Field
           label="Customer phone"
@@ -155,25 +162,26 @@ export function CreateSaleForm({
           required={false}
           maxLength={30}
           placeholder="+91 98765 43210"
+          darkSurface={darkSurface}
         />
       </div>
 
       <fieldset className="space-y-3">
-        <legend className="text-sm font-medium text-slate-700">Items</legend>
+        <legend className={`text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}>Items</legend>
 
         {lines.map((line) => {
           const product = products.find((p) => p.id === line.productId);
           return (
             <div
               key={line.key}
-              className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 p-3"
+              className={`flex flex-wrap items-end gap-3 rounded-lg border p-3 ${darkSurface ? 'border-slate-700 bg-[#0c1523]' : 'border-slate-200'}`}
             >
               <div className="min-w-48 flex-1">
-                <label className="block text-sm font-medium text-slate-700">Product</label>
+                <label className={`block text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}>Product</label>
                 <select
                   value={line.productId}
                   onChange={(event) => updateLine(line.key, { productId: event.target.value })}
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm shadow-sm outline-none ${darkSurface ? 'border-slate-700 bg-[#101a2a] text-slate-100 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20' : 'border-slate-300 bg-white text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-100'}`}
                 >
                   {products.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -184,18 +192,18 @@ export function CreateSaleForm({
               </div>
 
               <div className="w-28">
-                <label className="block text-sm font-medium text-slate-700">Quantity</label>
+                <label className={`block text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}>Quantity</label>
                 <input
                   type="number"
                   min="0.01"
                   step="0.01"
                   value={line.quantity}
                   onChange={(event) => updateLine(line.key, { quantity: event.target.value })}
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  className={`mt-1.5 w-full rounded-lg border px-3 py-2 text-sm shadow-sm outline-none ${darkSurface ? 'border-slate-700 bg-[#101a2a] text-slate-100 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20' : 'border-slate-300 bg-white text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-100'}`}
                 />
               </div>
 
-              <div className="flex-1 text-right text-sm text-slate-600">
+              <div className={`flex-1 text-right text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-600'}`}>
                 {product
                   ? `${formatAmount(product.sellingPrice.toFixed(2))} each · ${
                       product.currentStock
@@ -204,33 +212,35 @@ export function CreateSaleForm({
               </div>
 
               {lines.length > 1 ? (
-                <SecondaryButton onClick={() => removeLine(line.key)}>Remove</SecondaryButton>
+                <SecondaryButton onClick={() => removeLine(line.key)} darkSurface={darkSurface}>Remove</SecondaryButton>
               ) : null}
             </div>
           );
         })}
 
-        <SecondaryButton onClick={addLine}>Add another item</SecondaryButton>
+        <SecondaryButton onClick={addLine} disabled={lines.length >= MAX_SALE_LINES} darkSurface={darkSurface}>
+          {lines.length >= MAX_SALE_LINES ? 'Maximum 200 items reached' : 'Add another item'}
+        </SecondaryButton>
       </fieldset>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-3">
-        <p className="text-sm text-slate-600">
+      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 ${darkSurface ? 'border border-slate-800 bg-[#0c1523]' : 'bg-slate-50'}`}>
+        <p className={`text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-600'}`}>
           Estimated total{' '}
-          <span className="font-semibold text-slate-900">
+          <span className={`font-semibold ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>
             {formatAmount(estimatedTotal.toFixed(2))}
           </span>
         </p>
-        <p className="text-xs text-slate-500">
+        <p className={`text-xs ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
           {formatQuantity(String(complete.length))} item
           {complete.length === 1 ? '' : 's'} · final total is calculated by the server
         </p>
       </div>
 
       <div className="flex justify-end gap-3">
-        <SecondaryButton onClick={onClose} disabled={saving}>
+        <SecondaryButton onClick={onClose} disabled={saving} darkSurface={darkSurface}>
           Cancel
         </SecondaryButton>
-        <PrimaryButton type="submit" disabled={saving || !canSubmit}>
+        <PrimaryButton type="submit" disabled={saving || !canSubmit} darkSurface={darkSurface}>
           {saving ? 'Recording…' : 'Record sale'}
         </PrimaryButton>
       </div>

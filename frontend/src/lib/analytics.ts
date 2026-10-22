@@ -164,6 +164,22 @@ export interface AnalyticsQuery {
 }
 
 /**
+ * Query accepted by `/api/analytics/inventory`.
+ *
+ * The server's `inventoryAnalyticsQuerySchema` is `.strict()` and takes only
+ * `{ from, to }`. Sending `groupBy` there is refused with
+ * `400 Unrecognized key: "groupBy"`, which silently blanked every inventory
+ * KPI on the Analytics page.
+ *
+ * Note this narrows the *declared* contract but is not, on its own, a hard
+ * guarantee: TypeScript's excess-property check only fires for object literals,
+ * so a caller passing a variable that happens to carry `groupBy` still
+ * type-checks. The actual guarantee is the whitelist in `inventory()` below,
+ * which physically cannot emit the key.
+ */
+export type InventoryAnalyticsQuery = Omit<AnalyticsQuery, 'groupBy'>;
+
+/**
  * Serialise a set of optional parameters, dropping anything undefined or empty
  * so the server sees a clean query string. Values are read via `Object.entries`,
  * so a caller's typed interface can be passed straight in.
@@ -199,8 +215,15 @@ export const analyticsApi = {
   sales: (query: AnalyticsQuery = {}) =>
     request<SalesAnalytics>(`/api/analytics/sales${buildQueryString(query)}`),
 
-  inventory: (query: AnalyticsQuery = {}) =>
-    request<InventoryAnalytics>(`/api/analytics/inventory${buildQueryString(query)}`),
+  inventory: (query: InventoryAnalyticsQuery = {}) =>
+    request<InventoryAnalytics>(
+      // Whitelisted for the same reason `products` is below: the server schema
+      // is strict, so only the keys it declares may ever reach the query string.
+      `/api/analytics/inventory${buildQueryString({
+        from: query.from,
+        to: query.to,
+      })}`,
+    ),
 
   products: (
     query: AnalyticsQuery & {

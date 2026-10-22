@@ -33,11 +33,13 @@ export function MovementForm({
   product,
   onClose,
   onRecorded,
+  darkSurface = false,
 }: {
   movementType: MovementType;
   product: InventoryItem;
   onClose: () => void;
   onRecorded: (currentStock: number) => void;
+  darkSurface?: boolean;
 }) {
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
@@ -93,13 +95,13 @@ export function MovementForm({
       onSubmit={handleSubmit}
       className="space-y-4"
     >
-      <ErrorBanner message={error} />
+      <ErrorBanner message={error} darkSurface={darkSurface} />
 
-      <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
-        <span className="font-medium text-slate-900">{product.name}</span>{' '}
+      <div className={`rounded-lg px-3 py-2 text-sm ${darkSurface ? 'border border-slate-700 bg-slate-900/50 text-slate-400' : 'bg-slate-50 text-slate-600'}`}>
+        <span className={`font-medium ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>{product.name}</span>{' '}
         <span className="font-mono text-xs">{product.sku}</span>
         <p className="mt-1">
-          Current stock: <span className="font-semibold">{product.currentStock}</span> {product.unit}
+          Current stock: <span className={`font-semibold ${darkSurface ? 'text-slate-200' : 'text-slate-900'}`}>{product.currentStock}</span> {product.unit}
         </p>
       </div>
 
@@ -111,6 +113,7 @@ export function MovementForm({
         step="0.01"
         placeholder={signed ? '-2.5' : '25'}
         hint={HINTS[movementType]}
+        darkSurface={darkSurface}
       />
 
       <Textarea
@@ -126,15 +129,16 @@ export function MovementForm({
               ? 'Order fulfilment'
               : 'Stock count correction'
         }
+        darkSurface={darkSurface}
       />
 
-      <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+      <div className={`space-y-3 rounded-lg border p-3 ${darkSurface ? 'border-slate-700' : 'border-slate-200'}`}>
+        <label className={`flex items-center gap-2 text-sm ${darkSurface ? 'text-slate-300' : 'text-slate-700'}`}>
           <input
             type="checkbox"
             checked={withReference}
             onChange={(event) => setWithReference(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            className={`h-4 w-4 rounded ${darkSurface ? 'border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400' : 'border-slate-300 text-brand-600 focus:ring-brand-500'}`}
           />
           Link this movement to a reference
         </label>
@@ -147,22 +151,24 @@ export function MovementForm({
               onChange={setReferenceType}
               maxLength={50}
               placeholder="purchase_order"
+              darkSurface={darkSurface}
             />
             <Field
               label="Reference id"
               value={referenceId}
               onChange={setReferenceId}
               placeholder="UUID"
+              darkSurface={darkSurface}
             />
           </div>
         ) : null}
       </div>
 
       <div className="flex justify-end gap-3">
-        <SecondaryButton onClick={onClose} disabled={saving}>
+        <SecondaryButton onClick={onClose} disabled={saving} darkSurface={darkSurface}>
           Cancel
         </SecondaryButton>
-        <PrimaryButton type="submit" disabled={saving || locallyInvalid}>
+        <PrimaryButton type="submit" disabled={saving || locallyInvalid} darkSurface={darkSurface}>
           {saving ? 'Recording…' : TITLES[movementType]}
         </PrimaryButton>
       </div>

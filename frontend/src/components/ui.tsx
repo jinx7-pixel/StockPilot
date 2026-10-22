@@ -28,6 +28,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router-dom';
@@ -86,9 +87,23 @@ const focusRing =
 // Layout
 // ---------------------------------------------------------------------------
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className = '',
+  darkSurface = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  darkSurface?: boolean;
+}) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>
+    <div
+      className={`rounded-xl border shadow-sm ${
+        darkSurface
+          ? 'border-slate-800 bg-[#101a2a] shadow-black/20'
+          : 'border-slate-200 bg-white'
+      } ${className}`}
+    >
       {children}
     </div>
   );
@@ -123,7 +138,7 @@ export type Crumb = {
  * read aloud between two links is noise. Marking it `aria-hidden` keeps the
  * visual affordance without adding it to the announcement.
  */
-export function Breadcrumbs({ items }: { items: readonly Crumb[] }) {
+export function Breadcrumbs({ items, darkSurface = false }: { items: readonly Crumb[]; darkSurface?: boolean }) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm">
@@ -135,18 +150,22 @@ export function Breadcrumbs({ items }: { items: readonly Crumb[] }) {
               {item.to ? (
                 <Link
                   to={item.to}
-                  className={`rounded text-slate-500 transition hover:text-slate-900 ${focusRing}`}
+                  className={`rounded transition ${
+                    darkSurface
+                      ? 'text-slate-400 hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]'
+                      : `text-slate-500 hover:text-slate-900 ${focusRing}`
+                  }`}
                 >
                   {item.label}
                 </Link>
               ) : (
-                <span aria-current="page" className="font-medium text-slate-900">
+                <span aria-current="page" className={`font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-900'}`}>
                   {item.label}
                 </span>
               )}
 
               {isLast ? null : (
-                <span aria-hidden="true" className="text-slate-300">
+                <span aria-hidden="true" className={darkSurface ? 'text-slate-600' : 'text-slate-300'}>
                   /
                 </span>
               )}
@@ -163,10 +182,12 @@ export function PageHeader({
   description,
   actions,
   breadcrumbs,
+  darkSurface = false,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  darkSurface?: boolean;
   /** Rendered above the title; `PageHeader` owns the spacing either way. */
   breadcrumbs?: ReactNode;
 }) {
@@ -174,8 +195,14 @@ export function PageHeader({
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div>
         {breadcrumbs ? <div className="mb-2">{breadcrumbs}</div> : null}
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+        <h1 className={`text-2xl font-bold tracking-tight ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>
+          {title}
+        </h1>
+        {description ? (
+          <p className={`mt-1 text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
+            {description}
+          </p>
+        ) : null}
       </div>
       {actions ? <div className="flex gap-2">{actions}</div> : null}
     </header>
@@ -224,6 +251,8 @@ export function Field({
   hint,
   error,
   disabled,
+  darkSurface = false,
+  showPasswordToggle = false,
 }: ControlProps & {
   type?: string;
   value: string;
@@ -232,9 +261,21 @@ export function Field({
   placeholder?: string;
   min?: number;
   max?: number;
-  step?: string;
+  /*
+   * `string | number`, matching React's own `InputHTMLAttributes['step']`.
+   *
+   * The DOM attribute accepts both spellings: `step="0.01"` and `step={0.01}`
+   * serialise to the same `step="0.01"`. Narrowing this to `string` alone
+   * rejected the numeric literal, which forced call sites into stringly-typed
+   * arithmetic — or into an assertion that silenced the real type mismatch.
+   */
+  step?: string | number;
   minLength?: number;
   maxLength?: number;
+  /** Dark styling for authentication forms; shared screens keep the default surface. */
+  darkSurface?: boolean;
+  /** Adds a keyboard-accessible visibility toggle to password fields. */
+  showPasswordToggle?: boolean;
 }) {
   // Unique per rendered instance, so two "Quantity" fields on one page no longer
   // collide. `name` stays derived from the label because it is a stable,
@@ -243,45 +284,88 @@ export function Field({
   const id = `field-${generatedId}`;
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const hasPasswordToggle = type === 'password' && showPasswordToggle;
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label
+        htmlFor={id}
+        className={`block text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}
+      >
         {label}
         {required ? '' : <span className="ml-1 font-normal text-slate-400">(optional)</span>}
       </label>
 
-      <input
-        id={id}
-        name={label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
-        type={type}
-        value={value}
-        required={required}
-        disabled={disabled}
-        min={min}
-        max={max}
-        step={step}
-        minLength={minLength}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        placeholder={placeholder}
-        // A failed validation must be announced as part of the control, not as a
-        // detached banner the user has to find.
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(hintId, errorId)}
-        onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 ${
-          error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'
-        } ${focusRing}`}
-      />
+      <div className={hasPasswordToggle ? 'relative' : undefined}>
+        <input
+          id={id}
+          name={label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}
+          type={hasPasswordToggle && passwordVisible ? 'text' : type}
+          value={value}
+          required={required}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
+          minLength={minLength}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          // A failed validation must be announced as part of the control, not as a
+          // detached banner the user has to find.
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy(hintId, errorId)}
+          onChange={(event) => onChange(event.target.value)}
+          className={`w-full rounded-lg border px-3 py-2 text-sm shadow-sm outline-none transition ${
+            hasPasswordToggle ? 'pr-11' : ''
+          } ${
+            darkSurface
+              ? error
+                ? 'border-red-400 bg-red-950/30 text-slate-100 placeholder:text-slate-400 focus:border-red-300'
+                : 'border-slate-600 bg-navy-800 text-slate-100 placeholder:text-slate-400 focus:border-accent-400'
+              : `text-slate-900 focus:border-brand-500 ${error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'}`
+          } ${darkSurface ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900' : focusRing}`}
+        />
+        {hasPasswordToggle ? (
+          <button
+            type="button"
+            disabled={disabled}
+            aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+            aria-pressed={passwordVisible}
+            aria-controls={id}
+            onClick={() => setPasswordVisible((visible) => !visible)}
+            className={`absolute inset-y-0 right-0 flex items-center rounded-r-lg px-3 transition focus:outline-none focus-visible:ring-2 ${
+              darkSurface
+                ? 'text-slate-400 hover:text-accent-400 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900'
+                : 'text-slate-500 hover:text-slate-800 focus-visible:ring-brand-500'
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <svg
+              aria-hidden="true"
+              className="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2.25 12s3.5-6.75 9.75-6.75S21.75 12 21.75 12s-3.5 6.75-9.75 6.75S2.25 12 2.25 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              {!passwordVisible ? <path d="m3 3 18 18" /> : null}
+            </svg>
+          </button>
+        ) : null}
+      </div>
 
       {hint ? (
-        <p id={hintId} className="text-xs text-slate-500">
+        <p id={hintId} className={`text-xs ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs font-medium text-red-700">
+        <p id={errorId} role="alert" className={`text-xs font-medium ${darkSurface ? 'text-red-300' : 'text-red-700'}`}>
           {error}
         </p>
       ) : null}
@@ -298,10 +382,12 @@ export function Select({
   error,
   required,
   disabled,
+  darkSurface = false,
 }: ControlProps & {
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  darkSurface?: boolean;
 }) {
   const generatedId = useId();
   const id = `select-${generatedId}`;
@@ -310,7 +396,7 @@ export function Select({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className={`block text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}>
         {label}
         {required === false ? (
           <span className="ml-1 font-normal text-slate-400">(optional)</span>
@@ -326,9 +412,13 @@ export function Select({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(hintId, errorId)}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 ${
-          error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'
-        } ${focusRing}`}
+        className={`w-full rounded-lg border px-3 py-2 text-sm shadow-sm outline-none transition ${
+          darkSurface
+            ? error
+              ? 'border-red-400 bg-red-950/30 text-slate-100 focus:border-red-300'
+              : 'border-slate-700 bg-[#0b1220] text-slate-200 scheme-dark focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/15'
+            : `bg-white text-slate-900 focus:border-brand-500 ${error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'} ${focusRing}`
+        } ${darkSurface ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]' : ''}`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -338,12 +428,12 @@ export function Select({
       </select>
 
       {hint ? (
-        <p id={hintId} className="text-xs text-slate-500">
+        <p id={hintId} className={`text-xs ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs font-medium text-red-700">
+        <p id={errorId} role="alert" className={`text-xs font-medium ${darkSurface ? 'text-red-300' : 'text-red-700'}`}>
           {error}
         </p>
       ) : null}
@@ -361,12 +451,15 @@ export function Textarea({
   placeholder,
   hint,
   error,
+  darkSurface = false,
 }: ControlProps & {
   value: string;
   onChange: (value: string) => void;
   rows?: number;
   maxLength?: number;
   placeholder?: string;
+  /** Midnight styling for forms owned by dark workspace pages. */
+  darkSurface?: boolean;
 }) {
   const generatedId = useId();
   const id = `textarea-${generatedId}`;
@@ -375,7 +468,7 @@ export function Textarea({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className={`block text-sm font-medium ${darkSurface ? 'text-slate-200' : 'text-slate-700'}`}>
         {label}
         {required ? '' : <span className="ml-1 font-normal text-slate-400">(optional)</span>}
       </label>
@@ -391,18 +484,22 @@ export function Textarea({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(hintId, errorId)}
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-brand-500 ${
-          error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'
-        } ${focusRing}`}
+        className={`w-full rounded-lg border px-3 py-2 text-sm shadow-sm outline-none transition ${
+          darkSurface
+            ? error
+              ? 'border-red-400 bg-red-950/30 text-slate-100 placeholder:text-slate-400 focus:border-red-300'
+              : 'border-slate-600 bg-navy-800 text-slate-100 placeholder:text-slate-400 focus:border-accent-400'
+            : `text-slate-900 focus:border-brand-500 ${error ? 'border-red-400 bg-red-50/40' : 'border-slate-300'}`
+        } ${darkSurface ? 'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900' : focusRing}`}
       />
 
       {hint ? (
-        <p id={hintId} className="text-xs text-slate-500">
+        <p id={hintId} className={`text-xs ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="text-xs font-medium text-red-700">
+        <p id={errorId} role="alert" className={`text-xs font-medium ${darkSurface ? 'text-red-300' : 'text-red-700'}`}>
           {error}
         </p>
       ) : null}
@@ -446,6 +543,8 @@ export function PrimaryButton({
   disabled,
   form,
   children,
+  darkSurface = false,
+  variant = 'default',
 }: {
   type?: 'button' | 'submit';
   onClick?: () => void;
@@ -453,6 +552,8 @@ export function PrimaryButton({
   /** Id of a form elsewhere in the DOM, so a modal footer can submit it. */
   form?: string;
   children: ReactNode;
+  darkSurface?: boolean;
+  variant?: 'default' | 'emerald';
 }) {
   return (
     <button
@@ -460,7 +561,11 @@ export function PrimaryButton({
       onClick={onClick}
       disabled={disabled}
       form={form}
-      className={primaryButtonClass}
+      className={darkSurface
+        ? 'rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]'
+        : variant === 'emerald'
+          ? 'rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2'
+          : primaryButtonClass}
     >
       {children}
     </button>
@@ -473,11 +578,14 @@ export function SubmitButton({
   label,
   form,
   disabled,
+  darkSurface = false,
 }: {
   pending: boolean;
   label: string;
   form?: string;
   disabled?: boolean;
+  /** Emerald styling for authentication forms. */
+  darkSurface?: boolean;
 }) {
   return (
     <button
@@ -487,7 +595,11 @@ export function SubmitButton({
       // `aria-busy` tells assistive tech the control is working, and the label
       // changes so the state is not communicated by the disabled style alone.
       aria-busy={pending}
-      className={`w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
+        darkSurface
+          ? 'bg-accent-500 text-navy-900 hover:bg-accent-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900'
+          : `bg-brand-600 text-white hover:bg-brand-700 ${focusRing}`
+      }`}
     >
       {pending ? 'Please wait…' : label}
     </button>
@@ -498,17 +610,22 @@ export function SecondaryButton({
   onClick,
   disabled,
   children,
+  darkSurface = false,
 }: {
   onClick?: () => void;
   disabled?: boolean;
   children: ReactNode;
+  /** Midnight styling for controls in dark workspace dialogs. */
+  darkSurface?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={secondaryButtonClass}
+      className={darkSurface
+        ? 'rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]'
+        : secondaryButtonClass}
     >
       {children}
     </button>
@@ -519,17 +636,22 @@ export function DangerButton({
   onClick,
   disabled,
   children,
+  darkSurface = false,
 }: {
   onClick?: () => void;
   disabled?: boolean;
   children: ReactNode;
+  /** Midnight styling for destructive controls in dark workspace dialogs. */
+  darkSurface?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
+      className={darkSurface
+        ? 'rounded-lg border border-rose-400/20 bg-rose-400/[0.06] px-3 py-2 text-sm font-medium text-rose-200 shadow-sm transition hover:border-rose-400/40 hover:bg-rose-400/[0.12] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]'
+        : `rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`}
     >
       {children}
     </button>
@@ -540,20 +662,30 @@ export function DangerButton({
 // Feedback
 // ---------------------------------------------------------------------------
 
-export function ErrorBanner({ message }: { message: string | null }) {
+export function ErrorBanner({
+  message,
+  darkSurface = false,
+}: {
+  message: string | null;
+  darkSurface?: boolean;
+}) {
   if (!message) return null;
 
   return (
     <p
       role="alert"
-      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+      className={`rounded-lg border px-3 py-2 text-sm ${
+        darkSurface
+          ? 'border-red-400/30 bg-red-950/40 text-red-200'
+          : 'border-red-200 bg-red-50 text-red-700'
+      }`}
     >
       {message}
     </p>
   );
 }
 
-export function Spinner({ label = 'Loading…' }: { label?: string }) {
+export function Spinner({ label = 'Loading…', darkSurface = false }: { label?: string; darkSurface?: boolean }) {
   return (
     // `role="status"` with a polite live region: assistive tech announces the
     // wait without interrupting. Previously the spinner was `aria-hidden` and the
@@ -561,11 +693,11 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
     <div
       role="status"
       aria-live="polite"
-      className="flex items-center justify-center gap-3 py-12 text-sm text-slate-500"
+      className={`flex items-center justify-center gap-3 py-12 text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}
     >
       <span
         aria-hidden="true"
-        className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600"
+        className={`h-4 w-4 animate-spin rounded-full border-2 ${darkSurface ? 'border-slate-700 border-t-emerald-400' : 'border-slate-300 border-t-brand-600'}`}
       />
       {label}
     </div>
@@ -576,15 +708,21 @@ export function EmptyState({
   title,
   description,
   action,
+  darkSurface = false,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
+  darkSurface?: boolean;
 }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-      <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-      <p className="max-w-sm text-sm text-slate-500">{description}</p>
+      <h3 className={`text-base font-semibold ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>
+        {title}
+      </h3>
+      <p className={`max-w-sm text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
+        {description}
+      </p>
       {action}
     </div>
   );
@@ -684,11 +822,14 @@ export function Modal({
   onClose,
   children,
   footer,
+  darkSurface = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** Midnight theme for dialogs owned by dark workspace pages. */
+  darkSurface?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -751,7 +892,7 @@ export function Modal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 py-10">
+    <div className={`fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-10 ${darkSurface ? 'bg-slate-950/75' : 'bg-slate-900/40'}`}>
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
       <div
@@ -763,17 +904,17 @@ export function Modal({
         // below controls traversal explicitly.
         tabIndex={-1}
         onKeyDown={onKeyDown}
-        className={`relative w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-lg ${focusRing}`}
+        className={`relative w-full max-w-lg rounded-xl border shadow-lg ${darkSurface ? 'border-slate-700 bg-[#101a2a] text-slate-100 shadow-black/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]' : `border-slate-200 bg-white ${focusRing}`}`}
       >
-        <header className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+        <header className={`flex items-center justify-between border-b px-6 py-4 ${darkSurface ? 'border-slate-800' : 'border-slate-200'}`}>
+          <h2 id={titleId} className={`text-lg font-semibold ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className={`rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 ${focusRing}`}
+            className={`rounded p-1 transition focus:outline-none focus-visible:ring-2 ${darkSurface ? 'text-slate-400 hover:bg-white/5 hover:text-slate-100 focus-visible:ring-emerald-400' : `text-slate-400 hover:bg-slate-100 hover:text-slate-600 ${focusRing}`}`}
           >
             ✕
           </button>
@@ -782,7 +923,7 @@ export function Modal({
         <div className="px-6 py-5">{children}</div>
 
         {footer ? (
-          <footer className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+          <footer className={`flex justify-end gap-3 border-t px-6 py-4 ${darkSurface ? 'border-slate-800' : 'border-slate-200'}`}>
             {footer}
           </footer>
         ) : null}
@@ -806,6 +947,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   tone = 'primary',
   pending = false,
+  darkSurface = false,
   onConfirm,
   onCancel,
   children,
@@ -817,6 +959,8 @@ export function ConfirmDialog({
   cancelLabel?: string;
   tone?: 'primary' | 'danger';
   pending?: boolean;
+  /** Midnight styling for confirmations owned by dark workspace pages. */
+  darkSurface?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   children?: ReactNode;
@@ -827,13 +971,14 @@ export function ConfirmDialog({
     <Modal
       title={title}
       onClose={pending ? () => undefined : onCancel}
+      darkSurface={darkSurface}
       footer={
         <>
-          <SecondaryButton onClick={onCancel} disabled={pending}>
+          <SecondaryButton onClick={onCancel} disabled={pending} darkSurface={darkSurface}>
             {cancelLabel}
           </SecondaryButton>
           {tone === 'danger' ? (
-            <DangerButton onClick={onConfirm} disabled={pending}>
+            <DangerButton onClick={onConfirm} disabled={pending} darkSurface={darkSurface}>
               {pending ? 'Working…' : confirmLabel}
             </DangerButton>
           ) : (
@@ -844,7 +989,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="text-sm text-slate-600">{description}</p>
+      <p className={`text-sm ${darkSurface ? 'text-slate-300' : 'text-slate-600'}`}>{description}</p>
       {children}
     </Modal>
   );

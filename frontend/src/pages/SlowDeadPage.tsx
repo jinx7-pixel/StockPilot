@@ -1,17 +1,8 @@
 /**
- * Slow / Dead Stock page — the assessment, presented.
+ * Slow / Dead Stock page — the server's assessment, presented.
  *
- * **Read-only, and deliberately inert.** There is no markdown button, no
- * supplier return, no stock adjustment, no bulk selection and no write path
- * anywhere behind it. Identifying stock that is not moving is a measurement;
- * deciding what to do about it is a recommendation and an action, and both
- * belong to modules that do not exist yet. A button here would imply a decision
- * this page has not made.
- *
- * The server is the only classifier. Status, priority and the demand figures are
- * rendered exactly as they arrive; the page never recomputes anything, because a
- * second answer computed in the browser is how a screen starts disagreeing with
- * the assessment behind it.
+ * This is a read-only view. It does not infer movement dates, calculate new
+ * thresholds, or make changes to products or inventory.
  */
 
 import { DecisionExplanationView } from '../components/DecisionExplanationView';
@@ -21,14 +12,13 @@ import { Link } from 'react-router-dom';
 import {
   Card,
   EmptyState,
-  ErrorBanner,
   Field,
   Modal,
   PageHeader,
+  PrimaryButton,
   SecondaryButton,
   Select,
   Spinner,
-  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -50,10 +40,10 @@ const STATUS_LABEL: Record<SlowDeadStatus, string> = {
 };
 
 const STATUS_BADGE: Record<SlowDeadStatus, string> = {
-  DEAD: 'bg-red-100 text-red-700',
-  SLOW: 'bg-amber-100 text-amber-700',
-  NORMAL: 'bg-emerald-100 text-emerald-700',
-  INSUFFICIENT_DATA: 'bg-slate-100 text-slate-500',
+  DEAD: 'border-red-400/20 bg-red-400/[0.08] text-red-200',
+  SLOW: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
+  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
+  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -63,26 +53,50 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
   INSUFFICIENT: 'Insufficient evidence',
 };
 
-/** Ordered so the summary reads most to least actionable. */
+/** Ordered from the most attention-worthy classification to the least. */
 const STATUS_ORDER: SlowDeadStatus[] = ['DEAD', 'SLOW', 'NORMAL', 'INSUFFICIENT_DATA'];
 
-function Badge({ className, label }: { className: string; label: string }) {
+const darkSecondaryLinkClass = 'rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
+
+function StatusBadge({ status }: { status: SlowDeadStatus }) {
   return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}
-    >
-      {label}
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[status]}`}>
+      {STATUS_LABEL[status]}
     </span>
   );
 }
 
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs tracking-wide text-slate-500 uppercase">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">{value}</p>
+    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
+      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="mt-1 text-lg font-bold tabular-nums text-slate-100">{value}</dd>
       {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
     </div>
+  );
+}
+
+function SummaryCard({
+  status,
+  count,
+  available,
+  loading,
+}: {
+  status: SlowDeadStatus;
+  count: number | undefined;
+  available: boolean;
+  loading: boolean;
+}) {
+  const value = loading ? '…' : available ? (count ?? 0).toLocaleString() : '—';
+
+  return (
+    <Card darkSurface className="p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{STATUS_LABEL[status]}</p>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-100">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">
+        {loading ? 'Loading classification count…' : available ? 'Products in the current catalog scope' : 'Count unavailable'}
+      </p>
+    </Card>
   );
 }
 
@@ -96,19 +110,38 @@ export function SlowDeadPage() {
   const [page, setPage] = useState(1);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [items, setItems] = useState<SlowDead[] | null>(null);
   const [meta, setMeta] = useState<ListMeta | null>(null);
-  const [statusCounts, setStatusCounts] = useState<Partial<Record<SlowDeadStatus, number>>>({});
+  const [statusCounts, setStatusCounts] = useState<Partial<Record<SlowDeadStatus, number>> | null>(null);
   const [selected, setSelected] = useState<SlowDead | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [categoriesReloadToken, setCategoriesReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
 
+    /*
+     * The resets live inside the async continuation rather than in the effect
+     * body, so they are queued in the same microtask as the request kick-off and
+     * React batches them into a single render. Written in the effect body they
+     * were a synchronous setState: React had to commit a render for the resets,
+     * then a second render when the fetch settled, which is the cascading-render
+     * cost the hook lint rule exists to prevent. Behaviour is identical — same
+     * values cleared, same cancellation guard, same dependency list.
+     */
     void (async () => {
+      setLoading(true);
+      setError(null);
+      setItems(null);
+      setMeta(null);
+      setStatusCounts(null);
+      setSelected(null);
+
       try {
         const result = await slowDeadApi.list({
           ...(appliedSearch ? { search: appliedSearch } : {}),
@@ -123,12 +156,18 @@ export function SlowDeadPage() {
 
         setItems(result.items);
         setMeta(result.meta);
-        setStatusCounts(result.statusCounts ?? {});
-        setError(null);
+        // An absent summary is unavailable; an empty map from the API is a real
+        // zero-count summary for the current catalog scope.
+        setStatusCounts(result.statusCounts ?? null);
       } catch (cause) {
         if (cancelled) return;
+        setItems(null);
+        setMeta(null);
+        setStatusCounts(null);
         setError(
-          cause instanceof ApiError ? cause.message : 'Could not load slow or dead stock. Please try again.',
+          cause instanceof ApiError
+            ? cause.message
+            : 'Could not load slow or dead stock. Please try again.',
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -144,27 +183,36 @@ export function SlowDeadPage() {
     let cancelled = false;
 
     void (async () => {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
+
       try {
         const result = await catalogApi.listCategories();
         if (!cancelled) setCategories(result);
-      } catch {
-        // The category filter is a convenience; a failure here must not take
-        // the whole assessment list down with it.
+      } catch (cause) {
+        if (!cancelled) {
+          setCategoriesError(
+            cause instanceof ApiError ? cause.message : 'Could not load category options.',
+          );
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [reloadToken]);
+  }, [categoriesReloadToken]);
 
   const reload = useCallback(() => {
-    setLoading(true);
     setReloadToken((token) => token + 1);
   }, []);
 
-  // Any filter change returns to page one: staying on page 4 of a list that just
-  // shrank to one page would show an empty table.
+  const retryCategories = useCallback(() => {
+    setCategoriesReloadToken((token) => token + 1);
+  }, []);
+
   function handleCategory(value: string) {
     setCategoryId(value);
     setPage(1);
@@ -202,67 +250,112 @@ export function SlowDeadPage() {
   }
 
   const hasFilters =
+    searchInput.trim() !== '' ||
     appliedSearch !== '' ||
     categoryId !== '' ||
     activeStatus !== 'all' ||
     status !== 'all' ||
     confidence !== 'all';
-
-  if (loading) return <Spinner label="Assessing stock movement…" />;
-
-  const hasAnyCounts = STATUS_ORDER.some((level) => (statusCounts[level] ?? 0) > 0);
   const totalPages = meta?.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Slow / Dead Stock"
-        description="Inventory that is not moving: no sales at all in the last 90 days, or sales on too few days. Read-only — this page flags stock, it does not act on it."
-        actions={<SecondaryButton onClick={reload}>Refresh</SecondaryButton>}
+        description="Identify inventory that is moving slowly or has stopped moving, using available stock and sales history."
+        darkSurface
+        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
       />
 
-      {error ? <ErrorBanner message={error} /> : null}
+      <section aria-labelledby="slow-dead-guide-heading" className="space-y-3">
+        <div>
+          <h2 id="slow-dead-guide-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            How the classifications work
+          </h2>
+          <p className="mt-1 text-xs text-slate-400">
+            The authenticated API applies the classification policy and returns its evidence with each product.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Card darkSurface className="p-4">
+            <StatusBadge status="DEAD" />
+            <p className="mt-3 text-sm leading-5 text-slate-400">No units sold in the analysis window while stock is still held, after enough history is available.</p>
+          </Card>
+          <Card darkSurface className="p-4">
+            <StatusBadge status="SLOW" />
+            <p className="mt-3 text-sm leading-5 text-slate-400">Stock remains on hand, and sales occurred on no more active days than the server policy allows.</p>
+          </Card>
+          <Card darkSurface className="p-4">
+            <StatusBadge status="NORMAL" />
+            <p className="mt-3 text-sm leading-5 text-slate-400">With enough history, neither condition applies; no stock held is classified as normal.</p>
+          </Card>
+          <Card darkSurface className="p-4">
+            <StatusBadge status="INSUFFICIENT_DATA" />
+            <p className="mt-3 text-sm leading-5 text-slate-400">There is not enough observable history to draw a reliable conclusion.</p>
+          </Card>
+        </div>
+        <p className="rounded-lg border border-slate-800 bg-[#0c1523] px-4 py-3 text-sm text-slate-400">
+          This assessment uses sales history and current ledger stock. The API does not provide a last-sale date or include non-sale stock movements in this classification; open a product&apos;s stock history for the dated ledger.
+        </p>
+      </section>
 
-      {hasAnyCounts ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Summary</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {STATUS_ORDER.map((level) => (
-              <Card key={level} className="p-3">
-                <p className="text-xs tracking-wide text-slate-500 uppercase">
-                  {STATUS_LABEL[level]}
-                </p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{statusCounts[level] ?? 0}</p>
-              </Card>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <section aria-labelledby="slow-dead-summary-heading" className="space-y-3">
+        <div>
+          <h2 id="slow-dead-summary-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Classification totals
+          </h2>
+          <p className="mt-1 text-xs text-slate-400">
+            Counts follow the applied search, category, and product-status scope. They include every classification and confidence level.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {STATUS_ORDER.map((level) => (
+            <SummaryCard
+              key={level}
+              status={level}
+              count={statusCounts?.[level]}
+              available={statusCounts !== null}
+              loading={loading}
+            />
+          ))}
+        </div>
+      </section>
 
-      <Card className="p-4">
-        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Card darkSurface className="p-4 sm:p-5">
+        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
-            label="Search"
+            label="Search product"
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
+            darkSurface
           />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
+            darkSurface
+            disabled={categoriesLoading || categoriesError !== null}
+            hint={
+              categoriesLoading
+                ? 'Loading category options…'
+                : categoriesError
+                  ? 'Category options are unavailable; other filters still work.'
+                  : undefined
+            }
             options={[
-              { value: '', label: 'All categories' },
+              { value: '', label: categoriesError ? 'Categories unavailable' : 'All categories' },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
             ]}
           />
           <Select
-            label="Status"
+            label="Classification"
             value={status}
             onChange={handleStatus}
+            darkSurface
             options={[
-              { value: 'all', label: 'Any status' },
+              { value: 'all', label: 'All classifications' },
               ...STATUS_ORDER.map((level) => ({ value: level, label: STATUS_LABEL[level] })),
             ]}
           />
@@ -270,6 +363,7 @@ export function SlowDeadPage() {
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
+            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -282,6 +376,7 @@ export function SlowDeadPage() {
             label="Product status"
             value={activeStatus}
             onChange={handleActive}
+            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
@@ -289,87 +384,103 @@ export function SlowDeadPage() {
             ]}
           />
 
-          <div className="flex items-end gap-2 lg:col-span-3">
-            <button
-              type="submit"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
-            >
-              Apply
-            </button>
-            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+          <div className="flex items-end gap-2 xl:col-span-3">
+            <PrimaryButton type="submit" variant="emerald">Apply filters</PrimaryButton>
+            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
+        {categoriesError ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-300/[0.06] px-3 py-2 text-sm text-amber-200">
+            <p>Categories could not be loaded: {categoriesError}</p>
+            <SecondaryButton darkSurface disabled={categoriesLoading} onClick={retryCategories}>Retry categories</SecondaryButton>
+          </div>
+        ) : null}
       </Card>
 
-      {items === null || items.length === 0 ? (
-        <Card>
+      {loading ? (
+        <Card darkSurface className="flex min-h-48 items-center justify-center p-6">
+          <Spinner darkSurface label="Loading server-assessed stock classifications…" />
+        </Card>
+      ) : error ? (
+        <Card darkSurface className="border-red-400/20 bg-red-400/[0.06] p-5">
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-semibold text-red-200">Slow / dead stock could not be loaded</h2>
+              <p className="mt-1 text-sm text-red-100">{error}</p>
+            </div>
+            <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          </div>
+        </Card>
+      ) : items && items.length === 0 ? (
+        <Card darkSurface>
           <EmptyState
-            title={hasFilters ? 'No products match these filters' : 'Nothing to assess yet'}
+            title={hasFilters ? 'No products match these filters' : 'No products to assess yet'}
             description={
               hasFilters
-                ? 'Try widening the search, or clear the filters to see the full catalog.'
-                : 'Once you add products and record sales, each product is checked for slow or dead inventory here.'
+                ? 'Adjust your filters or clear them to see the full catalog.'
+                : 'Add products and record sales to see server-assessed slow and dead stock here.'
             }
+            darkSurface
             action={
               hasFilters ? (
-                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link className={secondaryButtonClass} to="/app/products">
-                  Go to products
-                </Link>
+                <Link className={darkSecondaryLinkClass} to="/app/products">Go to products</Link>
               )
             }
           />
         </Card>
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+      ) : items ? (
+        <Card darkSurface className="overflow-hidden">
+          <div className="border-b border-slate-800 px-4 py-4 sm:px-5">
+            <h2 className="font-semibold text-slate-100">Product assessments</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              {meta?.total.toLocaleString() ?? '—'} matching product{meta?.total === 1 ? '' : 's'}
+              {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
+            </p>
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="bg-[#0b1220] text-xs uppercase tracking-wide text-slate-400">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
-                  <th scope="col" className="px-4 py-3">Status</th>
-                  <th scope="col" className="px-4 py-3 text-right">Stock</th>
-                  <th scope="col" className="px-4 py-3 text-right">Units sold (90d)</th>
-                  <th scope="col" className="px-4 py-3 text-right">Sale days (90d)</th>
-                  <th scope="col" className="px-4 py-3 text-right">Avg daily sales</th>
+                  <th scope="col" className="px-4 py-3">Classification</th>
+                  <th scope="col" className="px-4 py-3 text-right">Current stock</th>
+                  <th scope="col" className="px-4 py-3 text-right">Units sold · analysis window</th>
+                  <th scope="col" className="px-4 py-3 text-right">Sale days · analysis window</th>
+                  <th scope="col" className="px-4 py-3 text-right">Average daily sales</th>
                   <th scope="col" className="px-4 py-3">Confidence</th>
-                  <th scope="col" className="px-4 py-3" />
+                  <th scope="col" className="px-4 py-3"><span className="sr-only">Product details</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800">
                 {items.map((item) => (
-                  <tr key={item.productId} className="hover:bg-slate-50">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">
-                        {item.name}
-                        {!item.isActive ? (
-                          <span className="ml-2 text-xs text-slate-400">inactive</span>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {item.sku}
-                        {item.category ? ` · ${item.category.name}` : ''}
+                  <tr key={item.productId} className="align-top transition hover:bg-white/[0.025]">
+                    <td className="px-4 py-4">
+                      <p className="font-semibold text-slate-100">{item.name}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {item.sku}{item.category ? ` · ${item.category.name}` : ' · No category'}
+                        {!item.isActive ? ' · Inactive' : ''}
                       </p>
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge className={STATUS_BADGE[item.status]} label={STATUS_LABEL[item.status]} />
+                    <td className="max-w-sm px-4 py-4">
+                      <StatusBadge status={item.status} />
+                      <p className="mt-2 text-xs leading-5 text-slate-400">{item.reason}</p>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.currentStock}
+                    <td className="px-4 py-4 text-right font-medium tabular-nums text-slate-100">{item.currentStock}</td>
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">
+                      <span className="block">{item.unitsSold90d}</span>
+                      <span className="text-xs text-slate-400">{item.analysisWindowDays} days</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.unitsSold90d}
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">
+                      <span className="block">{item.activeSalesDays90d}</span>
+                      <span className="text-xs text-slate-400">{item.analysisWindowDays} days</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.activeSalesDays90d}
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
-                      {item.averageDailySales90d}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</td>
-                    <td className="px-4 py-3 text-right">
-                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">{item.averageDailySales90d}</td>
+                    <td className="px-4 py-4 text-slate-400">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-4 text-right">
+                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -377,90 +488,122 @@ export function SlowDeadPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
-            <span>
-              {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
-              {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
-              <span className="ml-2 text-xs text-slate-400">
-                over a {meta?.total ? 90 : 90}-day window
-              </span>
-            </span>
+          <div className="space-y-3 p-3 md:hidden">
+            {items.map((item) => (
+              <article key={item.productId} className="rounded-xl border border-slate-800 bg-[#0b1220] p-4 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="break-words font-semibold text-slate-100">{item.name}</h3>
+                    <p className="mt-1 break-words text-xs text-slate-500">
+                      {item.sku}{item.category ? ` · ${item.category.name}` : ' · No category'}
+                      {!item.isActive ? ' · Inactive' : ''}
+                    </p>
+                  </div>
+                  <StatusBadge status={item.status} />
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3">
+                  <Metric label="Current stock" value={item.currentStock} />
+                  <Metric label="Units sold" value={item.unitsSold90d} hint={`${item.analysisWindowDays}-day window`} />
+                  <Metric label="Sale days" value={String(item.activeSalesDays90d)} hint={`${item.analysisWindowDays}-day window`} />
+                  <Metric label="Average daily sales" value={item.averageDailySales90d} />
+                </dl>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs text-slate-400">{CONFIDENCE_LABEL[item.confidence]}</span>
+                  <SecondaryButton darkSurface onClick={() => setSelected(item)}>View assessment</SecondaryButton>
+                </div>
+                <p className="mt-3 border-t border-slate-800 pt-3 text-sm leading-5 text-slate-400">{item.reason}</p>
+              </article>
+            ))}
+          </div>
 
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
+            <span>
+              {meta ? `${meta.total.toLocaleString()} matching product${meta.total === 1 ? '' : 's'}` : 'Product count unavailable'}
+              {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
+            </span>
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton darkSurface disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton darkSurface disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>
                   Next
                 </SecondaryButton>
               </div>
             ) : null}
           </footer>
         </Card>
-      )}
+      ) : null}
+
+      <section aria-labelledby="slow-dead-workflows-heading" className="space-y-3">
+        <div>
+          <h2 id="slow-dead-workflows-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Related workflows
+          </h2>
+          <p className="mt-1 text-xs text-slate-400">Review stock history and the existing sales and inventory-planning tools.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link className={darkSecondaryLinkClass} to="/app/inventory">Inventory</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/sales">Sales</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/demand">Demand planning</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/analytics">Analytics</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/overstock">Overstock</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/reorder">Reorder</Link>
+          <Link className={darkSecondaryLinkClass} to="/app/recommendations">Recommendations</Link>
+        </div>
+      </section>
 
       {selected ? (
-        <Modal title={selected.name} onClose={() => setSelected(null)}>
+        <Modal darkSurface title={selected.name} onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className={STATUS_BADGE[selected.status]} label={STATUS_LABEL[selected.status]} />
-              <span className="text-sm text-slate-600">{CONFIDENCE_LABEL[selected.confidence]}</span>
+              <StatusBadge status={selected.status} />
+              <span className="text-sm text-slate-300">{CONFIDENCE_LABEL[selected.confidence]}</span>
+              <span className="text-sm text-slate-400">{selected.sku}</span>
             </div>
 
-            {/* The server's own words. Not paraphrased, not re-worded. */}
-            <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm leading-6 text-slate-300">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={STATUS_LABEL[selected.status]}
+              darkSurface
             />
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Metric
-                label="Current stock"
-                value={selected.currentStock}
-                hint="sum of the inventory ledger"
-              />
-              <Metric
-                label="Units sold"
-                value={selected.unitsSold90d}
-                hint={`across the ${selected.analysisWindowDays}-day window`}
-              />
-              <Metric
-                label="Active sales days"
-                value={String(selected.activeSalesDays90d)}
-                hint={`at or below ${selected.evidence.slowMaxActiveSalesDays} is slow`}
-              />
-              <Metric
-                label="Average daily sales"
-                value={selected.averageDailySales90d}
-                hint="over the whole window"
-              />
-            </div>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <Metric label="Current stock" value={selected.currentStock} hint="Calculated from the inventory ledger" />
+              <Metric label="Units sold" value={selected.unitsSold90d} hint={`Across the ${selected.analysisWindowDays}-day analysis window`} />
+              <Metric label="Active sales days" value={String(selected.activeSalesDays90d)} hint={`Server slow-stock limit: ${selected.evidence.slowMaxActiveSalesDays} days`} />
+              <Metric label="Average daily sales" value={selected.averageDailySales90d} hint="Server-calculated across the analysis window" />
+            </dl>
 
-            <section className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                Evidence
-              </h3>
-              <ul className="space-y-1 text-sm text-slate-600">
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Server evidence</h3>
+              <ul className="space-y-1 text-sm text-slate-300">
                 <li>Analysis window: {selected.evidence.analysisWindowDays} days</li>
-                <li>
-                  Observable history required: {selected.evidence.minimumObservableDays} days
-                </li>
-                <li>Holds inventory: {selected.evidence.holdsInventory ? 'yes' : 'no'}</li>
-                <li>
-                  Sufficient history: {selected.evidence.hasSufficientHistory ? 'yes' : 'no'}
-                </li>
-                <li>Classified because: {selected.evidence.classificationBasis}</li>
+                <li>Minimum observable history: {selected.evidence.minimumObservableDays} days</li>
+                <li>Slow-stock limit: {selected.evidence.slowMaxActiveSalesDays} active sale days</li>
+                <li>Stock currently held: {selected.evidence.holdsInventory ? 'yes' : 'no'}</li>
+                <li>History sufficient for a verdict: {selected.evidence.hasSufficientHistory ? 'yes' : 'no'}</li>
+                <li>Classification basis: {selected.evidence.classificationBasis}</li>
               </ul>
             </section>
 
-            <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-              This is a measurement, not a recommendation. Nothing on this page has been marked down,
-              returned, adjusted or ordered.
+            <div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4" aria-label="Related product workflows">
+              <Link className={darkSecondaryLinkClass} to={`/app/inventory/${encodeURIComponent(selected.productId)}`}>
+                View stock history
+              </Link>
+              <Link className={darkSecondaryLinkClass} to="/app/demand">Demand planning</Link>
+              <Link className={darkSecondaryLinkClass} to="/app/analytics">Analytics</Link>
+              <Link className={darkSecondaryLinkClass} to="/app/overstock">Overstock</Link>
+              <Link className={darkSecondaryLinkClass} to="/app/reorder">Reorder</Link>
+              <Link className={darkSecondaryLinkClass} to="/app/recommendations">Recommendations</Link>
+            </div>
+
+            <p className="rounded-lg border border-amber-400/20 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-200">
+              This page reports a server classification only. It does not markdown, write off, deactivate, adjust, transfer, or order stock.
             </p>
           </div>
         </Modal>

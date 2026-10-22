@@ -12,7 +12,6 @@ import { MovementForm } from '../components/MovementForm';
 import {
   Card,
   EmptyState,
-  ErrorBanner,
   Field,
   Modal,
   PageHeader,
@@ -20,7 +19,6 @@ import {
   SecondaryButton,
   Select,
   Spinner,
-  primaryButtonClass,
 } from '../components/ui';
 import { catalogApi, type Category } from '../lib/catalog';
 import {
@@ -48,6 +46,8 @@ export function InventoryPage() {
   const [meta, setMeta] = useState<ListMeta | null>(null);
   const [summary, setSummary] = useState<InventorySummary | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [summaryError, setSummaryError] = useState(false);
+  const [categoriesError, setCategoriesError] = useState(false);
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -90,6 +90,8 @@ export function InventoryPage() {
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
+        setItems(null);
+        setMeta(null);
         setError(cause instanceof ApiError ? cause.message : 'Could not load inventory.');
       })
       .finally(() => {
@@ -107,19 +109,31 @@ export function InventoryPage() {
     inventoryApi
       .summary()
       .then((summary) => {
-        if (!cancelled) setSummary(summary);
+        if (!cancelled) {
+          setSummary(summary);
+          setSummaryError(false);
+        }
       })
       .catch(() => {
-        // The summary is a convenience; the list still works without it.
+        if (!cancelled) {
+          setSummary(null);
+          setSummaryError(true);
+        }
       });
 
     catalogApi
       .listCategories()
       .then((value) => {
-        if (!cancelled) setCategories(value);
+        if (!cancelled) {
+          setCategories(value);
+          setCategoriesError(false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setCategories([]);
+        if (!cancelled) {
+          setCategories([]);
+          setCategoriesError(true);
+        }
       });
 
     return () => {
@@ -128,17 +142,22 @@ export function InventoryPage() {
   }, [reloadToken]);
 
   const reload = useCallback(() => {
+    setError(null);
+    setSummaryError(false);
+    setCategoriesError(false);
     setLoading(true);
     setReloadToken((token) => token + 1);
   }, []);
 
   function applySearch() {
+    setError(null);
     setAppliedSearch(search.trim());
     setPage(1);
     setLoading(true);
   }
 
   function clearFilters() {
+    setError(null);
     setSearch('');
     setAppliedSearch('');
     setCategoryId('');
@@ -149,55 +168,139 @@ export function InventoryPage() {
   }
 
   const hasFilters =
-    appliedSearch !== '' || categoryId !== '' || status !== 'all' || stockStatus !== 'all';
+    appliedSearch !== '' ||
+    search.trim() !== '' ||
+    categoryId !== '' ||
+    status !== 'all' ||
+    stockStatus !== 'all';
   const totalPages = meta?.totalPages ?? 1;
 
   function stockTone(stock: number): string {
-    if (stock <= 0) return 'text-red-600 font-semibold';
-    if (stock < 5) return 'text-amber-600 font-medium';
-    return 'text-slate-900 font-medium';
+    if (stock <= 0) return 'text-rose-300 font-semibold';
+    return 'text-emerald-300 font-semibold';
+  }
+
+  function retryInventory() {
+    setError(null);
+    setSummaryError(false);
+    setCategoriesError(false);
+    setLoading(true);
+    setReloadToken((token) => token + 1);
+  }
+
+  function statusBadge(item: InventoryItem) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        <span
+          className={
+            item.isActive
+              ? 'rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-200'
+              : 'rounded-full border border-slate-700 bg-slate-900/60 px-2 py-0.5 text-xs font-medium text-slate-400'
+          }
+        >
+          {item.isActive ? 'Active' : 'Inactive'}
+        </span>
+        <span
+          className={
+            item.currentStock > 0
+              ? 'rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-200'
+              : 'rounded-full border border-rose-400/20 bg-rose-400/[0.08] px-2 py-0.5 text-xs font-medium text-rose-200'
+          }
+        >
+          {item.currentStock > 0 ? 'In stock' : 'Out of stock'}
+        </span>
+      </div>
+    );
+  }
+
+  function movementActions(
+    item: InventoryItem,
+    alignment: 'justify-end' | 'justify-start' = 'justify-end',
+  ) {
+    return (
+      <div className={`flex flex-wrap gap-2 ${alignment}`}>
+        {MOVEMENT_BUTTONS.map((button) => (
+          <SecondaryButton
+            darkSurface
+            key={button.type}
+            onClick={() => setMoving({ product: item, type: button.type })}
+          >
+            {button.label}
+          </SecondaryButton>
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Inventory"
-        description="Stock levels derived from the movement ledger. Nothing here is a stored total."
+        description="Monitor stock levels and keep inventory under control."
+        darkSurface
       />
 
-      {error ? <ErrorBanner message={error} /> : null}
+      {error ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-rose-400/25 bg-rose-400/[0.06] px-3 py-2 text-sm text-rose-200">
+          <span>{error}</span>
+          <SecondaryButton darkSurface onClick={retryInventory}>Retry</SecondaryButton>
+        </div>
+      ) : null}
       {notice ? (
-        <p className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+        <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 text-sm text-emerald-200">
           {notice}
         </p>
       ) : null}
 
-      {summary ? (
-        <div className="grid gap-3 sm:grid-cols-4">
-          <Card className="p-4">
-            <p className="text-xs tracking-wide text-slate-500 uppercase">Active products</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">{summary.productCount}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs tracking-wide text-slate-500 uppercase">With movements</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {summary.productsWithMovements}
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs tracking-wide text-slate-500 uppercase">Out of stock</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">{summary.outOfStockCount}</p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-xs tracking-wide text-slate-500 uppercase">Ledger entries</p>
-            <p className="mt-1 text-2xl font-bold text-slate-900">
-              {summary.totalMovementCount}
-            </p>
-          </Card>
+      {summaryError || categoriesError ? (
+        <div className="space-y-2">
+          {summaryError ? (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-sm text-amber-200">
+              <span>Inventory summary is unavailable. The product list remains usable.</span>
+              <SecondaryButton darkSurface onClick={retryInventory}>Retry</SecondaryButton>
+            </div>
+          ) : null}
+          {categoriesError ? (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-sm text-amber-200">
+              <span>Categories could not be loaded, so category filtering is unavailable.</span>
+              <SecondaryButton darkSurface onClick={retryInventory}>Retry</SecondaryButton>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      <Card className="p-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card darkSurface className="p-4">
+          <p className="text-xs tracking-wide text-slate-500 uppercase">Active products</p>
+          <p className="mt-1 text-2xl font-bold text-slate-100">{summary?.productCount ?? '—'}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {summary ? 'Active catalogue items' : summaryError ? 'Unavailable' : 'Loading summary'}
+          </p>
+        </Card>
+        <Card darkSurface className="p-4">
+          <p className="text-xs tracking-wide text-slate-500 uppercase">In stock</p>
+          <p className="mt-1 text-2xl font-bold text-slate-100">
+            {summary ? summary.productCount - summary.outOfStockCount : '—'}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Active products with positive stock</p>
+        </Card>
+        <Card darkSurface className="p-4">
+          <p className="text-xs tracking-wide text-slate-500 uppercase">Out of stock</p>
+          <p className="mt-1 text-2xl font-bold text-rose-300">
+            {summary?.outOfStockCount ?? '—'}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Active products at zero stock or below</p>
+        </Card>
+        <Card darkSurface className="p-4">
+          <p className="text-xs tracking-wide text-slate-500 uppercase">Ledger entries</p>
+          <p className="mt-1 text-2xl font-bold text-slate-100">
+            {summary?.totalMovementCount ?? '—'}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Recorded stock movements</p>
+        </Card>
+      </div>
+
+      <Card darkSurface className="p-4">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -212,18 +315,24 @@ export function InventoryPage() {
             required={false}
             maxLength={200}
             placeholder="Name or SKU"
+            darkSurface
           />
 
           <Select
             label="Category"
             value={categoryId}
             onChange={(value) => {
+              setError(null);
               setCategoryId(value);
               setPage(1);
               setLoading(true);
             }}
+            darkSurface
             options={[
-              { value: '', label: 'All categories' },
+              {
+                value: '',
+                label: categoriesError ? 'Categories unavailable' : 'All categories',
+              },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
             ]}
           />
@@ -232,14 +341,16 @@ export function InventoryPage() {
             label="Stock status"
             value={stockStatus}
             onChange={(value) => {
+              setError(null);
               setStockStatus(value as StockFilter);
               setPage(1);
               setLoading(true);
             }}
+            darkSurface
             options={[
               { value: 'all', label: 'Any' },
               { value: 'in_stock', label: 'In stock' },
-              { value: 'out_of_stock', label: 'Zero or negative' },
+              { value: 'out_of_stock', label: 'Out of stock' },
               { value: 'no_movements', label: 'No movements yet' },
             ]}
           />
@@ -248,10 +359,12 @@ export function InventoryPage() {
             label="Product status"
             value={status}
             onChange={(value) => {
+              setError(null);
               setStatus(value as StatusFilter);
               setPage(1);
               setLoading(true);
             }}
+            darkSurface
             options={[
               { value: 'all', label: 'All' },
               { value: 'true', label: 'Active only' },
@@ -260,16 +373,29 @@ export function InventoryPage() {
           />
 
           <div className="flex items-end gap-2">
-            <PrimaryButton type="submit">Search</PrimaryButton>
-            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear</SecondaryButton> : null}
+            <PrimaryButton type="submit" darkSurface>Search</PrimaryButton>
+            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      <Card>
+      <Card darkSurface className="overflow-hidden">
         {loading ? (
-          <Spinner label="Loading inventory…" />
-        ) : items === null ? null : items.length === 0 ? (
+          items === null ? (
+            <Spinner label="Loading inventory…" darkSurface />
+          ) : (
+            <div className="border-b border-slate-800 py-3">
+              <Spinner label="Updating inventory…" darkSurface />
+            </div>
+          )
+        ) : items === null ? (
+          <EmptyState
+            title="Inventory could not be loaded"
+            description="Check your connection and try loading the inventory again."
+            action={<SecondaryButton darkSurface onClick={retryInventory}>Retry</SecondaryButton>}
+            darkSurface
+          />
+        ) : items.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No products match those filters' : 'No products yet'}
             description={
@@ -279,19 +405,20 @@ export function InventoryPage() {
             }
             action={
               hasFilters ? (
-                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link className={primaryButtonClass} to="/app/products">
+                <Link className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]" to="/app/products">
                   Go to products
                 </Link>
               )
             }
+            darkSurface
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-xs tracking-wide text-slate-500 uppercase">
+                <thead className="border-b border-slate-800 text-xs tracking-wide text-slate-500 uppercase">
                   <tr>
                     <th scope="col" className="px-6 py-3 font-medium">Product</th>
                     <th scope="col" className="px-6 py-3 font-medium">SKU</th>
@@ -302,46 +429,27 @@ export function InventoryPage() {
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-slate-800">
                   {items.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
+                    <tr key={item.id} className="transition-colors hover:bg-white/[0.025]">
                       <td className="px-6 py-4">
                         <Link
                           to={`/app/inventory/${item.id}`}
-                          className="font-medium text-brand-700 hover:underline"
+                          className="rounded font-medium text-slate-200 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                         >
                           {item.name}
                         </Link>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs text-slate-700">{item.sku}</td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {item.category?.name ?? <span className="text-slate-400">—</span>}
+                      <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.sku}</td>
+                      <td className="px-6 py-4 text-slate-400">
+                        {item.category?.name ?? <span className="text-slate-600">—</span>}
                       </td>
                       <td className={`px-6 py-4 text-right ${stockTone(item.currentStock)}`}>
                         {item.currentStock} {item.unit}
                       </td>
+                      <td className="px-6 py-4">{statusBadge(item)}</td>
                       <td className="px-6 py-4">
-                        <span
-                          className={
-                            item.isActive
-                              ? 'rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700'
-                              : 'rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600'
-                          }
-                        >
-                          {item.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
-                          {MOVEMENT_BUTTONS.map((button) => (
-                            <SecondaryButton
-                              key={button.type}
-                              onClick={() => setMoving({ product: item, type: button.type })}
-                            >
-                              {button.label}
-                            </SecondaryButton>
-                          ))}
-                        </div>
+                        {movementActions(item)}
                       </td>
                     </tr>
                   ))}
@@ -349,7 +457,33 @@ export function InventoryPage() {
               </table>
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-3 text-sm text-slate-600">
+            <div className="divide-y divide-slate-800 md:hidden">
+              {items.map((item) => (
+                <article key={item.id} className="space-y-4 p-4">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/app/inventory/${item.id}`}
+                        className="break-words rounded font-semibold text-slate-200 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                      >
+                        {item.name}
+                      </Link>
+                      <p className="mt-1 break-all font-mono text-xs text-slate-500">{item.sku}</p>
+                    </div>
+                    <p className={`shrink-0 text-right text-sm ${stockTone(item.currentStock)}`}>
+                      {item.currentStock} {item.unit}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm text-slate-400">{item.category?.name ?? 'Uncategorized'}</p>
+                    {statusBadge(item)}
+                  </div>
+                  {movementActions(item, 'justify-start')}
+                </article>
+              ))}
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400 sm:px-6">
               <span>
                 {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
                 {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -357,18 +491,20 @@ export function InventoryPage() {
 
               {meta && meta.totalPages > 1 ? (
                 <div className="flex gap-2">
-                  <SecondaryButton
+                  <SecondaryButton darkSurface
                     disabled={page <= 1}
                     onClick={() => {
+                      setError(null);
                       setPage((p) => p - 1);
                       setLoading(true);
                     }}
                   >
                     Previous
                   </SecondaryButton>
-                  <SecondaryButton
+                  <SecondaryButton darkSurface
                     disabled={page >= totalPages}
                     onClick={() => {
+                      setError(null);
                       setPage((p) => p + 1);
                       setLoading(true);
                     }}
@@ -392,11 +528,13 @@ export function InventoryPage() {
                 : 'Adjust stock'
           }
           onClose={() => setMoving(null)}
+          darkSurface
         >
           <MovementForm
             key={moving.type}
             movementType={moving.type}
             product={moving.product}
+            darkSurface
             onClose={() => setMoving(null)}
             onRecorded={(currentStock) => {
               setNotice(

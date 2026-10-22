@@ -21,14 +21,12 @@ import { Link } from 'react-router-dom';
 import {
   Card,
   EmptyState,
-  ErrorBanner,
   Field,
   Modal,
   PageHeader,
   SecondaryButton,
   Select,
   Spinner,
-  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { overstockApi, type ConfidenceLevel, type ListMeta, type Overstock, type OverstockStatus } from '../lib/overstock';
@@ -43,9 +41,15 @@ const STATUS_LABEL: Record<OverstockStatus, string> = {
 };
 
 const STATUS_BADGE: Record<OverstockStatus, string> = {
-  OVERSTOCK: 'bg-violet-100 text-violet-700',
-  NORMAL: 'bg-emerald-100 text-emerald-700',
-  INSUFFICIENT_DATA: 'bg-slate-100 text-slate-500',
+  OVERSTOCK: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
+  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
+  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
+};
+
+const STATUS_ICON: Record<OverstockStatus, string> = {
+  OVERSTOCK: '↑',
+  NORMAL: '✓',
+  INSUFFICIENT_DATA: '?',
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -61,19 +65,28 @@ const STATUS_ORDER: OverstockStatus[] = ['OVERSTOCK', 'NORMAL', 'INSUFFICIENT_DA
 function Badge({ className, label }: { className: string; label: string }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}
     >
       {label}
     </span>
   );
 }
 
+function StatusBadge({ status }: { status: OverstockStatus }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_BADGE[status]}`}>
+      <span aria-hidden="true" className="font-bold">{STATUS_ICON[status]}</span>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs tracking-wide text-slate-500 uppercase">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
+      <p className="text-xs tracking-wide text-slate-400 uppercase">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-100 tabular-nums">{value}</p>
+      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
     </div>
   );
 }
@@ -95,10 +108,12 @@ export function OverstockPage() {
   const [confidence, setConfidence] = useState<ConfidenceLevel | 'all'>('all');
   const [page, setPage] = useState(1);
 
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[] | null>(null);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [items, setItems] = useState<Overstock[] | null>(null);
   const [meta, setMeta] = useState<ListMeta | null>(null);
-  const [statusCounts, setStatusCounts] = useState<Partial<Record<OverstockStatus, number>>>({});
+  const [statusCounts, setStatusCounts] = useState<Partial<Record<OverstockStatus, number>> | null>(null);
   const [selected, setSelected] = useState<Overstock | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -109,6 +124,8 @@ export function OverstockPage() {
     let cancelled = false;
 
     void (async () => {
+      setLoading(true);
+      setError(null);
       try {
         const result = await overstockApi.list({
           ...(appliedSearch ? { search: appliedSearch } : {}),
@@ -123,10 +140,13 @@ export function OverstockPage() {
 
         setItems(result.items);
         setMeta(result.meta);
-        setStatusCounts(result.statusCounts ?? {});
+        setStatusCounts(result.statusCounts ?? null);
         setError(null);
       } catch (cause) {
         if (cancelled) return;
+        setItems(null);
+        setMeta(null);
+        setStatusCounts(null);
         setError(
           cause instanceof ApiError ? cause.message : 'Could not load overstock data. Please try again.',
         );
@@ -144,12 +164,22 @@ export function OverstockPage() {
     let cancelled = false;
 
     void (async () => {
+      setCategoriesLoading(true);
+      setCategoriesError(null);
       try {
         const result = await catalogApi.listCategories();
         if (!cancelled) setCategories(result);
-      } catch {
+      } catch (cause) {
         // The category filter is a convenience; a failure here must not take
         // the whole assessment list down with it.
+        if (!cancelled) {
+          setCategories(null);
+          setCategoriesError(
+            cause instanceof ApiError ? cause.message : 'Could not load category options.',
+          );
+        }
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
       }
     })();
 
@@ -160,6 +190,7 @@ export function OverstockPage() {
 
   const reload = useCallback(() => {
     setLoading(true);
+    setError(null);
     setReloadToken((token) => token + 1);
   }, []);
 
@@ -208,59 +239,76 @@ export function OverstockPage() {
     overstockStatus !== 'all' ||
     confidence !== 'all';
 
-  if (loading) return <Spinner label="Assessing stock cover…" />;
-
-  const hasAnyCounts = STATUS_ORDER.some((level) => (statusCounts[level] ?? 0) > 0);
   const totalPages = meta?.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Overstock"
-        description="Products carrying more stock than their own recent demand justifies, measured as days of cover. Read-only: this page flags excess, it does not act on it."
-        actions={<SecondaryButton onClick={reload}>Refresh</SecondaryButton>}
+        description="Identify excess inventory and understand where stock may be tied up."
+        darkSurface
+        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
       />
 
-      {error ? <ErrorBanner message={error} /> : null}
+      <p className="text-sm text-slate-400">
+        Overstock is assessed from historical days of cover. This page is read-only and does not recommend or change stock actions.
+      </p>
 
-      {hasAnyCounts ? (
+      {statusCounts !== null ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Summary</h2>
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-300 uppercase">Classification summary</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Counts follow search, category, and product status. Classification and confidence filters only narrow the list.
+            </p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {STATUS_ORDER.map((level) => (
-              <Card key={level} className="p-3">
-                <p className="text-xs tracking-wide text-slate-500 uppercase">
-                  {STATUS_LABEL[level]}
-                </p>
-                <p className="mt-1 text-2xl font-bold text-slate-900">{statusCounts[level] ?? 0}</p>
+              <Card key={level} darkSurface className="min-w-0 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs tracking-wide text-slate-400 uppercase">{STATUS_LABEL[level]}</p>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-sm font-bold ${STATUS_BADGE[level]}`} aria-hidden="true">
+                    {STATUS_ICON[level]}
+                  </span>
+                </div>
+                <p className="mt-2 text-2xl font-bold text-slate-100 tabular-nums">{statusCounts[level] ?? 0}</p>
               </Card>
             ))}
           </div>
         </section>
-      ) : null}
+      ) : (
+        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+          Overstock classification totals are unavailable. Product assessments may still load below.
+        </p>
+      )}
 
-      <Card className="p-4">
-        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Card darkSurface className="p-4">
+        <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
             label="Search"
             value={searchInput}
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
+            darkSurface
           />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
+            disabled={categoriesLoading || categoriesError !== null}
+            hint={categoriesError ? 'Category options are unavailable until the lookup succeeds.' : undefined}
+            darkSurface
             options={[
               { value: '', label: 'All categories' },
-              ...categories.map((category) => ({ value: category.id, label: category.name })),
+              ...(categories ?? []).map((category) => ({ value: category.id, label: category.name })),
             ]}
           />
           <Select
             label="Status"
             value={overstockStatus}
             onChange={handleStatus}
+            darkSurface
             options={[
               { value: 'all', label: 'Any status' },
               ...STATUS_ORDER.map((level) => ({ value: level, label: STATUS_LABEL[level] })),
@@ -270,6 +318,7 @@ export function OverstockPage() {
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
+            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -282,6 +331,7 @@ export function OverstockPage() {
             label="Product status"
             value={status}
             onChange={handleActive}
+            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
@@ -289,20 +339,45 @@ export function OverstockPage() {
             ]}
           />
 
-          <div className="flex items-end gap-2 lg:col-span-3">
+          <div className="flex flex-wrap items-end gap-2 xl:col-span-3">
             <button
               type="submit"
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="min-h-10 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]"
             >
-              Apply
+              Search
             </button>
-            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      {items === null || items.length === 0 ? (
-        <Card>
+      {categoriesError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+          <span>Category options could not be loaded: {categoriesError}</span>
+          <SecondaryButton darkSurface disabled={loading} onClick={reload}>Retry</SecondaryButton>
+        </div>
+      ) : null}
+
+      {loading ? (
+        <Card darkSurface className="p-8"><Spinner darkSurface label="Assessing stock cover…" /></Card>
+      ) : error ? (
+        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div role="alert" className="min-w-0">
+            <h2 className="font-semibold text-rose-200">Overstock assessments could not be loaded</h2>
+            <p className="mt-1 break-words text-sm text-rose-300">{error}</p>
+          </div>
+          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+        </Card>
+      ) : items === null ? (
+        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div>
+            <h2 className="font-semibold text-slate-100">Overstock data is unavailable</h2>
+            <p className="mt-1 text-sm text-slate-400">The assessment list has not returned data yet.</p>
+          </div>
+          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+        </Card>
+      ) : items.length === 0 ? (
+        <Card darkSurface>
           <EmptyState
             title={hasFilters ? 'No products match these filters' : 'Nothing to assess yet'}
             description={
@@ -310,22 +385,54 @@ export function OverstockPage() {
                 ? 'Try widening the search, or clear the filters to see the full catalog.'
                 : 'Once you add products and record sales, each product gets a days-of-cover reading here.'
             }
-            action={
-              hasFilters ? (
-                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
-              ) : (
-                <Link className={secondaryButtonClass} to="/app/products">
-                  Go to products
-                </Link>
-              )
-            }
+            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/products">Go to products</Link>}
+            darkSurface
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        <div className="space-y-3 lg:hidden">
+          {items.map((item) => (
+            <Card key={item.productId} darkSurface className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="break-words font-semibold text-slate-100">
+                    {item.name}
+                    {!item.isActive ? <span className="ml-2 text-xs font-normal text-slate-500">inactive</span> : null}
+                  </h2>
+                  <p className="mt-1 break-words text-xs text-slate-400">
+                    {item.sku}{item.category ? ` · ${item.category.name}` : ''}
+                  </p>
+                </div>
+                <StatusBadge status={item.status} />
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <div><dt className="text-xs text-slate-400">Current stock</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.currentStock}</dd></div>
+                <div><dt className="text-xs text-slate-400">Average daily sales</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.averageDailySales30d}</dd></div>
+                <div><dt className="text-xs text-slate-400">Days of stock</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{optional(item.daysOfStock)}</dd></div>
+                <div><dt className="text-xs text-slate-400">Threshold</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.thresholdDays} days</dd></div>
+                <div className="col-span-2"><dt className="text-xs text-slate-400">Confidence</dt><dd className="mt-0.5 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
+              </dl>
+              <div className="mt-4 border-t border-slate-800 pt-3">
+                <SecondaryButton darkSurface onClick={() => setSelected(item)}>View details</SecondaryButton>
+              </div>
+            </Card>
+          ))}
+          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-400">
+            <span>{meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}{meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}</span>
+            {meta && meta.totalPages > 1 ? (
+              <div className="flex gap-2">
+                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
+                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
+              </div>
+            ) : null}
+          </footer>
+        </div>
+
+        <Card darkSurface className="hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+              <thead className="bg-[#0c1523] text-xs tracking-wide text-slate-400 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Status</th>
@@ -337,42 +444,39 @@ export function OverstockPage() {
                   <th scope="col" className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-800">
                 {items.map((item) => (
-                  <tr key={item.productId} className="hover:bg-slate-50">
+                  <tr key={item.productId} className="transition-colors hover:bg-white/[0.025]">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-900">
+                      <p className="font-medium text-slate-100">
                         {item.name}
                         {!item.isActive ? (
-                          <span className="ml-2 text-xs text-slate-400">inactive</span>
+                          <span className="ml-2 text-xs text-slate-500">inactive</span>
                         ) : null}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-400">
                         {item.sku}
                         {item.category ? ` · ${item.category.name}` : ''}
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge
-                        className={STATUS_BADGE[item.status]}
-                        label={STATUS_LABEL[item.status]}
-                      />
+                      <StatusBadge status={item.status} />
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {item.currentStock}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
                       {item.averageDailySales30d}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
+                    <td className="px-4 py-3 text-right font-semibold text-slate-100 tabular-nums">
                       {optional(item.daysOfStock)}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-500 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-300 tabular-nums">
                       {item.thresholdDays}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-3 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-3 text-right">
-                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -380,7 +484,7 @@ export function OverstockPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
             <span>
               {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
               {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -388,39 +492,41 @@ export function OverstockPage() {
 
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
                   Next
                 </SecondaryButton>
               </div>
             ) : null}
           </footer>
         </Card>
+        </>
       )}
 
       {selected ? (
-        <Modal title={selected.name} onClose={() => setSelected(null)}>
+        <Modal title={selected.name} darkSurface onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 className={STATUS_BADGE[selected.status]}
                 label={STATUS_LABEL[selected.status]}
               />
-              <span className="text-sm text-slate-600">
+              <span className="text-sm text-slate-300">
                 {CONFIDENCE_LABEL[selected.confidence]}
               </span>
             </div>
 
             {/* The server's own words. Not paraphrased, not re-worded. */}
-            <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm text-slate-300">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={STATUS_LABEL[selected.status]}
+              darkSurface
             />
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -447,10 +553,10 @@ export function OverstockPage() {
             </div>
 
             <section className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
                 Evidence
               </h3>
-              <ul className="space-y-1 text-sm text-slate-600">
+              <ul className="space-y-1 text-sm text-slate-300">
                 <li>
                   Active sales days in the {selected.evidence.analysisWindowDays}-day window:{' '}
                   {selected.activeSalesDays30d}
@@ -466,17 +572,32 @@ export function OverstockPage() {
                 </li>
                 <li>Sufficient evidence: {selected.evidence.hasSufficientEvidence ? 'yes' : 'no'}</li>
                 {selected.evidence.unmetEvidenceGates.length > 0 ? (
-                  <li className="text-slate-500">
+                  <li className="text-slate-400">
                     Not met: {selected.evidence.unmetEvidenceGates.join(', ')}
                   </li>
                 ) : null}
               </ul>
             </section>
 
-            <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-200">
               This is a measurement, not a recommendation. Nothing on this page has been marked
               down, returned, discounted or ordered.
             </p>
+
+            <nav aria-label="Related inventory pages" className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to={`/app/inventory/${selected.productId}`}>
+                Inventory history
+              </Link>
+              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/demand">
+                Demand Planning
+              </Link>
+              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/reorder">
+                Reorder
+              </Link>
+              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/purchase-orders">
+                Purchase Orders
+              </Link>
+            </nav>
           </div>
         </Modal>
       ) : null}

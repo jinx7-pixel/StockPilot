@@ -121,3 +121,4 @@ yarn-error.log
 .tmp/
 tmp/
 .temp/
+.mavis/
