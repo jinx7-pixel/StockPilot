@@ -1,0 +1,72 @@
+name: Feature request
+description: Suggest an idea, improvement, or new capability
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to **StockPilot**.
+
+        Focus on the *problem* you are trying to solve rather than the solution
+        you have in mind â€” it makes it much easier to design the right fix.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation, not the implementation.
+      placeholder: Small shop owners have no way to see how many repair requests came in this week.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? A rough sketch is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: How have you solved this elsewhere, or what else did you consider?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the project does this affect?
+      options:
+        - Frontend (frontend/)
+        - Backend (backend/)
+        - Database and migrations (database/)
+        - Intelligence engine
+        - Authentication and sessions
+        - Analytics and reporting
+        - Docker and CI
+        - Documentation
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or mockups
+      description: Optional. Helpful for anything visual.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues and discussions for this idea.
+          required: true
+        - label: This is an enhancement, not a bug report.
+          required: true
