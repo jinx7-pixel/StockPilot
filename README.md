@@ -366,7 +366,9 @@ Status of each planned module. Only those marked ✅ are built.
 
 ## License
 
-Private — all rights reserved. No licence has been granted yet.
+StockPilot is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 jinx7-pixel. Third-party dependencies retain their respective licenses.
 
 **StockPilot** · Migration infrastructure stage · Built for growing businesses
 that deserve clear answers about their stock.

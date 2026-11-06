@@ -2,6 +2,7 @@
   "name": "stockpilot-frontend",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "description": "StockPilot web client — Inventory Intelligence Platform",
   "type": "module",
   "engines": {
