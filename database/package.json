@@ -1,6 +1,7 @@
 {
   "name": "stockpilot-database",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "StockPilot database schema and migrations — versioned with node-pg-migrate",
   "type": "module"

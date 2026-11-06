@@ -167,7 +167,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t border-slate-800/80 pt-4 sm:mt-9 sm:flex sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">© {year} StockPilot. All rights reserved.</p>
+          <p className="text-xs text-slate-500">© {year} StockPilot. Code licensed under MIT.</p>
         </div>
       </div>
     </footer>

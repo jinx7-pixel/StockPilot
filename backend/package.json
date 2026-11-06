@@ -1,6 +1,7 @@
 {
   "name": "stockpilot-backend",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "description": "StockPilot API — Inventory Intelligence Platform",
   "type": "module",
