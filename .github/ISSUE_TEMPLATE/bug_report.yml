@@ -1,0 +1,90 @@
+name: Bug report
+description: Something is broken and you can reproduce it
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in **StockPilot**.
+
+        Please fill in the sections below. The more precise the reproduction
+        steps, the faster it can be fixed.
+
+        > Security vulnerabilities should **not** be reported here â€” see
+        > [SECURITY.md](../blob/main/SECURITY.md) for private reporting.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: A clear description of the problem.
+      placeholder: The contact form shows a success message but nothing is saved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+      placeholder: The enquiry appears in the admin dashboard.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Node version, and where you saw it (local / preview / production).
+      placeholder: Windows 11 Â· Chrome 141 Â· Node 24 Â· local dev
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output or logs
+      description: Paste the relevant console or server output. Remove any secrets first.
+      render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Frontend (frontend/)
+        - Backend (backend/)
+        - Database and migrations (database/)
+        - Intelligence engine
+        - Authentication and sessions
+        - Analytics and reporting
+        - Docker and CI
+        - Documentation
+        - Something else
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues and this has not been reported yet.
+          required: true
+        - label: This is a bug, not a feature request.
+          required: true
+        - label: I can reproduce this consistently.
+          required: false
