@@ -1,13 +1,13 @@
 # Getting Started — StockPilot
 
-Step-by-step local setup for the foundation stage. See
+Step-by-step local setup for StockPilot. See
 [`architecture.md`](./architecture.md) for how the pieces fit together.
 
 ## Prerequisites
 
 | Tool | Version | Check |
 | --- | --- | --- |
-| Node.js | ≥ 20.19 (22 LTS or newer recommended) | `node -v` |
+| Node.js | 24 recommended to match CI and Docker | `node -v` |
 | npm | 10+ | `npm -v` |
 | Git | any recent | `git --version` |
 | Docker | any recent, for local PostgreSQL | `docker --version` |
@@ -21,8 +21,8 @@ locally, point `PG*` in `backend/.env` at it and skip the compose step.
 git clone <your-repo-url> stockpilot
 cd stockpilot
 
-npm install --prefix frontend
-npm install --prefix backend
+npm ci --prefix frontend
+npm ci --prefix backend
 ```
 
 Frontend and backend have separate dependency trees on purpose.
@@ -34,10 +34,9 @@ docker compose up -d db
 docker compose ps        # expect STATUS "healthy"
 ```
 
-This creates a PostgreSQL 18 container with local credentials
-(`stockpilot` / `stockpilot` / `stockpilot_local_dev`) and a named volume
-`stockpilot_pgdata`. Apart from migration infrastructure, an **empty schema is
-expected** at this stage.
+This starts PostgreSQL 18 with the local database `stockpilot`, owner role
+`stockpilot`, and password `stockpilot_local_dev`. The named volume
+`stockpilot_pgdata` holds the database across container restarts.
 
 ```bash
 docker compose logs -f db   # follow startup logs
@@ -61,9 +60,8 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-The defaults in both templates already work for the local Docker database, so no
-editing is required to start. `.env` and `.env.local` are git-ignored — never
-commit them, and never put a real password or API key in the `.example` files.
+For the default local Docker database, set `PGPASSWORD=stockpilot_local_dev`
+in `backend/.env`. Keep real credentials in your ignored environment files.
 
 ## 4. Apply database migrations
 
@@ -81,20 +79,37 @@ npm run migration:up
 [migrate] done — 1 migration(s) applied.
 ```
 
-This creates the `pgmigrations` tracking table plus one generic helper function.
-**No business tables exist yet** — that is intentional.
+This applies the migrations for workspace accounts, inventory, sales, purchasing,
+and action history, and records each one in `pgmigrations`.
 
 Full workflow, naming rules and rollback: [`database/README.md`](../database/README.md).
 
 ## 5. Run the backend
 
-The API runs under a **restricted database role**, `stockpilot_app`, which holds
-only `SELECT`/`INSERT`/`UPDATE`/`DELETE` on the twelve runtime tables. It cannot
-read the migration history, alter the schema, or create databases.
+### Provision the runtime role
 
-Those credentials live in `backend/.env.runtime` — a **local-only, gitignored**
-file (`.gitignore` matches `.env.*`). Create it from your protected credential
-file, which lives outside the repository:
+For a fresh Docker database, connect as the schema owner from the repository root
+after applying the migrations. For a native database, use the same SQL in its
+`psql` session.
+
+```bash
+docker compose exec db psql -U stockpilot -d stockpilot
+```
+
+```sql
+CREATE ROLE stockpilot_app LOGIN;
+\password stockpilot_app
+GRANT CONNECT ON DATABASE stockpilot TO stockpilot_app;
+GRANT USAGE ON SCHEMA public TO stockpilot_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+  businesses, users, auth_sessions, auth_email_tokens, auth_attempts,
+  categories, products, inventory_movements, sales, sale_items, suppliers,
+  purchase_orders, purchase_order_items, actions TO stockpilot_app;
+```
+
+If the role already exists, run the grants only. Use your actual database,
+schema, and runtime role names if they differ from the defaults. Create
+`backend/.env.runtime` with the password you set in `psql`.
 
 ```bash
 # backend/.env.runtime — local only, gitignored. Shape, not a real credential:
@@ -102,6 +117,11 @@ PGUSER=stockpilot_app
 PGPASSWORD=...        # from your out-of-repo credential file; never commit
 PGDATABASE=stockpilot
 ```
+
+Configure `APP_PUBLIC_URL` and the SMTP settings from `backend/.env.example` in
+`backend/.env.runtime` for account email. Set `MFA_ENCRYPTION_KEY` to enable
+authenticator setup. The dashboard preview uses sample data and runs with the
+frontend alone.
 
 `.env.runtime` is intentionally **required**: if it is missing, Node refuses to
 start rather than quietly falling back to the owner account.

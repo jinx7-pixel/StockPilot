@@ -10,6 +10,10 @@ and intuition. It does not simply record stock levels: it flags *risk*, explains
 *why* something is at risk in plain language, recommends what to do about it, and
 then stops — the decision stays with the owner.
 
+![StockPilot dashboard showing sample inventory, sales and low-stock alerts](docs/images/dashboard-preview.jpg)
+
+*Dashboard preview with sample data.*
+
 ---
 
 ## Description
@@ -21,10 +25,10 @@ tracking itself, but the **interpretation layer on top of it**:
 
 | Stage | What StockPilot does |
 | --- | --- |
-| **Track** | Maintains a live, accurate picture of stock across locations, SKUs and movements. |
+| **Track** | Tracks products, sales, supplier orders, and stock movements in one workspace. |
 | **Understand risk** | Spots stockouts, overstock, dead stock and supplier exposure before they bite. |
 | **Explain** | States the problem in plain language a non-technical owner can act on — no jargon. |
-| **Recommend** | Proposes concrete next steps (reorder, defer, reallocate, renegotiate) with reasoning. |
+| **Recommend** | Suggests replenishment or a review of excess stock, slow-moving items, and supplier performance. |
 | **Decide** | Presents options and trade-offs. The owner decides; the system advises. |
 
 The design principle throughout: **decision support, not decision automation.**
@@ -42,7 +46,7 @@ The design principle throughout: **decision support, not decision automation.**
 | Layer | Technology |
 | --- | --- |
 | **Frontend** | React 19, TypeScript 6, Vite 8, Tailwind CSS 4 |
-| **Backend** | Node.js 22+, Express 5, TypeScript 5.9 |
+| **Backend** | Node.js 24 in CI and Docker, Express 5, TypeScript 5.9 |
 | **Database** | PostgreSQL 18 |
 | **Schema management** | node-pg-migrate (versioned, reversible migrations) |
 | **API** | REST (JSON over HTTP, `/api/*`) |
@@ -50,9 +54,9 @@ The design principle throughout: **decision support, not decision automation.**
 | **Linting** | ESLint 10 flat config + `typescript-eslint` |
 | **Package manager** | npm (separate dependency tree per package) |
 | **Version control** | Git, GitHub |
-| **CI/CD** | GitHub Actions — `ci.yml` (lint · typecheck · build). Deployment not implemented yet |
-| **Containerization** | Docker — *planned for a later milestone* |
-| **Local infrastructure** | `docker-compose.yml` (PostgreSQL 18 only) |
+| **CI** | GitHub Actions runs lint, type checks, tests, builds, and runtime dependency audits |
+| **Containerization** | Docker images for the Nginx frontend and Express API. `docker-compose.prod.yml` runs the full stack for local rehearsal |
+| **Local infrastructure** | `docker-compose.yml` runs PostgreSQL 18 for host-based development |
 
 ---
 
@@ -62,10 +66,11 @@ The design principle throughout: **decision support, not decision automation.**
 StockPilot/
 ├── frontend/                  # React + TypeScript + Vite + Tailwind
 │   ├── src/
-│   │   ├── App.tsx            # Foundation shell (no business features yet)
+│   │   ├── App.tsx            # Public, authentication, and workspace routes
 │   │   ├── main.tsx
 │   │   └── index.css          # Tailwind import + design tokens
 │   ├── .env.example
+│   ├── Dockerfile             # Vite build served by Nginx
 │   ├── eslint.config.js
 │   ├── tsconfig*.json
 │   └── vite.config.ts         # Tailwind plugin + /api dev proxy
@@ -77,7 +82,7 @@ StockPilot/
 │   │   ├── config/env.ts      # Validated env access (the only process.env reader)
 │   │   ├── db/pool.ts         # pg connection pool — connection only, no schema
 │   │   ├── middlewares/       # notFoundHandler, errorHandler
-│   │   └── routes/            # /api/health (apiRouter + healthRouter)
+│   │   └── routes/            # Auth, inventory, analytics, and intelligence APIs
 │   ├── .env.example
 │   ├── eslint.config.js
 │   └── tsconfig*.json
@@ -85,7 +90,7 @@ StockPilot/
 ├── database/                  # Schema lifecycle
 │   ├── migrations/            # Versioned node-pg-migrate migrations (committed)
 │   ├── package.json           # Marks migrations as an ESM project
-│   └── README.md              # Migration workflow and policy (no business tables yet)
+│   └── README.md              # Migration workflow and policy
 │
 ├── docs/
 │   ├── architecture.md        # Layering, request lifecycle, scaling path
@@ -97,95 +102,37 @@ StockPilot/
 │       └── README.md           # What CI does, and what is deliberately not in it
 │
 ├── docker-compose.yml         # Local PostgreSQL 18 service
+├── docker-compose.prod.yml    # Full-stack Docker rehearsal
+├── Dockerfile                 # API and migration job images
 ├── .gitignore                 # Single source of truth for the monorepo
 └── README.md
 ```
 
 ---
 
-## Current Development Status
+## What works today
 
-**Stage: sales.** Accounts, the product catalog, the stock ledger and sales are
-all in place and covered by tests. **No suppliers, purchasing or intelligence
-features yet** — by design.
+- **Dashboard and analytics** show inventory balances, sales, and open purchase orders.
+- **Products, inventory, and sales** use an append-only stock ledger. Sales and
+  their stock movements commit together, with per-product locks to prevent overselling.
+- **Suppliers and purchasing** support draft orders, marking orders as placed,
+  and recording partial or full receipts.
+- **Recommendations and Action Center** explain what needs review. After user
+  approval, a replenishment recommendation can create a draft purchase order.
+- **Workspace access** includes owner and staff roles, tenant isolation, email
+  verification, password recovery, and optional authenticator-based two-step verification.
 
-### ✅ Complete
+| Intelligence engine | What it reports |
+| --- | --- |
+| Stock Risk | Out-of-stock items and products at risk of running out |
+| Demand Planning | Rising, falling, or stable demand based on sales history |
+| Reorder | Whether stock needs replenishment and a suggested quantity when the data supports it |
+| Overstock | Items holding more stock than recent demand warrants |
+| Slow / Dead Stock | Items selling infrequently or holding stock with no recent sales |
+| Supplier Intelligence | Observed lead times and consistency based on received orders |
 
-- Monorepo structure with `frontend/`, `backend/`, `database/`, `docs/`, `.github/workflows/`
-- Frontend: React 19 + TypeScript 6 + Vite 8, Tailwind CSS 4 via `@tailwindcss/vite`
-- Backend: Node.js + Express 5 + TypeScript, ESM, strict mode
-- `GET /api/health` → `{"status":"ok","service":"stockpilot-api"}`
-- Layered backend structure (`routes` → `services` → `repositories` → `db`) with
-  `createApp()` separated from `server.ts` for testability
-- **Migration infrastructure**: node-pg-migrate wired through a typed CLI
-  (`backend/src/db/migrate.ts`) with `create` / `up` / `down` / `redo` / `status`
-- **Auth schema**: `businesses`, `users` (with the `user_role` enum) and
-  `auth_sessions`
-- **Catalog schema**: `categories` and `products`
-- **Stock ledger**: `inventory_movements` — append-only, and the **single source
-  of truth for stock**. No cached quantity column anywhere
-- **Sales schema**: `sales` and `sale_items`, with a composite foreign key
-  guaranteeing a line never belongs to a different business than its sale
-- **Authentication API**: `POST /api/auth/register`, `/login`, `/logout`,
-  `GET /api/auth/me`
-- **Products API**: list (search / category / status filters, pagination,
-  server-side ordering), create, get, patch, soft delete
-- **Categories API**: list, create, get, patch, delete (owner-only, refused
-  while in use)
-- **Inventory API**: list with derived stock, summary, per-product detail,
-  paginated ledger, and movement recording
-- **Sales API**: list with search / status / date filters and pagination, create,
-  detail. A sale writes its header, lines **and** the `out` stock movements in one
-  transaction, through the same inventory service the direct route uses
-- **Concurrency safety**: a per-`(business, product)` advisory lock makes two
-  simultaneous sales unable to oversell the same stock, with no deadlock between
-  sales sharing products
-- **Argon2id** password hashing and opaque session tokens stored as SHA-256
-  digests, delivered in an HTTP-only `SameSite` cookie
-- **Multi-tenant isolation**: `businessId` always comes from the session; a
-  cross-tenant read returns `404`, never `403`, so existence is never confirmed
-- Rate limiting, Helmet, CORS with credentials, and a typed error contract
-- Environment configuration via committed `.env.example`; **no secrets in source**
-- ESLint 10 flat config in both packages, with migrations covered too
-- Root `.gitignore` covering Node, Vite, TypeScript, env files, logs, build
-  output, database dumps and IDE files
-- `docker-compose.yml` providing a local PostgreSQL 18 instance
-- **Backend test suite** (184 tests) on the Node built-in runner — no test
-  framework dependency
-- **GitHub Actions CI**: `frontend`, `backend`, `migrations` and `backend-tests`
-  jobs, the last against a throwaway PostgreSQL service container
-- Git repository initialised and pushed to `github.com/jinx7-pixel/StockPilot`
-
-### ⏳ Not started (intentionally)
-
-Suppliers · Purchase Orders · `stock_adjustments` · Reorder recommendations ·
-Demand forecasting · Overstock / dead-stock intelligence · **Dashboard** ·
-Analytics · AI/ML · Barcode/QR · Notifications · Payments · Multiple
-warehouses · Remaining business tables · Seed data · Docker images ·
-Deployment (CD) · Frontend tests
-
-### Verification results
-
-| Check | Backend | Frontend |
-| --- | --- | --- |
-| `npm ci` (both) | ✅ 0 vulnerabilities | ✅ 0 vulnerabilities |
-| `npm run typecheck` | ✅ pass (app **and** migrations) | ✅ pass |
-| `npm run lint` | ✅ pass (0 errors, 0 warnings) | ✅ pass (0 errors, 0 warnings) |
-| `npm run build` | ✅ `dist/` emitted, no tooling/tests | ✅ `dist/` emitted |
-| `npm test` | ✅ **184/184** pass | — (no frontend tests yet) |
-| `GET /api/health` | ✅ exact expected JSON | ✅ via `/api` proxy |
-| Auth flow (register → me → logout → 401) | ✅ verified live | ✅ UI built |
-| Catalog CRUD + duplicate SKU `409` | ✅ verified live | ✅ UI built |
-| Stock IN / OUT / ±adjustment balances | ✅ verified live | ✅ UI built |
-| Negative-stock refusal | ✅ `409` verified live | ✅ error surfaced in UI |
-| Concurrent OUT (start 10, two × 7) | ✅ one `201`, one `409`, final `3` | n/a |
-| Sale multi-item totals + line totals | ✅ `30.00` verified live | ✅ UI built |
-| Sale atomic rollback (2nd item short) | ✅ no sale, no items, no movements | n/a |
-| **Concurrent sales (start 5, two × 4)** | ✅ one `201`, one `409`, final `1` | n/a |
-| Cross-tenant isolation | ✅ verified live | n/a (no tenant in the client) |
-| Migration `up` → `down` → `up` | ✅ reversible, verified at SQL level | — |
-| No cached stock column | ✅ asserted by test + `information_schema` | — |
-
+Unified Intelligence combines the six engine results by product. Each
+assessment includes its evidence and flags insufficient data where applicable.
 
 ---
 
@@ -214,26 +161,36 @@ rationale and how to reproduce the pipeline locally.
 
 ## Quick Start
 
+### Preview the dashboard
+
+With Node.js 24, start the frontend and open
+[the sample dashboard](http://localhost:5173/app?preview=1). This development
+preview uses sample data and requires only the frontend.
+
+```bash
+npm ci --prefix frontend
+npm run dev --prefix frontend
+```
+
+### Run the full application
+
 ```bash
 # 1. Install
-npm install --prefix frontend
-npm install --prefix backend
+npm ci --prefix frontend
+npm ci --prefix backend
 
 # 2. Start the local database
 docker compose up -d db
 
-# 3. Configure environment (defaults already work locally)
+# 3. Copy the environment templates
 cp backend/.env.example  backend/.env
 cp frontend/.env.example frontend/.env.local
 
-# 3b. Create backend/.env.runtime — REQUIRED by step 5, see below
-#     It holds the restricted `stockpilot_app` credentials. Keep it out of git
-#     (it is ignored) and build it from your protected credential store, never
-#     from a password typed into chat or a tracked file. The API refuses to start
-#     without it.
+# Set PGPASSWORD=stockpilot_local_dev in backend/.env for the default local database.
 
 # 4. Apply database migrations
 cd backend && npm run migration:up && cd ..
+# Provision stockpilot_app and create backend/.env.runtime as described below.
 
 # 5. Run the API           (terminal 1 → http://localhost:4000)
 cd backend && npm run dev:local
@@ -250,7 +207,12 @@ Migrations (step 4) and the test suite keep using the owner/admin role from
 procedure — including why a missing `.env.runtime` is a deliberate startup
 failure, and why stray exported `PG*` variables can override it.
 
-Verify the foundation end to end:
+Set `APP_PUBLIC_URL` and the SMTP settings in `backend/.env.runtime` to
+exercise registration, email verification, and password recovery. To run
+the frontend, API, and PostgreSQL in containers, see the
+[Docker rehearsal guide](docs/deployment.md#local-rehearsal).
+
+Verify the API and migration status:
 
 ```bash
 curl http://localhost:4000/api/health
@@ -299,31 +261,18 @@ generic `set_updated_at()` helper and nothing else.
 
 ---
 
-## Planned Modules
+## Roadmap
 
-Status of each planned module. Only those marked ✅ are built.
+Future work includes multi-location inventory, barcode scanning, notifications,
+demand forecasting, and production deployment automation.
 
-| # | Module | Scope (planned) |
-| --- | --- | --- |
-| 1 | **Authentication & Users** | ✅ Owner/admin roles, sessions, onboarding, tenant isolation |
-| 2 | **Products & Catalog** | ✅ SKUs, categories, units, costing, active/inactive state |
-| 3 | **Inventory Tracking** | ✅ Stock ledger, derived balances, IN/OUT/adjustments. Locations, cycle counts and low-stock thresholds still to come |
-| 4 | **Suppliers** | Supplier records, lead times, MOQs, pricing, performance and reliability history |
-| 5 | **Purchase Orders** | Draft → approve → send workflow, PO lines, receiving, supplier acknowledgements |
-| 6 | **Sales & Demand** | ✅ Completed sales with immutable stock movements. Demand signals, seasonality and forecast inputs still to come |
-| 7 | **Dashboard & Risk Insights** | Stockout / overstock / dead-stock detection, exposure summaries, prioritised action list |
-| 8 | **Recommendations Engine** | Rule-based (and later ML) reorder, defer, reallocate and renegotiate suggestions with plain-language explanations |
-| 9 | **AI/ML Layer** *(long-term)* | Demand forecasting, anomaly detection, natural-language explanations and summaries |
-| 10 | **Platform & Operations** | Docker images, GitHub Actions CI/CD, observability, deployment, seed tooling |
-
-### Guiding principles for these modules
+### Design principles
 
 1. **Explain, don't just alert.** Every insight carries a human-readable reason.
 2. **Recommend, never auto-execute.** The owner approves every action.
 3. **Migrations only.** No application code creates or alters tables.
 4. **Secrets stay out of source.** Configuration is environment-driven.
-5. **No mock business data in the repository.** Realistic data is seeded locally
-   or generated by migrations fixtures, never committed as filler.
+5. **Isolated sample data.** The dashboard preview and test fixtures use synthetic records.
 
 ---
 
@@ -346,7 +295,9 @@ Status of each planned module. Only those marked ✅ are built.
   and repositories require an explicit `businessId` for client-driven lookups.
 - **Login** returns the same error for unknown emails and incorrect passwords.
   If legacy accounts share both an email and a password, users choose a
-  workspace after verification. New signups reject emails already in use.
+  workspace after verification. Signups and password resets use expiring,
+  single-use email links. Account security supports authenticator codes, recovery
+  codes, and signing out of all sessions.
 - **Credential endpoints are rate limited**, and `TRUST_PROXY` must be set
   correctly in production or every client would share one bucket.
 
@@ -369,6 +320,3 @@ Status of each planned module. Only those marked ✅ are built.
 StockPilot is licensed under the [MIT License](LICENSE).
 
 Copyright (c) 2026 jinx7-pixel. Third-party dependencies retain their respective licenses.
-
-**StockPilot** · Migration infrastructure stage · Built for growing businesses
-that deserve clear answers about their stock.
