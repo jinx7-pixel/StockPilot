@@ -28,7 +28,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1 — build the static assets.
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
@@ -42,13 +42,14 @@ COPY frontend/tsconfig.json frontend/tsconfig.app.json frontend/tsconfig.node.js
 COPY frontend/vite.config.ts ./vite.config.ts
 COPY frontend/index.html ./index.html
 COPY frontend/src ./src
+COPY frontend/public ./public
 
 RUN npm run build
 
 # -----------------------------------------------------------------------------
 # Stage 2 — Nginx serving the compiled assets.
 # -----------------------------------------------------------------------------
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.30-alpine AS runtime
 
 # The stock image is configured to run as root. Everything below moves it to the
 # built-in unprivileged `nginx` user instead of accepting root:

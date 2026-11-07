@@ -56,7 +56,7 @@ services:
       POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     volumes:
-      - stockpilot_pgdata:/var/lib/postgresql/data
+      - stockpilot_pgdata:/var/lib/postgresql
     healthcheck:
       # Readiness of the *database*, distinct from the API's liveness probe.
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
@@ -70,7 +70,7 @@ services:
   # One-shot migration job. Opt-in: `docker compose run --rm migrate`.
   #
   # Uses the OWNER role, never the restricted runtime role. `stockpilot_app`
-  # holds only SELECT/INSERT/UPDATE/DELETE on the twelve runtime tables and
+  # holds only SELECT/INSERT/UPDATE/DELETE on application tables and
   # cannot create or alter objects; widening it to run migrations would undo
   # the least-privilege work outright.
   # ---------------------------------------------------------------------------
@@ -105,13 +105,11 @@ services:
     restart: unless-stopped
     environment:
       # See the LOCAL REHEARSAL banner above before changing these.
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:?Set NODE_ENV=development for loopback rehearsal}
       HOST: 0.0.0.0
       PORT: '4000'
 
-      # Restricted runtime role. NOT the migration owner, and NOT
-      # stockpilot_app-by-accident: its grants are exactly the twelve runtime
-      # tables.
+      # Restricted runtime role with access only to application tables.
       PGHOST: ${PGHOST:-db}
       PGPORT: ${PGPORT:-5432}
       PGDATABASE: ${PGDATABASE}
@@ -122,7 +120,15 @@ services:
 
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080,http://127.0.0.1:8080}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-}
 
       # Exactly ONE trusted hop: Nginx. Never `true`, which would let any client
       # forge X-Forwarded-For and therefore its rate-limit bucket.
@@ -158,7 +164,7 @@ services:
     restart: unless-stopped
     ports:
       # The only published port in this stack.
-      - '${FRONTEND_PORT:-8080}:8080'
+      - '127.0.0.1:${FRONTEND_PORT:-8080}:8080'
     depends_on:
       api:
         # service_healthy here means "the API process is up", because the API

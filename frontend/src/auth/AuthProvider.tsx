@@ -82,23 +82,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('authenticated');
   }, []);
 
-  const logout = useCallback(async () => {
+  const signOut = useCallback(async (all: boolean) => {
     setError(null);
     try {
-      await api.logout();
-    } finally {
-      // Clear local state even if the network call failed: the user asked to
-      // sign out, so never leave a stale identity on screen.
+      if (all) await api.logoutAll();
+      else await api.logout();
       setUser(null);
       setStatus('unauthenticated');
+    } catch {
+      setError('Sign-out could not be confirmed. Please try again.');
     }
   }, []);
+  const logout = useCallback(() => signOut(false), [signOut]);
+  const logoutAll = useCallback(() => signOut(true), [signOut]);
 
   const clearError = useCallback(() => setError(null), []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, login, register, logout, error, clearError }),
-    [status, user, login, register, logout, error, clearError],
+    () => ({ status, user, login, register, logout, logoutAll, error, clearError }),
+    [status, user, login, register, logout, logoutAll, error, clearError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

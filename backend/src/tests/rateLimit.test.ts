@@ -47,6 +47,7 @@ import {
 } from '../middlewares/rateLimit.js';
 import { closeTestDatabase, prepareTestDatabase, resetTestDatabase } from './helpers/testDatabase.js';
 import { startTestServer, type TestServer } from './helpers/testServer.js';
+import { registrationBody, verifiedRegistration } from './helpers/fixtures.js';
 
 let server: TestServer;
 
@@ -589,12 +590,12 @@ describe('Rate limiting — existing auth and session behaviour is intact', () =
     const register = await fetch(`${server.baseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(await verifiedRegistration(server, registrationBody({
         businessName: 'Rate Limited Co',
         name: 'Owner',
         email: 'owner@ratelimited.test',
         password: 'CorrectHorse9!',
-      }),
+      }))),
     });
     assert.equal(register.status, 201, await register.text());
 
@@ -609,7 +610,7 @@ describe('Rate limiting — existing auth and session behaviour is intact', () =
 
     const logout = await fetch(`${server.baseUrl}/api/auth/logout`, {
       method: 'POST',
-      headers: { Cookie: cookie!.split(';')[0]! },
+      headers: { Cookie: cookie!.split(';')[0]!, 'Content-Type': 'application/json' },
     });
     assert.equal(logout.status, 200);
   });
@@ -618,12 +619,12 @@ describe('Rate limiting — existing auth and session behaviour is intact', () =
     const register = await fetch(`${server.baseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(await verifiedRegistration(server, registrationBody({
         businessName: 'Normal Traffic Co',
         name: 'Owner',
         email: 'owner@normaltraffic.test',
         password: 'CorrectHorse9!',
-      }),
+      }))),
     });
     const cookie = register.headers.get('set-cookie')!.split(';')[0]!;
 

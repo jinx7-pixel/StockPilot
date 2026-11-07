@@ -3,6 +3,13 @@ import { Router } from 'express';
 import { checkConnection } from '../db/pool.js';
 
 const SERVICE_NAME = 'stockpilot-api';
+let inFlight: Promise<boolean> | undefined;
+
+// Concurrent public probes share a single database checkout.
+function probe(): Promise<boolean> {
+  inFlight ??= checkConnection().finally(() => { inFlight = undefined; });
+  return inFlight;
+}
 
 /** Must match `health.routes.ts` so both probes are identifiable side by side. */
 export const readyRouter: Router = Router();
@@ -27,7 +34,7 @@ export const readyRouter: Router = Router();
  * session exists.
  */
 readyRouter.get('/ready', async (_req, res) => {
-  const ready = await checkConnection();
+  const ready = await probe();
 
   res.status(ready ? 200 : 503).json({
     status: ready ? 'ok' : 'unavailable',

@@ -73,7 +73,7 @@ export async function resetTestDatabase(): Promise<void> {
   await ensureSchema();
 
   await getPool().query(`
-    TRUNCATE TABLE auth_sessions, users, businesses
+    TRUNCATE TABLE auth_attempts, auth_email_tokens, auth_sessions, users, businesses
     RESTART IDENTITY CASCADE
   `);
 }

@@ -71,7 +71,14 @@ const SSL_MODES = ['disable', 'allow', 'prefer', 'require', 'no-verify', 'verify
 export type PgSslMode = (typeof SSL_MODES)[number];
 
 /** Modes in which a successful connection *guarantees* an encrypted session. */
-const TLS_ENFORCING_MODES: readonly PgSslMode[] = ['require', 'no-verify', 'verify-ca', 'verify-full'];
+function isOrigin(value: string, protocol: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === protocol && url.origin === value;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Read and validate `PGSSLMODE`.
@@ -106,18 +113,15 @@ function readSslMode(name: string, fallback: PgSslMode): PgSslMode {
 /**
  * Read `TRUST_PROXY`.
  *
- * Express accepts either a hop count or `true` ("trust every proxy"). Rejecting
- * anything else — a negative number, a hostname, a typo — stops an operator
- * believing they have configured proxy trust when they have not.
+ * Trust the exact number of proxy hops configured by the operator.
  */
-function readTrustProxy(name: string): number | true {
+function readTrustProxy(name: string): number {
   const raw = readString(name).trim().toLowerCase();
-  if (raw === 'true') return true;
 
   const parsed = Number.parseInt(raw, 10);
   if (Number.isNaN(parsed) || String(parsed) !== raw || parsed < 0) {
     throw new Error(
-      `Environment variable ${name} must be a non-negative integer or "true". Received: ${JSON.stringify(raw)}`,
+      `Environment variable ${name} must be a non-negative integer. Received: ${JSON.stringify(raw)}`,
     );
   }
   return parsed;
@@ -143,7 +147,7 @@ export const env = {
   port: readInt('PORT', 4000),
   host: readString('HOST', '0.0.0.0'),
   /**
-   * Number of reverse-proxy hops to trust for `req.ip`, or `true` to trust any.
+   * Number of reverse-proxy hops to trust for `req.ip`.
    *
    * Required in production: behind a load balancer a wrong value makes every
    * client share one rate-limit bucket, and an over-generous value lets any
@@ -161,7 +165,7 @@ export const env = {
   corsOrigins: (
     nodeEnv === 'production'
       ? readString('CORS_ORIGINS')
-      : readString('CORS_ORIGINS', 'http://localhost:5173')
+      : readString('CORS_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
   )
     .split(',')
     .map((origin) => origin.trim())
@@ -192,6 +196,14 @@ export const env = {
 
   /** Authentication: opaque session token in an HTTP-only cookie. */
   auth: {
+    publicUrl: readString('APP_PUBLIC_URL', nodeEnv === 'production' ? '' : 'http://localhost:5173'),
+    smtpHost: process.env.SMTP_HOST?.trim(),
+    smtpPort: readPositiveInt('SMTP_PORT', 587),
+    smtpUser: process.env.SMTP_USER?.trim(),
+    smtpPassword: process.env.SMTP_PASSWORD,
+    smtpFrom: process.env.SMTP_FROM?.trim(),
+    smtpSecure: readBoolean('SMTP_SECURE', false),
+    mfaKey: process.env.MFA_ENCRYPTION_KEY?.trim(),
     cookieName: readString('SESSION_COOKIE_NAME', 'sp_session'),
     /** Session lifetime in days. */
     sessionTtlDays: readPositiveInt('SESSION_TTL_DAYS', 7),
@@ -290,12 +302,20 @@ export function assertProductionSafe(config: Env): void {
 
   // -- Transport security ----------------------------------------------------
 
-  if (!TLS_ENFORCING_MODES.includes(config.database.sslMode)) {
-    problems.push(
-      `PGSSLMODE is "${config.database.sslMode}", which does not guarantee an encrypted ` +
-        `database session. Use one of: ${TLS_ENFORCING_MODES.join(', ')}. ` +
-        `"allow" and "prefer" fall back to plaintext when the server does not offer TLS.`,
-    );
+  if (config.database.sslMode !== 'verify-full') {
+    problems.push('PGSSLMODE must be verify-full in production to authenticate the database server.');
+  }
+  if (config.database.url) {
+    try {
+      const url = new URL(config.database.url);
+      // pg-connection-string merges query parameters over the explicit ssl config.
+      if ([...url.searchParams.keys()].some((key) => /^(ssl|uselibpqcompat)/i.test(key))) {
+        problems.push('DATABASE_URL must omit SSL query options. Configure TLS with PGSSLMODE.');
+      }
+      if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error();
+    } catch {
+      problems.push('DATABASE_URL must be a valid PostgreSQL URL.');
+    }
   }
 
   // -- Session cookie --------------------------------------------------------
@@ -320,8 +340,17 @@ export function assertProductionSafe(config: Env): void {
     // it ever were honoured, would allow any site to call the API with cookies.
     problems.push('CORS_ORIGINS must not contain "*" in production; list the exact frontend origins.');
   }
-  if (config.corsOrigins.some((origin) => origin.startsWith('http://') && !origin.includes('localhost'))) {
-    problems.push('CORS_ORIGINS must use https:// in production; plain http origins can be tampered with in transit.');
+  if (config.corsOrigins.some((origin) => !isOrigin(origin, 'https:'))) {
+    problems.push('CORS_ORIGINS must contain exact HTTPS origins in production.');
+  }
+  if (!isOrigin(config.auth.publicUrl, 'https:') || !config.corsOrigins.includes(config.auth.publicUrl)) {
+    problems.push('APP_PUBLIC_URL must be an HTTPS origin listed in CORS_ORIGINS.');
+  }
+  if (!config.auth.smtpHost || !config.auth.smtpFrom || !config.auth.smtpUser || !config.auth.smtpPassword) {
+    problems.push('Set SMTP_HOST, SMTP_FROM, SMTP_USER and SMTP_PASSWORD to deliver account emails.');
+  }
+  if (!config.auth.mfaKey || !/^[A-Za-z0-9+/]{43}=$/.test(config.auth.mfaKey)) {
+    problems.push('MFA_ENCRYPTION_KEY must be a base64-encoded 32-byte key.');
   }
 
   if (problems.length > 0) {

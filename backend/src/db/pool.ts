@@ -113,7 +113,11 @@ export async function checkConnection(timeoutMs = 2_000): Promise<boolean> {
   });
 
   try {
-    client = await Promise.race([getPool().connect(), deadline]);
+    const connection = getPool().connect().then((connected) => {
+      if (abandoned) connected.release();
+      return connected;
+    });
+    client = await Promise.race([connection, deadline]);
     await Promise.race([client.query('SELECT 1'), deadline]);
     return true;
   } catch (error) {

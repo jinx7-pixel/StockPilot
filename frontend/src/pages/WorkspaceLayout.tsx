@@ -64,6 +64,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
 ] as const;
 
 const NAV_GROUPS_ID = 'workspace-nav-groups';
+const SIDEBAR_SHORTCUT = 'Ctrl + B';
 
 const NAV_ICON_PATHS: Record<string, string> = {
   '/app': 'M3.5 3.5h7v7h-7zM13.5 3.5h7v5h-7zM13.5 11.5h7v9h-7zM3.5 13.5h7v7h-7z',
@@ -113,11 +114,17 @@ function navClass(isActive: boolean): string {
 const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2';
 
 export function WorkspaceLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, error, clearError } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [railTooltip, setRailTooltip] = useState<{ label: string; top: number; left: number } | null>(null);
+  const [railTooltip, setRailTooltip] = useState<{
+    label: string;
+    shortcut?: string;
+    top: number;
+    left: number;
+  } | null>(null);
+  const signedIn = Boolean(user);
   const isDevelopmentPreview = import.meta.env.DEV && user?.id === 'dev-preview-user';
   const route = location.pathname.split('/').slice(0, 3).join('/');
   const currentGroup = NAV_GROUPS.find((group) => group.items.some((item) => item.to === route));
@@ -125,7 +132,7 @@ export function WorkspaceLayout() {
   const menuButtonId = 'workspace-nav-toggle';
 
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
+    if (!signedIn || typeof window.matchMedia !== 'function') return;
 
     const desktopViewport = window.matchMedia('(min-width: 1024px)');
     const restoreFullSidebarOnMobile = (event: MediaQueryListEvent) => {
@@ -135,9 +142,25 @@ export function WorkspaceLayout() {
       }
     };
 
+    const toggleSidebarWithShortcut = (event: globalThis.KeyboardEvent) => {
+      if (!desktopViewport.matches || event.defaultPrevented || event.repeat || event.isComposing) return;
+      if (!event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.key.toLowerCase() !== 'b') return;
+
+      const target = event.target;
+      if (target instanceof HTMLElement && target.isContentEditable) return;
+
+      event.preventDefault();
+      setRailTooltip(null);
+      setSidebarCollapsed((collapsed) => !collapsed);
+    };
+
     desktopViewport.addEventListener('change', restoreFullSidebarOnMobile);
-    return () => desktopViewport.removeEventListener('change', restoreFullSidebarOnMobile);
-  }, []);
+    window.addEventListener('keydown', toggleSidebarWithShortcut);
+    return () => {
+      desktopViewport.removeEventListener('change', restoreFullSidebarOnMobile);
+      window.removeEventListener('keydown', toggleSidebarWithShortcut);
+    };
+  }, [signedIn]);
 
   if (!user) return null;
 
@@ -154,9 +177,9 @@ export function WorkspaceLayout() {
     }
   }
 
-  function showRailTooltip(label: string, element: HTMLElement) {
+  function showRailTooltip(label: string, element: HTMLElement, shortcut?: string) {
     const bounds = element.getBoundingClientRect();
-    setRailTooltip({ label, top: bounds.top + bounds.height / 2, left: bounds.right + 8 });
+    setRailTooltip({ label, shortcut, top: bounds.top + bounds.height / 2, left: bounds.right + 8 });
   }
 
   return (
@@ -198,15 +221,16 @@ export function WorkspaceLayout() {
           <button
             type="button"
             aria-label="Collapse sidebar"
+            aria-keyshortcuts="Control+B"
             aria-controls={NAV_GROUPS_ID}
             aria-expanded={!sidebarCollapsed}
             onClick={() => {
               setRailTooltip(null);
               setSidebarCollapsed(true);
             }}
-            onMouseEnter={(event) => showRailTooltip('Collapse sidebar', event.currentTarget)}
+            onMouseEnter={(event) => showRailTooltip('Collapse sidebar', event.currentTarget, SIDEBAR_SHORTCUT)}
             onMouseLeave={() => setRailTooltip(null)}
-            onFocus={(event) => showRailTooltip('Collapse sidebar', event.currentTarget)}
+            onFocus={(event) => showRailTooltip('Collapse sidebar', event.currentTarget, SIDEBAR_SHORTCUT)}
             onBlur={() => setRailTooltip(null)}
             className={`workspace-icon-button hidden lg:grid ${focusRing}`}
           >
@@ -250,6 +274,10 @@ export function WorkspaceLayout() {
                 <p className="truncate text-xs text-slate-500"><span className="capitalize">{user.role}</span> workspace</p>
               </div>
             </div>
+            <NavLink to="/app/security" onClick={() => setMenuOpen(false)}
+              className={({ isActive }) => navClass(isActive)}>
+              Account security
+            </NavLink>
             <button
               type="button"
               onClick={() => void logout()}
@@ -267,15 +295,16 @@ export function WorkspaceLayout() {
             <button
               type="button"
               aria-label="Expand sidebar"
+              aria-keyshortcuts="Control+B"
               aria-controls={NAV_GROUPS_ID}
               aria-expanded={false}
               onClick={() => {
                 setRailTooltip(null);
                 setSidebarCollapsed(false);
               }}
-              onMouseEnter={(event) => showRailTooltip('Expand sidebar', event.currentTarget)}
+              onMouseEnter={(event) => showRailTooltip('Expand sidebar', event.currentTarget, SIDEBAR_SHORTCUT)}
               onMouseLeave={() => setRailTooltip(null)}
-              onFocus={(event) => showRailTooltip('Expand sidebar', event.currentTarget)}
+              onFocus={(event) => showRailTooltip('Expand sidebar', event.currentTarget, SIDEBAR_SHORTCUT)}
               onBlur={() => setRailTooltip(null)}
               className={`workspace-icon-button grid ${focusRing}`}
             >
@@ -328,6 +357,11 @@ export function WorkspaceLayout() {
           style={{ top: railTooltip.top, left: railTooltip.left }}
         >
           {railTooltip.label}
+          {railTooltip.shortcut && (
+            <kbd className="ml-2 rounded border border-slate-600 px-1.5 py-0.5 font-sans text-[10px] text-slate-200">
+              {railTooltip.shortcut}
+            </kbd>
+          )}
         </div>
       ) : null}
 
@@ -337,14 +371,23 @@ export function WorkspaceLayout() {
             {currentItem ? <NavigationIcon to={currentItem.to} /> : null}
             <span>Workspace</span>
             <span aria-hidden="true">/</span>
-            <span className="truncate font-semibold text-slate-900">{currentItem?.label ?? 'Overview'}</span>
+            <span className="truncate font-semibold text-slate-900">
+              {location.pathname === '/app/security' ? 'Account security' : currentItem?.label ?? 'Overview'}
+            </span>
           </div>
           <div className="flex min-w-0 items-center gap-2.5 border-l border-slate-200 pl-4">
+            {sidebarCollapsed && <NavLink to="/app/security" className="text-sm font-medium text-slate-700 hover:underline">
+              Account security
+            </NavLink>}
             <span className="truncate text-sm font-medium text-slate-700" title={user.name}>{user.name}</span>
             <span className="workspace-avatar" aria-hidden="true">{initials}</span>
           </div>
         </div>
         <div className="workspace-content mx-auto w-full max-w-[1620px] px-4 py-5 sm:px-6 lg:px-7 lg:py-7 2xl:px-9">
+          {error && <div className="mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-950">
+            <p role="alert">{error}</p>
+            <button type="button" onClick={clearError} className="font-semibold">Dismiss</button>
+          </div>}
           {isDevelopmentPreview ? (
             <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
               Development preview · Sample data

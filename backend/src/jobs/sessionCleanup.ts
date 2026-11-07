@@ -29,6 +29,7 @@
  */
 
 import { env } from '../config/env.js';
+import { deleteExpiredAuthData } from '../repositories/accountSecurity.repository.js';
 import { deleteExpiredSessions } from '../repositories/session.repository.js';
 
 /** One sweep. Resolves to the number of rows removed, or `null` if it did not run. */
@@ -136,7 +137,13 @@ export function createSessionCleanup(options: SessionCleanupOptions = {}): Sessi
 
 /** The production instance: real repository, real interval, disabled under test. */
 export function startSessionCleanup(): SessionCleanup {
-  const job = createSessionCleanup();
+  const job = createSessionCleanup({
+    cleanup: async () => {
+      const removed = await deleteExpiredSessions();
+      await deleteExpiredAuthData();
+      return removed;
+    },
+  });
   job.start();
   return job;
 }

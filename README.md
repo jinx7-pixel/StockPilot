@@ -30,7 +30,8 @@ and recommends a next step. The owner decides what to do.
 - **Action Center:** Review recommendations and turn an approved replenishment
   action into a draft purchase order.
 - **Workspace access:** Sign in to a workspace with owner and staff roles and
-  business-scoped data.
+  business-scoped data. Accounts support email verification, password recovery,
+  and optional authenticator codes with recovery codes.
 
 | Intelligence engine | What it reports |
 | --- | --- |
@@ -127,9 +128,9 @@ Open [localhost:5173/app?preview=1](http://localhost:5173/app?preview=1).
    GRANT CONNECT ON DATABASE stockpilot TO stockpilot_app;
    GRANT USAGE ON SCHEMA public TO stockpilot_app;
    GRANT SELECT, INSERT, UPDATE, DELETE ON
-     businesses, users, auth_sessions, categories, products, inventory_movements,
-     sales, sale_items, suppliers, purchase_orders, purchase_order_items, actions
-     TO stockpilot_app;
+     businesses, users, auth_sessions, auth_email_tokens, auth_attempts,
+     categories, products, inventory_movements, sales, sale_items, suppliers,
+     purchase_orders, purchase_order_items, actions TO stockpilot_app;
    ```
 
    If the role already exists, apply the grants with your database and role names.
@@ -151,6 +152,9 @@ Open [localhost:5173/app?preview=1](http://localhost:5173/app?preview=1).
    [localhost:4000/api/health](http://localhost:4000/api/health). The health
    endpoint reports whether the API is running. `/api/ready` checks database readiness.
 
+To test registration and password recovery, configure SMTP and `APP_PUBLIC_URL`
+as described in the [local setup guide](docs/getting-started.md).
+
 ### Docker
 
 Docker support is already in the repository:
@@ -162,9 +166,8 @@ Docker support is already in the repository:
 | [`Dockerfile`](Dockerfile) | Builds the API and the separate migration job |
 | [`docker-compose.prod.yml`](docker-compose.prod.yml) | Runs the frontend, API, PostgreSQL, and opt-in migration job for a local rehearsal |
 
-See the [deployment guide](docs/deployment.md) for the container layout.
-[PR #3](https://github.com/jinx7-pixel/StockPilot/pull/3) updates the
-instructions and configuration for starting the container stack on a fresh database.
+See the [Docker rehearsal guide](docs/deployment.md#local-rehearsal) to start
+the container stack on a fresh database and verify the health endpoints.
 
 ## Project layout
 
@@ -216,8 +219,8 @@ requests targeting it. The jobs use Node.js 24.
 
 | Job | Checks |
 | --- | --- |
-| Frontend | Install, lint, type check, run Vitest, and build the web client |
-| Backend | Install, lint, type check, and build the API |
+| Frontend | Install, audit runtime dependencies, lint, type check, run Vitest, and build the web client |
+| Backend | Install, audit runtime dependencies, lint, type check, and build the API |
 | Migrations | Type check and lint migration files |
 | Backend tests | Run the backend suite against a disposable PostgreSQL 18 service |
 

@@ -12,7 +12,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import { env } from '../config/env.js';
 import { getPool } from '../db/pool.js';
 import { hashPassword } from '../security/password.js';
-import { PASSWORD, WEAK_PASSWORD, registerOwner, registrationBody } from './helpers/fixtures.js';
+import { PASSWORD, WEAK_PASSWORD, registerOwner, registrationBody, verifiedRegistration } from './helpers/fixtures.js';
 import { closeTestDatabase, prepareTestDatabase, resetTestDatabase } from './helpers/testDatabase.js';
 import { startTestServer, type TestServer } from './helpers/testServer.js';
 
@@ -45,7 +45,7 @@ describe('POST /api/auth/register', () => {
           business: { name: string };
         };
       };
-    }>('/api/auth/register', body);
+    }>('/api/auth/register', await verifiedRegistration(server, body));
 
     assert.equal(response.status, 201);
 
@@ -67,7 +67,8 @@ describe('POST /api/auth/register', () => {
   });
 
   it('never returns password material', async () => {
-    const response = await server.client().post('/api/auth/register', registrationBody());
+    const response = await server.client().post('/api/auth/register', await verifiedRegistration(server));
+    assert.equal(response.status, 201);
 
     const serialised = JSON.stringify(response.body);
     assert.ok(!serialised.includes('$argon2'), 'no Argon2 hash in the response');
@@ -75,7 +76,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('sets an HTTP-only cookie and no token in the body', async () => {
-    const response = await server.client().post('/api/auth/register', registrationBody());
+    const response = await server.client().post('/api/auth/register', await verifiedRegistration(server));
 
     const cookie = response.setCookie.find((c) => c.startsWith(`${env.auth.cookieName}=`));
     assert.ok(cookie, 'a session cookie is set');
@@ -86,7 +87,7 @@ describe('POST /api/auth/register', () => {
   it('normalises the email to lower case', async () => {
     const response = await server.client().post<{ data: { user: { email: string } } }>(
       '/api/auth/register',
-      registrationBody({ email: '  MiXeD.Case@Example.COM  ' }),
+      await verifiedRegistration(server, registrationBody({ email: '  MiXeD.Case@Example.COM  ' })),
     );
 
     assert.equal(response.status, 201);
@@ -99,9 +100,8 @@ describe('POST /api/auth/register', () => {
     await original.post('/api/auth/logout');
 
     const duplicate = server.client();
-    const response = await duplicate.post<{ code: string }>('/api/auth/register',
-      registrationBody({ email: ` ${user.email.toUpperCase()} `, password: 'another-valid-password' }),
-    );
+    const response = await duplicate.post('/api/auth/register/request', { email: user.email.toUpperCase() });
+    const unknown = await duplicate.post('/api/auth/register/request', { email: 'unknown@example.com' });
     // Check sign-in before the signup status to catch the original lockout.
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const login = await original.post<{ data: { user: { id: string } } }>(
@@ -112,23 +112,25 @@ describe('POST /api/auth/register', () => {
       await original.post('/api/auth/logout');
     }
 
-    assert.equal(response.status, 409);
-    assert.equal(response.body.code, 'EMAIL_ALREADY_REGISTERED');
+    assert.equal(response.status, 202);
+    assert.deepEqual(response.body, unknown.body);
+    assert.deepEqual(response.setCookie, []);
     assert.equal((await duplicate.get('/api/auth/me')).status, 401);
     assert.equal(await countRows('businesses'), 1, 'a duplicate leaves no orphan workspace');
     assert.equal(await countRows('users'), 1);
   });
 
   it('creates only one workspace when signups for the same email overlap', async () => {
-    const first = registrationBody();
-    const second = registrationBody({ email: first.email.toUpperCase() });
+    const body = registrationBody();
+    const first = await verifiedRegistration(server, body);
+    const second = await verifiedRegistration(server, registrationBody({ email: body.email.toUpperCase() }));
 
     const responses = await Promise.all([
       server.client().post('/api/auth/register', first),
       server.client().post('/api/auth/register', second),
     ]);
 
-    assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 409]);
+    assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 400]);
     assert.equal(await countRows('businesses'), 1);
     assert.equal(await countRows('users'), 1);
     assert.equal(await countRows('auth_sessions'), 1);
@@ -139,7 +141,7 @@ describe('POST /api/auth/register', () => {
 
     const response = await server
       .client()
-      .post('/api/auth/register', registrationBody({ password: WEAK_PASSWORD }));
+      .post('/api/auth/register', await verifiedRegistration(server, registrationBody({ password: WEAK_PASSWORD })));
 
     assert.equal(response.status, 400);
     assert.match(JSON.stringify(response.body), /12 characters/i);
@@ -147,7 +149,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('rejects a missing field with a clear 400', async () => {
-    const body = registrationBody();
+    const body = await verifiedRegistration(server);
     delete (body as Record<string, unknown>).businessName;
 
     const response = await server.client().post('/api/auth/register', body);
@@ -159,7 +161,7 @@ describe('POST /api/auth/register', () => {
   it('rejects an invalid email with a clear 400', async () => {
     const response = await server
       .client()
-      .post('/api/auth/register', registrationBody({ email: 'not-an-email' }));
+      .post('/api/auth/register/request', { email: 'not-an-email' });
 
     assert.equal(response.status, 400);
     assert.match(JSON.stringify(response.body), /valid email/i);
@@ -168,7 +170,7 @@ describe('POST /api/auth/register', () => {
   it('rejects unexpected fields instead of ignoring them', async () => {
     const response = await server
       .client()
-      .post('/api/auth/register', registrationBody({ role: 'owner', businessId: 'other-tenant' }));
+      .post('/api/auth/register', { ...await verifiedRegistration(server), role: 'owner', businessId: 'other-tenant' });
 
     assert.equal(response.status, 400, 'a client cannot smuggle in role or businessId');
   });
@@ -177,7 +179,7 @@ describe('POST /api/auth/register', () => {
 describe('POST /api/auth/login', () => {
   it('authenticates a registered owner and issues a session cookie', async () => {
     const body = registrationBody();
-    await server.client().post('/api/auth/register', body);
+    await registerOwner(server, body);
 
     // A separate client proves the session comes from this login, not a stale jar.
     const client = server.client();
@@ -197,7 +199,7 @@ describe('POST /api/auth/login', () => {
 
   it('accepts a differently-cased email', async () => {
     const body = registrationBody();
-    await server.client().post('/api/auth/register', body);
+    await registerOwner(server, body);
 
     const response = await server
       .client()
@@ -266,7 +268,7 @@ describe('POST /api/auth/login', () => {
 
   it('rejects a wrong password with 401 and issues no cookie', async () => {
     const body = registrationBody();
-    await server.client().post('/api/auth/register', body);
+    await registerOwner(server, body);
 
     const response = await server
       .client()
@@ -278,7 +280,7 @@ describe('POST /api/auth/login', () => {
 
   it('is indistinguishable for an unknown email, so accounts cannot be enumerated', async () => {
     const body = registrationBody();
-    await server.client().post('/api/auth/register', body);
+    await registerOwner(server, body);
 
     const wrongPassword = await server
       .client()

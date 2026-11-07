@@ -20,7 +20,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkspaceLayout } from './WorkspaceLayout';
 
@@ -51,13 +51,13 @@ vi.mock('../auth/authContext', () => ({
  * resolves the location exactly as it does in production, which is what makes
  * the active-state assertions meaningful rather than self-fulfilling.
  */
-function renderAt(path: string) {
+function renderAt(path: string, page = <p>page body</p>) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/app" element={<WorkspaceLayout />}>
-          <Route index element={<p>page body</p>} />
-          <Route path="*" element={<p>page body</p>} />
+          <Route index element={page} />
+          <Route path="*" element={page} />
         </Route>
       </Routes>
     </MemoryRouter>,
@@ -65,6 +65,58 @@ function renderAt(path: string) {
 }
 
 const nav = () => screen.getByRole('navigation', { name: 'Workspace' });
+
+describe('Desktop sidebar shortcut', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubDesktopViewport(matches: boolean) {
+    const viewport = { matches, addEventListener: vi.fn(), removeEventListener: vi.fn() };
+    vi.stubGlobal('matchMedia', () => viewport);
+    return viewport;
+  }
+
+  it('toggles both ways with Ctrl+B and shows the shortcut on hover in either state', async () => {
+    stubDesktopViewport(true);
+    const user = userEvent.setup();
+    renderAt('/app');
+
+    const collapse = screen.getByRole('button', { name: 'Collapse sidebar' });
+    expect(collapse).toHaveAttribute('aria-keyshortcuts', 'Control+B');
+    await user.hover(collapse);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Ctrl + B');
+
+    await user.keyboard('{Control>}b{/Control}');
+    const expand = screen.getByRole('button', { name: 'Expand sidebar' });
+    expect(expand).toHaveAttribute('aria-keyshortcuts', 'Control+B');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await user.hover(expand);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Ctrl + B');
+
+    await user.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
+  });
+
+  it('toggles from a focused search field and stays inactive in the mobile layout', async () => {
+    const viewport = stubDesktopViewport(true);
+    const user = userEvent.setup();
+    renderAt('/app', <input aria-label="Search inventory" />);
+
+    const search = screen.getByRole('textbox', { name: 'Search inventory' });
+    await user.click(search);
+    await user.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
+    expect(search).toHaveFocus();
+
+    await user.keyboard('{Control>}b{/Control}');
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
+
+    viewport.matches = false;
+    await user.keyboard('{Control>}b{/Control}');
+    expect(screen.queryByRole('button', { name: 'Expand sidebar' })).not.toBeInTheDocument();
+  });
+});
 
 describe('Workspace navigation — structure', () => {
   it('exposes a single, named navigation landmark', () => {
@@ -111,8 +163,8 @@ describe('Workspace navigation — structure', () => {
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
 
-    expect(hrefs).toHaveLength(17);
-    expect(new Set(hrefs).size).toBe(17);
+    expect(hrefs).toHaveLength(18);
+    expect(new Set(hrefs).size).toBe(18);
   });
 
   it('keeps every existing route available in the sidebar', () => {
@@ -142,9 +194,10 @@ describe('Workspace navigation — structure', () => {
         ['Suppliers', '/app/suppliers'],
         ['Products', '/app/products'],
         ['Categories', '/app/categories'],
+        ['Account security', '/app/security'],
       ]),
     );
-    expect(pairs).toHaveLength(17);
+    expect(pairs).toHaveLength(18);
   });
 
   it('places each destination inside its intended group', () => {
@@ -175,7 +228,7 @@ describe('Workspace navigation — structure', () => {
     for (const list of lists) {
       expect(list.className).toContain('min-w-0');
     }
-    expect(within(nav()).getAllByRole('link')).toHaveLength(17);
+    expect(within(nav()).getAllByRole('link')).toHaveLength(18);
   });
 });
 
@@ -320,7 +373,7 @@ describe('Workspace navigation — mobile disclosure', () => {
     expect(container).not.toBeNull();
     // The relationship is real, not decorative: the controlled element must
     // actually contain the navigation.
-    expect(container!.querySelectorAll('a').length).toBe(17);
+    expect(container!.querySelectorAll('a').length).toBe(18);
   });
 
   it('renders the links exactly once, collapsed or not', async () => {
@@ -328,13 +381,13 @@ describe('Workspace navigation — mobile disclosure', () => {
     renderAt('/app');
 
     // One set of links in the DOM. A mobile/desktop fork would double this.
-    expect(screen.getAllByRole('link')).toHaveLength(17);
+    expect(screen.getAllByRole('link')).toHaveLength(18);
     expect(screen.getAllByRole('navigation')).toHaveLength(1);
 
     await user.click(toggle());
 
     // Still one set after opening.
-    expect(screen.getAllByRole('link')).toHaveLength(17);
+    expect(screen.getAllByRole('link')).toHaveLength(18);
     expect(screen.getAllByRole('navigation')).toHaveLength(1);
   });
 

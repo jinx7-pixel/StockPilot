@@ -66,8 +66,9 @@ export function resolveSsl(mode: PgSslMode): ClientConfig['ssl'] {
       // Encrypt, but do not validate the server certificate. Matches both
       // `pg`'s mapping and StockPilot's pre-existing behaviour for `require`.
       return { rejectUnauthorized: false };
-    case 'verify-ca':
     case 'verify-full':
+      return { rejectUnauthorized: true };
+    case 'verify-ca':
     case 'prefer':
       return true;
   }
@@ -97,8 +98,12 @@ export function describeTarget(): string {
   const { host, port, database, user, url } = env.database;
 
   if (url) {
-    // Strip any credentials that may be embedded in the connection string.
-    return url.replace(/\/\/([^@/]*)@/, '//***@');
+    try {
+      const target = new URL(url);
+      return `${target.protocol}//${target.host}${target.pathname}`;
+    } catch {
+      return 'configured DATABASE_URL';
+    }
   }
 
   return `postgresql://${user}@${host}:${port}/${database}`;
