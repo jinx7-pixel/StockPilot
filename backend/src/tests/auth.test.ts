@@ -11,6 +11,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 
 import { env } from '../config/env.js';
 import { getPool } from '../db/pool.js';
+import { hashPassword } from '../security/password.js';
 import { PASSWORD, WEAK_PASSWORD, registerOwner, registrationBody } from './helpers/fixtures.js';
 import { closeTestDatabase, prepareTestDatabase, resetTestDatabase } from './helpers/testDatabase.js';
 import { startTestServer, type TestServer } from './helpers/testServer.js';
@@ -92,6 +93,47 @@ describe('POST /api/auth/register', () => {
     assert.equal(response.body.data.user.email, 'mixed.case@example.com');
   });
 
+  it('rejects a repeat signup without locking the original owner out', async () => {
+    const { client: original, user } = await registerOwner(server);
+    const credentials = { email: user.email, password: PASSWORD };
+    await original.post('/api/auth/logout');
+
+    const duplicate = server.client();
+    const response = await duplicate.post<{ code: string }>('/api/auth/register',
+      registrationBody({ email: ` ${user.email.toUpperCase()} `, password: 'another-valid-password' }),
+    );
+    // Check sign-in before the signup status to catch the original lockout.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const login = await original.post<{ data: { user: { id: string } } }>(
+        '/api/auth/login', credentials,
+      );
+      assert.equal(login.status, 200);
+      assert.equal(login.body.data.user.id, user.id);
+      await original.post('/api/auth/logout');
+    }
+
+    assert.equal(response.status, 409);
+    assert.equal(response.body.code, 'EMAIL_ALREADY_REGISTERED');
+    assert.equal((await duplicate.get('/api/auth/me')).status, 401);
+    assert.equal(await countRows('businesses'), 1, 'a duplicate leaves no orphan workspace');
+    assert.equal(await countRows('users'), 1);
+  });
+
+  it('creates only one workspace when signups for the same email overlap', async () => {
+    const first = registrationBody();
+    const second = registrationBody({ email: first.email.toUpperCase() });
+
+    const responses = await Promise.all([
+      server.client().post('/api/auth/register', first),
+      server.client().post('/api/auth/register', second),
+    ]);
+
+    assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 409]);
+    assert.equal(await countRows('businesses'), 1);
+    assert.equal(await countRows('users'), 1);
+    assert.equal(await countRows('auth_sessions'), 1);
+  });
+
   it('rejects a weak password with 400 and creates nothing', async () => {
     const before = await countRows('businesses');
 
@@ -162,6 +204,64 @@ describe('POST /api/auth/login', () => {
       .post('/api/auth/login', { email: body.email.toUpperCase(), password: PASSWORD });
 
     assert.equal(response.status, 200);
+  });
+
+  it('signs legacy accounts with the same email into the workspace matching their password', async () => {
+    const { user: first } = await registerOwner(server);
+    const { user: second } = await registerOwner(server);
+    const secondPassword = 'another-valid-password';
+    await getPool().query('UPDATE users SET email = $1, password_hash = $2 WHERE id = $3', [
+      first.email, await hashPassword(secondPassword), second.id,
+    ]);
+
+    for (const [user, password] of [[first, PASSWORD], [second, secondPassword]] as const) {
+      const login = await server.client().post<{ data: { user: { id: string; businessId: string } } }>(
+        '/api/auth/login', { email: first.email, password },
+      );
+      assert.equal(login.status, 200);
+      assert.equal(login.body.data.user.id, user.id);
+      assert.equal(login.body.data.user.businessId, user.businessId);
+    }
+
+    const wrongWorkspace = await server.client().post('/api/auth/login', {
+      email: first.email, password: PASSWORD, workspaceId: second.businessId,
+    });
+    assert.equal(wrongWorkspace.status, 401);
+    assert.deepEqual(wrongWorkspace.setCookie, []);
+  });
+
+  it('requires an explicit workspace when multiple legacy accounts match the same credentials', async () => {
+    const { user: first } = await registerOwner(server);
+    const { user: second } = await registerOwner(server);
+    const { user: third } = await registerOwner(server, { password: 'different-valid-password' });
+    await getPool().query('UPDATE users SET email = $1 WHERE id IN ($2, $3)', [
+      first.email, second.id, third.id,
+    ]);
+
+    const client = server.client();
+    const credentials = { email: first.email, password: PASSWORD };
+    const choice = await client.post<{ data: { workspaces: { id: string; name: string }[] } }>(
+      '/api/auth/login', credentials,
+    );
+    assert.equal(choice.status, 200);
+    assert.deepEqual(choice.body.data.workspaces.map(({ id }) => id).sort(),
+      [first.businessId, second.businessId].sort());
+    assert.deepEqual(choice.setCookie, []);
+    assert.equal((await client.get('/api/auth/me')).status, 401);
+
+    const wrongPassword = await client.post('/api/auth/login', {
+      ...credentials, workspaceId: second.businessId, password: 'incorrect-password',
+    });
+    assert.equal(wrongPassword.status, 401);
+    assert.deepEqual(wrongPassword.setCookie, []);
+
+    const selected = await client.post<{ data: { user: { id: string; businessId: string } } }>(
+      '/api/auth/login', { ...credentials, workspaceId: second.businessId },
+    );
+    assert.equal(selected.status, 200);
+    assert.equal(selected.body.data.user.id, second.id);
+    assert.equal(selected.body.data.user.businessId, second.businessId);
+    assert.equal((await client.get('/api/auth/me')).status, 200);
   });
 
   it('rejects a wrong password with 401 and issues no cookie', async () => {

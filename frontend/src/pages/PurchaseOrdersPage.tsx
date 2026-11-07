@@ -51,11 +51,11 @@ type PurchaseOrderSummary = {
 };
 
 const STATUS_STYLE: Record<PurchaseOrderStatus, string> = {
-  draft: 'border-slate-700 bg-slate-800 text-slate-200',
-  ordered: 'border-sky-400/20 bg-sky-400/[0.08] text-sky-200',
-  partially_received: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  received: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
-  cancelled: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
+  draft: 'border-slate-300 bg-slate-100 text-slate-800',
+  ordered: 'border-sky-400/20 bg-sky-400/[0.08] text-sky-700',
+  partially_received: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  received: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700',
+  cancelled: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-700',
 };
 
 async function loadAllPages<T>(loadPage: (page: number) => Promise<PageResult<T>>): Promise<T[]> {
@@ -87,10 +87,10 @@ function statusLabel(status: PurchaseOrderStatus): string {
 
 function SummaryCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <Card darkSurface className="min-w-0 p-4 sm:p-5">
-      <p className="text-xs font-medium tracking-wide text-slate-400 uppercase">{label}</p>
-      <p className="mt-2 truncate text-2xl font-semibold tabular-nums text-slate-100">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+    <Card className="min-w-0 p-4 sm:p-5">
+      <p className="text-xs font-medium tracking-wide text-slate-600 uppercase">{label}</p>
+      <p className="mt-2 truncate text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p>
     </Card>
   );
 }
@@ -321,20 +321,19 @@ export function PurchaseOrdersPage() {
       <PageHeader
         title="Purchase Orders"
         description="Track supplier orders and manage incoming inventory."
-        darkSurface
-        actions={<PrimaryButton darkSurface onClick={() => setCreating(true)}>Create Purchase Order</PrimaryButton>}
-      />
+        actions={<PrimaryButton onClick={() => setCreating(true)}>Create Purchase Order</PrimaryButton>}
+ />
 
-      {rangeError ? <ErrorBanner darkSurface message={rangeError} /> : null}
+      {rangeError ? <ErrorBanner message={rangeError} /> : null}
       {notice ? (
-        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-200">
+        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-700">
           {notice}
         </p>
       ) : null}
       {summaryError ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1"><ErrorBanner darkSurface message={`Purchase-order summary unavailable: ${summaryError}`} /></div>
-          <SecondaryButton darkSurface
+          <div className="min-w-0 flex-1"><ErrorBanner message={`Purchase-order summary unavailable: ${summaryError}`} /></div>
+          <SecondaryButton
             onClick={() => {
               setSummaryLoading(true);
               setSummaryError(null);
@@ -346,35 +345,35 @@ export function PurchaseOrdersPage() {
         </div>
       ) : null}
 
-      <section aria-label="Purchase order summary" className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+      <section aria-label="Purchase order summary" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         <SummaryCard
           label="Total purchase orders"
           value={summary ? formatQuantity(String(summary.total)) : '—'}
           detail={summary ? 'All statuses, all dates' : summaryLoading ? 'Loading order totals' : 'Order total unavailable'}
-        />
+ />
         <SummaryCard
           label="Draft orders"
           value={summary ? formatQuantity(String(summary.draft)) : '—'}
           detail="Not yet placed with suppliers"
-        />
+ />
         <SummaryCard
           label="Awaiting receipt"
           value={summary ? formatQuantity(String(summary.awaitingReceipt)) : '—'}
           detail="Ordered or partially received"
-        />
+ />
         <SummaryCard
           label="Received"
           value={summary ? formatQuantity(String(summary.received)) : '—'}
           detail="Fully received orders"
-        />
+ />
         <SummaryCard
           label="Order value · 30 days"
           value={purchaseValueLast30Days !== null ? formatAmount(purchaseValueLast30Days) : '—'}
           detail={purchaseValueLast30Days !== null ? 'Server-reported purchasing value' : summaryLoading ? 'Loading value summary' : 'Value unavailable'}
-        />
+ />
       </section>
 
-      <Card darkSurface className="p-4 sm:p-5">
+      <Card className="p-4 sm:p-5">
         <form onSubmit={applyFilters} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <Field
             label="Search supplier or notes"
@@ -383,8 +382,7 @@ export function PurchaseOrdersPage() {
             required={false}
             maxLength={150}
             placeholder="Supplier name or note"
-            darkSurface
-          />
+ />
           <Select
             label="Supplier"
             value={supplierId}
@@ -394,8 +392,7 @@ export function PurchaseOrdersPage() {
               ...suppliers.map((supplier) => ({ value: supplier.id, label: supplier.name })),
             ]}
             hint={supplierLookupError ? 'Supplier options could not be loaded.' : undefined}
-            darkSurface
-          />
+ />
           <Select
             label="Status"
             value={status}
@@ -404,8 +401,7 @@ export function PurchaseOrdersPage() {
               { value: 'all', label: 'All statuses' },
               ...PURCHASE_ORDER_STATUSES.map((value) => ({ value, label: statusLabel(value) })),
             ]}
-            darkSurface
-          />
+ />
           <Field
             label="From"
             type="date"
@@ -415,8 +411,7 @@ export function PurchaseOrdersPage() {
               setRangeError(null);
             }}
             required={false}
-            darkSurface
-          />
+ />
           <Field
             label="To"
             type="date"
@@ -426,25 +421,23 @@ export function PurchaseOrdersPage() {
               setRangeError(null);
             }}
             required={false}
-            darkSurface
-          />
+ />
           <div className="flex items-end gap-2">
-            <PrimaryButton darkSurface type="submit">Apply</PrimaryButton>
-            {showClearFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear</SecondaryButton> : null}
+            <PrimaryButton type="submit">Apply</PrimaryButton>
+            {showClearFilters ? <SecondaryButton onClick={clearFilters}>Clear</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      <Card darkSurface className="overflow-hidden">
+      <Card className="overflow-hidden">
         {loading ? (
-          orders === null ? <Spinner darkSurface label="Loading purchase orders…" /> : <Spinner darkSurface label="Updating purchase orders…" />
+          orders === null ? <Spinner label="Loading purchase orders…" /> : <Spinner label="Updating purchase orders…" />
         ) : orders === null ? (
           <EmptyState
             title="Purchase orders could not be loaded"
             description={error ?? 'Check the connection and retry to load the order history.'}
-            action={<SecondaryButton darkSurface onClick={reload}>Retry</SecondaryButton>}
-            darkSurface
-          />
+            action={<SecondaryButton onClick={reload}>Retry</SecondaryButton>}
+ />
         ) : orders.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No orders match those filters' : 'No purchase orders yet'}
@@ -455,18 +448,17 @@ export function PurchaseOrdersPage() {
             }
             action={
               hasFilters ? (
-                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <PrimaryButton darkSurface onClick={() => setCreating(true)}>Create the first order</PrimaryButton>
+                <PrimaryButton onClick={() => setCreating(true)}>Create the first order</PrimaryButton>
               )
             }
-            darkSurface
-          />
+ />
         ) : (
           <>
             <div className="hidden overflow-x-auto xl:block">
               <table className="w-full min-w-[1050px] text-left text-sm">
-                <thead className="border-b border-slate-800 text-xs tracking-wide text-slate-400 uppercase">
+                <thead className="border-b border-slate-200 text-xs tracking-wide text-slate-600 uppercase">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">Purchase order</th>
                     <th scope="col" className="px-4 py-3 font-medium">Supplier</th>
@@ -478,21 +470,21 @@ export function PurchaseOrdersPage() {
                     <th scope="col" className="px-5 py-3 text-right font-medium">Details</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-slate-200">
                   {orders.map((order) => (
-                    <tr key={order.id} className="transition-colors hover:bg-white/[0.025]">
+                    <tr key={order.id} className="transition-colors hover:bg-slate-50">
                       <td className="px-5 py-4">
                         <Link
                           to={`/app/purchase-orders/${order.id}`}
                           aria-label={`View purchase order ${order.id}`}
                           title={order.id}
-                          className="rounded font-mono text-xs font-medium text-emerald-300 hover:text-emerald-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                          className="rounded font-mono text-xs font-medium text-emerald-700 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                         >
                           PO-{order.id.slice(0, 8).toUpperCase()}
                         </Link>
                       </td>
-                      <td className="px-4 py-4 font-medium text-slate-100">{order.supplierName}</td>
-                      <td className="px-4 py-4 text-right text-slate-300">
+                      <td className="px-4 py-4 font-medium text-slate-900">{order.supplierName}</td>
+                      <td className="px-4 py-4 text-right text-slate-700">
                         {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'}
                       </td>
                       <td className="px-4 py-4">
@@ -500,18 +492,18 @@ export function PurchaseOrdersPage() {
                           {statusLabel(order.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-right font-medium tabular-nums text-slate-100">
+                      <td className="px-4 py-4 text-right font-medium tabular-nums text-slate-900">
                         {formatAmount(order.totalAmount)}
                       </td>
-                      <td className="px-4 py-4 text-slate-300">{formatDate(order.expectedAt)}</td>
-                      <td className="px-4 py-4 text-slate-300">
+                      <td className="px-4 py-4 text-slate-700">{formatDate(order.expectedAt)}</td>
+                      <td className="px-4 py-4 text-slate-700">
                         <span>{formatDate(order.createdAt)}</span>
                         <span className="mt-0.5 block text-xs text-slate-500">{order.createdBy.name}</span>
                       </td>
                       <td className="px-5 py-4 text-right">
                         <Link
                           to={`/app/purchase-orders/${order.id}`}
-                          className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                          className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-700 hover:bg-emerald-400/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                         >
                           View order <span aria-hidden="true" className="ml-1">→</span>
                         </Link>
@@ -522,14 +514,14 @@ export function PurchaseOrdersPage() {
               </table>
             </div>
 
-            <div className="divide-y divide-slate-800 xl:hidden">
+            <div className="divide-y divide-slate-200 xl:hidden">
               {orders.map((order) => (
                 <article key={order.id} className="space-y-3 p-4 sm:p-5">
                   <div className="flex min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Link
                         to={`/app/purchase-orders/${order.id}`}
-                        className="break-words font-semibold text-slate-100 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                        className="break-words font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                       >
                         {order.supplierName}
                       </Link>
@@ -539,28 +531,28 @@ export function PurchaseOrdersPage() {
                       {statusLabel(order.status)}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-3 text-sm">
                     <div>
-                      <p className="text-xs text-slate-400">Total</p>
-                      <p className="mt-0.5 font-semibold tabular-nums text-slate-100">{formatAmount(order.totalAmount)}</p>
+                      <p className="text-xs text-slate-600">Total</p>
+                      <p className="mt-0.5 font-semibold tabular-nums text-slate-900">{formatAmount(order.totalAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Items</p>
-                      <p className="mt-0.5 font-medium text-slate-200">{formatQuantity(String(order.itemCount))}</p>
+                      <p className="text-xs text-slate-600">Items</p>
+                      <p className="mt-0.5 font-medium text-slate-800">{formatQuantity(String(order.itemCount))}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Expected</p>
-                      <p className="mt-0.5 text-slate-300">{formatDate(order.expectedAt)}</p>
+                      <p className="text-xs text-slate-600">Expected</p>
+                      <p className="mt-0.5 text-slate-700">{formatDate(order.expectedAt)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Raised</p>
-                      <p className="mt-0.5 text-slate-300">{formatDate(order.createdAt)}</p>
+                      <p className="text-xs text-slate-600">Raised</p>
+                      <p className="mt-0.5 text-slate-700">{formatDate(order.createdAt)}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400">Raised by {order.createdBy.name}</p>
+                  <p className="text-xs text-slate-600">Raised by {order.createdBy.name}</p>
                   <Link
                     to={`/app/purchase-orders/${order.id}`}
-                    className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-300 hover:bg-emerald-400/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                    className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-700 hover:bg-emerald-400/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                   >
                     View order details <span aria-hidden="true" className="ml-1">→</span>
                   </Link>
@@ -568,14 +560,14 @@ export function PurchaseOrdersPage() {
               ))}
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400 sm:px-6">
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:px-6">
               <span>
                 {meta ? `${meta.total} order${meta.total === 1 ? '' : 's'}` : '—'}
                 {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
               </span>
               {meta && meta.totalPages > 1 ? (
                 <div className="flex gap-2">
-                  <SecondaryButton darkSurface
+                  <SecondaryButton
                     disabled={page <= 1}
                     onClick={() => {
                       setPage((current) => current - 1);
@@ -585,7 +577,7 @@ export function PurchaseOrdersPage() {
                   >
                     Previous
                   </SecondaryButton>
-                  <SecondaryButton darkSurface
+                  <SecondaryButton
                     disabled={page >= totalPages}
                     onClick={() => {
                       setPage((current) => current + 1);
@@ -603,26 +595,25 @@ export function PurchaseOrdersPage() {
       </Card>
 
       {creating ? (
-        <Modal title="Create Purchase Order" darkSurface onClose={() => setCreating(false)}>
+        <Modal title="Create Purchase Order"  onClose={() => setCreating(false)}>
           {lookupsLoading ? (
-            <Spinner darkSurface label="Loading active suppliers and products…" />
+            <Spinner label="Loading active suppliers and products…" />
           ) : supplierLookupError || productLookupError ? (
             <div className="space-y-3">
-              <ErrorBanner darkSurface
+              <ErrorBanner
                 message={[
                   supplierLookupError ? `Supplier data unavailable: ${supplierLookupError}` : null,
                   productLookupError ? `Product data unavailable: ${productLookupError}` : null,
                 ].filter(Boolean).join(' ')}
-              />
+ />
               <div className="flex justify-end">
-                <SecondaryButton darkSurface onClick={reload}>Retry</SecondaryButton>
+                <SecondaryButton onClick={reload}>Retry</SecondaryButton>
               </div>
             </div>
           ) : (
             <CreatePurchaseOrderForm
               suppliers={suppliers}
               products={products}
-              darkSurface
               onClose={() => setCreating(false)}
               onCreated={(order) => {
                 setNotice(`Created ${statusLabel(order.status)} purchase order for ${formatAmount(order.totalAmount)}.`);
@@ -630,7 +621,7 @@ export function PurchaseOrdersPage() {
                 setPage(1);
                 reload();
               }}
-            />
+ />
           )}
         </Modal>
       ) : null}

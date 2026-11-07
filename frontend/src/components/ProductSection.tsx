@@ -1,3 +1,4 @@
+import { StockPilotLogo } from './StockPilotLogo';
 import './product-showcase.css';
 
 const PRODUCTS = [
@@ -27,7 +28,7 @@ export function ProductSection() {
           <div className="sp-workspace-preview" role="img" aria-label="Illustrative StockPilot workspace with sample data: 412 products and 18,940 stock units. Oat Milk has 6 units against a reorder point of 12. Its recommendation includes evidence and medium confidence; a reviewed recommendation can become a draft purchase order.">
             <div aria-hidden="true" className="sp-workspace-shell">
               <div className="sp-workspace-toolbar">
-                <span className="sp-workspace-brand"><span>✓</span> StockPilot</span>
+                <span className="sp-workspace-brand"><StockPilotLogo /> StockPilot</span>
                 <span className="sp-workspace-path">Workspace <span>/</span> Overview</span>
                 <span className="sp-workspace-demo"><i /> Sample workspace</span>
               </div>

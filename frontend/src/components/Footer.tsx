@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { StockPilotLogo } from './StockPilotLogo';
 
 const FOOTER_LINKS = [
   { label: 'Product', href: '#product' },
@@ -17,25 +18,6 @@ const FOOTER_LINK_CLASS =
 
 const CONTACT_LINK_CLASS =
   'group flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg border border-[#d9e3ee] bg-white px-2.5 py-1.5 text-sm text-[#172b46] transition-colors duration-200 hover:border-[#b9d5ea] hover:bg-[#f5faff] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:ring-offset-white motion-reduce:transition-none';
-
-function BrandMark() {
-  return (
-    <span
-      aria-hidden="true"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#cfe6f6] bg-[#edf7fe] text-[#086dac]"
-    >
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-        <path
-          d="M5 13.5 9 17l10-11"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-}
 
 function GitHubIcon() {
   return (
@@ -85,7 +67,7 @@ export function Footer() {
               aria-label="StockPilot, back to top"
               className="inline-flex items-center gap-3 rounded-md text-[#172b46] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
-              <BrandMark />
+              <StockPilotLogo className="[--stockpilot-logo-size:32px]" />
               <span className="text-lg font-semibold tracking-tight">StockPilot</span>
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">

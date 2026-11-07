@@ -90,10 +90,10 @@ function displayError(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
 }
 
-const inputClass = 'mt-1 block h-10 w-full min-w-0 rounded-lg border border-slate-700/80 bg-[#0b1220] px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/15 scheme-dark';
-const primaryButtonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-400 px-4 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
-const secondaryButtonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
-const dangerButtonClass = 'inline-flex h-9 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-400/[0.06] px-3 text-xs font-medium text-rose-200 transition hover:border-rose-400/40 hover:bg-rose-400/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]';
+const inputClass = 'mt-1 block h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 scheme-light';
+const primaryButtonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+const secondaryButtonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+const dangerButtonClass = 'inline-flex h-9 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-400/[0.06] px-3 text-xs font-medium text-rose-700 transition hover:border-rose-400/40 hover:bg-rose-400/[0.12] focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 
 function MetricIcon({ type }: { type: 'products' | 'active' | 'stock' | 'attention' }) {
   const paths = {
@@ -103,10 +103,10 @@ function MetricIcon({ type }: { type: 'products' | 'active' | 'stock' | 'attenti
     attention: 'M12 3 2.8 20h18.4z M12 9v5 M12 17v.1',
   };
   const color = type === 'attention'
-    ? 'border-amber-400/15 bg-amber-400/[0.08] text-amber-300'
+    ? 'border-amber-400/15 bg-amber-400/[0.08] text-amber-700'
     : type === 'stock'
-      ? 'border-sky-400/15 bg-sky-400/[0.08] text-sky-300'
-      : 'border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-300';
+      ? 'border-sky-400/15 bg-sky-400/[0.08] text-sky-700'
+      : 'border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-700';
 
   return (
     <span className={'grid h-10 w-10 shrink-0 place-items-center rounded-xl border ' + color}>
@@ -129,13 +129,11 @@ function MetricCard({
   icon: 'products' | 'active' | 'stock' | 'attention';
 }) {
   return (
-    <article className="group min-w-0 rounded-2xl border border-slate-800/90 bg-[#101a2a] p-4 shadow-[0_14px_35px_-24px_rgba(0,0,0,0.8)] transition duration-200 hover:-translate-y-0.5 hover:border-slate-700 hover:bg-[#121f31] sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-slate-400">{label}</p>
-        <MetricIcon type={icon} />
-      </div>
-      <p className="mt-4 text-3xl font-semibold tracking-tight text-white">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+    <article className="workspace-metric">
+      <MetricIcon type={icon} />
+      <p className="workspace-metric-label">{label}</p>
+      <p className="workspace-metric-value mt-1 text-slate-950">{value}</p>
+      <p className="workspace-metric-detail">{detail}</p>
     </article>
   );
 }
@@ -152,7 +150,7 @@ function ProductSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="block min-w-0 text-xs font-medium text-slate-400">
+    <label className="block min-w-0 text-xs font-medium text-slate-600">
       {label}
       <select value={value} onChange={(event) => onChange(event.target.value)} className={inputClass}>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -163,10 +161,10 @@ function ProductSelect({
 
 function Badge({ tone, children }: { tone: 'green' | 'amber' | 'rose' | 'slate'; children: React.ReactNode }) {
   const styles = {
-    green: 'border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-200',
-    amber: 'border-amber-400/20 bg-amber-400/[0.07] text-amber-200',
-    rose: 'border-rose-400/20 bg-rose-400/[0.07] text-rose-200',
-    slate: 'border-slate-700 bg-slate-800/50 text-slate-400',
+    green: 'border-emerald-400/20 bg-emerald-400/[0.07] text-emerald-700',
+    amber: 'border-amber-400/20 bg-amber-400/[0.07] text-amber-700',
+    rose: 'border-rose-400/20 bg-rose-400/[0.07] text-rose-700',
+    slate: 'border-slate-300 bg-slate-50 text-slate-600',
   };
   return <span className={'inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium ' + styles[tone]}>{children}</span>;
 }
@@ -195,8 +193,8 @@ function ProductActions({
 }) {
   return (
     <div className="flex items-center justify-end gap-2">
-      <Link to={'/app/inventory/' + row.id} className="inline-flex h-9 items-center rounded-lg px-2.5 text-xs font-medium text-slate-400 transition hover:bg-white/[0.045] hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">View</Link>
-      {row.product ? <button type="button" onClick={() => onEdit(row.product!)} className="inline-flex h-9 items-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-xs font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">Edit</button> : null}
+      <Link to={'/app/inventory/' + row.id} className="inline-flex h-9 items-center rounded-lg px-2.5 text-xs font-medium text-slate-600 transition hover:bg-brand-50 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">View</Link>
+      {row.product ? <button type="button" onClick={() => onEdit(row.product!)} className="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Edit</button> : null}
       {row.product?.isActive ? <button type="button" onClick={() => onRetire(row.product!)} className={dangerButtonClass}>Retire</button> : null}
     </div>
   );
@@ -539,11 +537,11 @@ export function ProductsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-6 sm:space-y-7">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="workspace-page-header">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-emerald-300 uppercase">Catalogue management</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Products</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Manage your product catalogue, pricing, and stock details.</p>
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-brand-600 uppercase">Catalogue management</p>
+          <h1 className="mt-2">Products</h1>
+          <p className="workspace-page-description">Manage your product catalogue, pricing, and stock details.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/app/categories" className={secondaryButtonClass}>Manage categories</Link>
@@ -554,23 +552,23 @@ export function ProductsPage() {
         </div>
       </header>
 
-      {error ? <ErrorBanner message={error} darkSurface /> : null}
-      {notice ? <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-200">{notice}</p> : null}
-      {categoryWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-100">Categories could not be loaded. Product search and the other filters are still available.</p> : null}
-      {summaryError ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-100">{summaryError}</p> : null}
-      {stockWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-100">{stockWarning}</p> : null}
-      {riskWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-100">Some low-stock classifications could not be loaded. Stock quantities remain available.</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
+      {notice ? <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-700">{notice}</p> : null}
+      {categoryWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-800">Categories could not be loaded. Product search and the other filters are still available.</p> : null}
+      {summaryError ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-800">{summaryError}</p> : null}
+      {stockWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-800">{stockWarning}</p> : null}
+      {riskWarning ? <p role="status" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-800">Some low-stock classifications could not be loaded. Stock quantities remain available.</p> : null}
 
-      <section aria-label="Product summary" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Product summary" className="grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricCard label="Total products" value={overview ? formatCount(overview.products.totalProducts) : '—'} detail={summaryLoading && !overview ? 'Loading catalogue totals' : overview ? 'Across your catalogue' : 'Catalogue totals unavailable'} icon="products" />
         <MetricCard label="Active products" value={overview ? formatCount(overview.products.activeProducts) : '—'} detail={overview ? 'Marked active in the catalogue' : 'Active product count unavailable'} icon="active" />
         <MetricCard label="Products in stock" value={overview ? formatCount(overview.inventory.productsWithStock) : '—'} detail={overview ? 'Current inventory snapshot' : 'Inventory summary unavailable'} icon="stock" />
         <MetricCard label="Needs attention" value={needsAttention === null ? '—' : formatCount(needsAttention)} detail={needsAttention === null ? summaryLoading ? 'Loading stock-risk count' : 'Stock-risk count unavailable' : 'Out of stock, critical, or low stock'} icon="attention" />
       </section>
 
-      <section aria-label="Product filters" className="rounded-2xl border border-slate-800/90 bg-[#101a2a] p-4 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)] sm:p-5">
+      <section aria-label="Product filters" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <form onSubmit={(event) => { event.preventDefault(); applyFilters(); }} className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1.4fr)_minmax(140px,1fr)_minmax(135px,0.9fr)_minmax(145px,1fr)_auto] xl:items-end">
-          <Field label="Search name or SKU" value={search} onChange={setSearch} required={false} maxLength={200} placeholder="e.g. Arabica Beans or SKU-1042" darkSurface />
+          <Field label="Search name or SKU" value={search} onChange={setSearch} required={false} maxLength={200} placeholder="e.g. Arabica Beans or SKU-1042" />
           <ProductSelect label="Category" value={categoryId} onChange={changeCategory} options={[
             { value: '', label: 'All categories' },
             ...categories.map((category) => ({ value: category.id, label: category.name })),
@@ -591,13 +589,13 @@ export function ProductsPage() {
             {hasFilters ? <button type="button" onClick={clearFilters} className={secondaryButtonClass}>Clear</button> : null}
           </div>
         </form>
-        <p className="mt-3 text-[11px] leading-5 text-slate-600">Stock quantities come from the inventory ledger. Low-stock labels use the current server stock-risk assessment.</p>
+        <p className="mt-3 text-[11px] leading-5 text-slate-500">Stock quantities come from the inventory ledger. Low-stock labels use the current server stock-risk assessment.</p>
       </section>
 
-      <section aria-label="Products list" className="min-w-0 overflow-hidden rounded-2xl border border-slate-800/90 bg-[#101a2a] shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)]">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 px-5 py-4 sm:px-6">
+      <section aria-label="Products list" className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-sm font-semibold text-slate-100 sm:text-base">Product catalogue</h2>
+            <h2 className="text-sm font-semibold text-slate-900 sm:text-base">Product catalogue</h2>
             <p className="mt-1 text-xs text-slate-500">Pricing and stock are shown from their respective workspace records.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -611,21 +609,21 @@ export function ProductsPage() {
         </div>
 
         {loading ? (
-          <div role="status" className="flex items-center justify-center gap-3 py-14 text-sm text-slate-400">
-            <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400 motion-reduce:animate-none" />
+          <div role="status" className="flex items-center justify-center gap-3 py-14 text-sm text-slate-600">
+            <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 motion-reduce:animate-none" />
             Loading products…
           </div>
         ) : rows === null ? (
           <div className="px-6 py-12 text-center">
-            <p className="text-sm font-medium text-slate-200">Products could not be loaded.</p>
+            <p className="text-sm font-medium text-slate-800">Products could not be loaded.</p>
             <button type="button" onClick={beginReload} className={'mt-4 ' + secondaryButtonClass}>Try again</button>
           </div>
         ) : rows.length === 0 ? (
           <div className="px-6 py-12 text-center">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-700">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-6 w-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5zM12 12v9M4 7.5 12 12l8-4.5" /></svg>
             </span>
-            <h3 className="mt-4 text-sm font-semibold text-slate-100">{hasFilters ? 'No products match these filters' : 'Your catalogue is ready to begin'}</h3>
+            <h3 className="mt-4 text-sm font-semibold text-slate-900">{hasFilters ? 'No products match these filters' : 'Your catalogue is ready to begin'}</h3>
             <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500">{hasFilters ? 'Adjust your search or filters to see more products.' : 'Add your first product to start organizing prices and stock details.'}</p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               {hasFilters ? <button type="button" onClick={clearFilters} className={secondaryButtonClass}>Clear filters</button> : null}
@@ -642,21 +640,21 @@ export function ProductsPage() {
                 const isActive = row.product?.isActive ?? row.inventory?.isActive ?? false;
                 const stockState = statusForStock(row.inventory, riskById[row.id], stockStatus);
                 return (
-                  <article key={row.id} className="rounded-xl border border-slate-800 bg-[#0c1523] p-4">
+                  <article key={row.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <Link to={'/app/inventory/' + row.id} className="break-words text-sm font-semibold text-slate-100 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">{name}</Link>
+                        <Link to={'/app/inventory/' + row.id} className="break-words text-sm font-semibold text-slate-900 transition hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{name}</Link>
                         <p className="mt-1 font-mono text-[11px] text-slate-500">{sku}</p>
                       </div>
                       <Badge tone={isActive ? 'green' : 'slate'}>{isActive ? 'Active' : 'Inactive'}</Badge>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-800/80 pt-3">
-                      <div><p className="text-[10px] tracking-wide text-slate-600 uppercase">Category</p><p className="mt-1 truncate text-xs text-slate-300">{category}</p></div>
-                      <div><p className="text-[10px] tracking-wide text-slate-600 uppercase">Selling price</p><p className="mt-1 text-xs tabular-nums text-slate-300">{row.product ? formatMoney(row.product.sellingPrice) : '—'}</p></div>
-                      <div><p className="text-[10px] tracking-wide text-slate-600 uppercase">On hand</p><p className="mt-1 text-xs tabular-nums text-slate-300">{row.inventory ? formatQuantity(row.inventory.currentStock) + ' ' + row.inventory.unit : '—'}</p></div>
-                      <div><p className="text-[10px] tracking-wide text-slate-600 uppercase">Stock condition</p><div className="mt-1"><Badge tone={stockState.tone}>{stockState.label}</Badge></div></div>
+                    <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-200 pt-3">
+                      <div><p className="text-[10px] tracking-wide text-slate-500 uppercase">Category</p><p className="mt-1 truncate text-xs text-slate-700">{category}</p></div>
+                      <div><p className="text-[10px] tracking-wide text-slate-500 uppercase">Selling price</p><p className="mt-1 text-xs tabular-nums text-slate-700">{row.product ? formatMoney(row.product.sellingPrice) : '—'}</p></div>
+                      <div><p className="text-[10px] tracking-wide text-slate-500 uppercase">On hand</p><p className="mt-1 text-xs tabular-nums text-slate-700">{row.inventory ? formatQuantity(row.inventory.currentStock) + ' ' + row.inventory.unit : '—'}</p></div>
+                      <div><p className="text-[10px] tracking-wide text-slate-500 uppercase">Stock condition</p><div className="mt-1"><Badge tone={stockState.tone}>{stockState.label}</Badge></div></div>
                     </div>
-                    <div className="mt-3 border-t border-slate-800/80 pt-2">
+                    <div className="mt-3 border-t border-slate-200 pt-2">
                       <ProductActions row={row} onEdit={openEdit} onRetire={(product) => void handleRetire(product)} />
                     </div>
                   </article>
@@ -666,7 +664,7 @@ export function ProductsPage() {
 
             <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b border-slate-800/80 bg-[#0c1523] text-[11px] tracking-wide text-slate-500 uppercase">
+                <thead className="border-b border-slate-200 bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium sm:px-6">Product</th>
                     <th scope="col" className="px-4 py-3 font-medium">Category</th>
@@ -677,7 +675,7 @@ export function ProductsPage() {
                     <th scope="col" className="px-5 py-3 text-right font-medium sm:px-6">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/70">
+                <tbody className="divide-y divide-slate-100">
                   {rows.map((row) => {
                     const name = row.product?.name ?? row.inventory?.name ?? 'Product details unavailable';
                     const sku = row.product?.sku ?? row.inventory?.sku ?? '—';
@@ -685,14 +683,14 @@ export function ProductsPage() {
                     const isActive = row.product?.isActive ?? row.inventory?.isActive ?? false;
                     const stockState = statusForStock(row.inventory, riskById[row.id], stockStatus);
                     return (
-                      <tr key={row.id} className="transition hover:bg-white/[0.02]">
+                      <tr key={row.id} className="transition hover:bg-slate-50">
                         <td className="px-5 py-3.5 sm:px-6">
-                          <Link to={'/app/inventory/' + row.id} className="font-medium text-slate-200 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">{name}</Link>
-                          <p className="mt-0.5 font-mono text-[11px] text-slate-600">{sku} · {row.inventory?.unit ?? row.product?.unit ?? '—'}</p>
+                          <Link to={'/app/inventory/' + row.id} className="font-medium text-slate-800 transition hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{name}</Link>
+                          <p className="mt-0.5 font-mono text-[11px] text-slate-500">{sku} · {row.inventory?.unit ?? row.product?.unit ?? '—'}</p>
                         </td>
-                        <td className="px-4 py-3.5 text-slate-400">{category ?? '—'}</td>
-                        <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{row.product ? formatMoney(row.product.sellingPrice) : '—'}</td>
-                        <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{row.inventory ? formatQuantity(row.inventory.currentStock) + ' ' + row.inventory.unit : '—'}</td>
+                        <td className="px-4 py-3.5 text-slate-600">{category ?? '—'}</td>
+                        <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{row.product ? formatMoney(row.product.sellingPrice) : '—'}</td>
+                        <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{row.inventory ? formatQuantity(row.inventory.currentStock) + ' ' + row.inventory.unit : '—'}</td>
                         <td className="px-4 py-3.5"><Badge tone={stockState.tone}>{stockState.label}</Badge></td>
                         <td className="px-4 py-3.5"><Badge tone={isActive ? 'green' : 'slate'}>{isActive ? 'Active' : 'Inactive'}</Badge></td>
                         <td className="px-5 py-3.5 sm:px-6"><ProductActions row={row} onEdit={openEdit} onRetire={(product) => void handleRetire(product)} /></td>
@@ -703,7 +701,7 @@ export function ProductsPage() {
               </table>
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 px-4 py-3 sm:px-6">
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 sm:px-6">
               <p className="text-xs text-slate-500">{meta ? formatCount(meta.total) + ' products' : '—'}{meta && meta.totalPages > 1 ? ' · Page ' + formatCount(meta.page) + ' of ' + formatCount(meta.totalPages) : ''}</p>
               {meta && meta.totalPages > 1 ? (
                 <div className="flex gap-2">
@@ -717,31 +715,31 @@ export function ProductsPage() {
       </section>
 
       {creating || editing ? (
-        <Modal darkSurface title={editing ? 'Edit product' : 'Add product'} onClose={saving ? () => undefined : closeDialog} footer={
+        <Modal title={editing ? 'Edit product' : 'Add product'} onClose={saving ? () => undefined : closeDialog} footer={
           <>
             <button type="button" onClick={closeDialog} disabled={saving} className={secondaryButtonClass}>Cancel</button>
             <button type="submit" form="product-form" disabled={saving} className={primaryButtonClass}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Create product'}</button>
           </>
         }>
           <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
-            <ErrorBanner message={formError} darkSurface />
-            <Field label="SKU" value={form.sku} onChange={(sku) => setForm((current) => ({ ...current, sku }))} maxLength={100} placeholder="BOLT-M8-40" hint="Stored in uppercase and unique within your business." darkSurface />
-            <Field label="Product name" value={form.name} onChange={(name) => setForm((current) => ({ ...current, name }))} maxLength={200} placeholder="M8 x 40mm hex bolt" darkSurface />
-            <label className="block space-y-1.5 text-sm font-medium text-slate-200" htmlFor="product-description">
+            <ErrorBanner message={formError} />
+            <Field label="SKU" value={form.sku} onChange={(sku) => setForm((current) => ({ ...current, sku }))} maxLength={100} placeholder="BOLT-M8-40" hint="Stored in uppercase and unique within your business." />
+            <Field label="Product name" value={form.name} onChange={(name) => setForm((current) => ({ ...current, name }))} maxLength={200} placeholder="M8 x 40mm hex bolt" />
+            <label className="block space-y-1.5 text-sm font-medium text-slate-800" htmlFor="product-description">
               Description <span className="ml-1 text-xs font-normal text-slate-500">(optional)</span>
-              <textarea id="product-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} maxLength={2000} placeholder="Add useful product details" className="block w-full rounded-lg border border-slate-700/80 bg-[#0b1220] px-3 py-2 text-sm font-normal text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/15" />
+              <textarea id="product-description" value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} maxLength={2000} placeholder="Add useful product details" className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
             </label>
             <ProductSelect label="Category" value={form.categoryId} onChange={(categoryId) => setForm((current) => ({ ...current, categoryId }))} options={[
               { value: '', label: 'No category' },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
             ]} />
             <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Unit" value={form.unit} onChange={(unit) => setForm((current) => ({ ...current, unit }))} maxLength={30} placeholder="piece" hint="piece, box, kg…" darkSurface />
-              <Field label="Cost price" type="number" value={form.costPrice} onChange={(costPrice) => setForm((current) => ({ ...current, costPrice }))} min={0} step="0.01" darkSurface />
-              <Field label="Selling price" type="number" value={form.sellingPrice} onChange={(sellingPrice) => setForm((current) => ({ ...current, sellingPrice }))} min={0} step="0.01" darkSurface />
+              <Field label="Unit" value={form.unit} onChange={(unit) => setForm((current) => ({ ...current, unit }))} maxLength={30} placeholder="piece" hint="piece, box, kg…" />
+              <Field label="Cost price" type="number" value={form.costPrice} onChange={(costPrice) => setForm((current) => ({ ...current, costPrice }))} min={0} step="0.01" />
+              <Field label="Selling price" type="number" value={form.sellingPrice} onChange={(sellingPrice) => setForm((current) => ({ ...current, sellingPrice }))} min={0} step="0.01" />
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 rounded border-slate-600 bg-[#0b1220] text-emerald-400 accent-emerald-400 focus:ring-emerald-400" />
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} className="h-4 w-4 rounded border-slate-400 accent-brand-600 focus:ring-brand-600" />
               Active product
             </label>
           </form>

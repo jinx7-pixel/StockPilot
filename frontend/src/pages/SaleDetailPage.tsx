@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import {
+  Badge,
   Breadcrumbs,
   Card,
   ErrorBanner,
@@ -84,7 +85,7 @@ export function SaleDetailPage() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs tracking-wide text-slate-500 uppercase">Total</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">
@@ -97,7 +98,7 @@ export function SaleDetailPage() {
         </Card>
         <Card className="p-4">
           <p className="text-xs tracking-wide text-slate-500 uppercase">Status</p>
-          <p className="mt-1 text-2xl font-bold text-green-700 capitalize">{sale.status}</p>
+          <p className="mt-2"><Badge tone="success" className="capitalize">{sale.status}</Badge></p>
         </Card>
         <Card className="p-4">
           <p className="text-xs tracking-wide text-slate-500 uppercase">Recorded by</p>

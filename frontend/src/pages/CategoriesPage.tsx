@@ -22,11 +22,11 @@ interface FormState {
 const EMPTY_FORM: FormState = { name: '', description: '' };
 
 const primaryActionClass =
-  'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-400 px-4 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
+  'inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 const secondaryActionClass =
-  'inline-flex h-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
+  'inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 const rowActionClass =
-  'rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-emerald-400/[0.08] hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101a2a]';
+  'rounded-md px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-emerald-400/[0.08] hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 focus-visible:ring-offset-white';
 
 function displayError(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
@@ -180,13 +180,13 @@ export function CategoriesPage() {
 
   return (
     <div className="min-w-0 space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="workspace-page-header">
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-emerald-300 uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.18em] text-brand-600 uppercase">
             Catalogue management
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-100">Categories</h1>
-          <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400">
+          <h1 className="mt-2">Categories</h1>
+          <p className="workspace-page-description">
             Organize your inventory into clear groups so products are easier to find and manage.
           </p>
         </div>
@@ -198,25 +198,25 @@ export function CategoriesPage() {
         </button>
       </header>
 
-      {error ? <ErrorBanner message={error} darkSurface /> : null}
+      {error ? <ErrorBanner message={error} /> : null}
       {notice ? (
-        <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-200">
+        <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-400/[0.06] px-4 py-3 text-sm text-emerald-700">
           {notice}
         </p>
       ) : null}
 
       <section aria-label="Category summary" className="grid grid-cols-1 gap-4 sm:max-w-sm">
-        <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-800/90 bg-[#101a2a] p-5 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)]">
+        <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div>
-            <p className="text-sm font-medium text-slate-300">Total categories</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
+            <p className="text-sm font-medium text-slate-700">Total categories</p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
               {categories === null ? '—' : categories.length.toLocaleString()}
             </p>
             <p className="mt-1 text-xs text-slate-500">
               {loading && categories === null ? 'Loading your catalogue' : categories === null ? 'Category total unavailable' : 'In your product catalogue'}
             </p>
           </div>
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-300">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-700">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
               <path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5" />
             </svg>
@@ -225,7 +225,7 @@ export function CategoriesPage() {
       </section>
 
       <section aria-label="Search categories">
-        <div className="rounded-2xl border border-slate-800/90 bg-[#101a2a] p-4 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)] sm:p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="w-full max-w-xl">
               <Field
@@ -235,8 +235,7 @@ export function CategoriesPage() {
                 required={false}
                 maxLength={100}
                 placeholder="e.g. Fasteners"
-                darkSurface
-              />
+ />
             </div>
             {hasSearch ? (
               <button type="button" onClick={() => setSearch('')} className={secondaryActionClass}>
@@ -249,15 +248,15 @@ export function CategoriesPage() {
       </section>
 
       <section aria-label="Categories list" className="min-w-0">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-800/90 bg-[#101a2a] shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 px-5 py-4 sm:px-6">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
             <div>
-              <h2 className="text-base font-semibold text-slate-100">Category list</h2>
+              <h2 className="text-base font-semibold text-slate-900">Category list</h2>
               <p className="mt-1 text-xs text-slate-500">Names and descriptions for your inventory groups.</p>
             </div>
             {categories ? (
               <div className="flex flex-wrap items-center gap-3">
-                <span role={loading ? 'status' : undefined} className="text-xs font-medium text-slate-400">
+                <span role={loading ? 'status' : undefined} className="text-xs font-medium text-slate-600">
                   {loading
                     ? 'Refreshing categories…'
                     : hasSearch
@@ -272,37 +271,37 @@ export function CategoriesPage() {
           </div>
 
           {loading && categories === null ? (
-            <div role="status" aria-live="polite" className="flex items-center justify-center gap-3 py-14 text-sm text-slate-400">
-              <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400 motion-reduce:animate-none" />
+            <div role="status" aria-live="polite" className="flex items-center justify-center gap-3 py-14 text-sm text-slate-600">
+              <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 motion-reduce:animate-none" />
               Loading categories…
             </div>
           ) : categories === null ? (
             <div className="px-5 py-10 text-center sm:px-6">
-              <p className="text-sm font-medium text-slate-200">Categories could not be loaded.</p>
+              <p className="text-sm font-medium text-slate-800">Categories could not be loaded.</p>
               <button type="button" onClick={beginReload} className={`${secondaryActionClass} mt-4`}>
                 Try again
               </button>
             </div>
           ) : !hasCategories ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <h3 className="text-base font-semibold text-slate-100">No categories yet</h3>
-              <p className="max-w-sm text-sm text-slate-400">Create a category when it helps you organize and find products in your catalogue.</p>
+              <h3 className="text-base font-semibold text-slate-900">No categories yet</h3>
+              <p className="max-w-sm text-sm text-slate-600">Create a category when it helps you organize and find products in your catalogue.</p>
               <button type="button" onClick={openCreate} className={primaryActionClass}>Add the first category</button>
             </div>
           ) : filteredCategories.length === 0 ? (
             <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <h3 className="text-base font-semibold text-slate-100">No matching categories</h3>
-              <p className="max-w-sm text-sm text-slate-400">Try another name or clear your search to see all categories.</p>
+              <h3 className="text-base font-semibold text-slate-900">No matching categories</h3>
+              <p className="max-w-sm text-sm text-slate-600">Try another name or clear your search to see all categories.</p>
               <button type="button" onClick={() => setSearch('')} className={secondaryActionClass}>Clear search</button>
             </div>
           ) : (
             <>
               <div className="space-y-3 p-3 lg:hidden">
                 {filteredCategories.map((category) => (
-                  <article key={category.id} className="rounded-xl border border-slate-800 bg-[#0c1523] p-4">
+                  <article key={category.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="min-w-0">
-                      <h3 className="break-words text-sm font-semibold text-slate-100">{category.name}</h3>
-                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-slate-300">
+                      <h3 className="break-words text-sm font-semibold text-slate-900">{category.name}</h3>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-slate-700">
                         {category.description || 'No description provided.'}
                       </p>
                       <p className="mt-3 text-xs text-slate-500">Updated {formatDate(category.updatedAt)}</p>
@@ -313,7 +312,7 @@ export function CategoriesPage() {
                       onView={setViewing}
                       onEdit={openEdit}
                       onDelete={setDeleteCandidate}
-                    />
+ />
                   </article>
                 ))}
               </div>
@@ -321,7 +320,7 @@ export function CategoriesPage() {
               <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[700px] text-left text-sm">
                   <caption className="sr-only">Categories in your product catalogue</caption>
-                  <thead className="bg-[#0c1523] text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
+                  <thead className="bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
                     <tr>
                       <th scope="col" className="px-5 py-3 sm:px-6">Category</th>
                       <th scope="col" className="px-4 py-3">Description</th>
@@ -329,16 +328,16 @@ export function CategoriesPage() {
                       <th scope="col" className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/80">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredCategories.map((category) => (
-                      <tr key={category.id} className="transition-colors hover:bg-white/[0.025]">
-                        <th scope="row" className="max-w-56 px-5 py-4 font-semibold text-slate-100 sm:px-6">
+                      <tr key={category.id} className="transition-colors hover:bg-slate-50">
+                        <th scope="row" className="max-w-56 px-5 py-4 font-semibold text-slate-900 sm:px-6">
                           <span className="break-words">{category.name}</span>
                         </th>
-                        <td className="max-w-lg whitespace-pre-wrap break-words px-4 py-4 text-slate-300">
+                        <td className="max-w-lg whitespace-pre-wrap break-words px-4 py-4 text-slate-700">
                           {category.description || <span className="text-slate-500">No description</span>}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-slate-400">{formatDate(category.updatedAt)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 text-slate-600">{formatDate(category.updatedAt)}</td>
                         <td className="px-4 py-4">
                           <CategoryActions
                             category={category}
@@ -346,7 +345,7 @@ export function CategoriesPage() {
                             onView={setViewing}
                             onEdit={openEdit}
                             onDelete={setDeleteCandidate}
-                          />
+ />
                         </td>
                       </tr>
                     ))}
@@ -362,10 +361,9 @@ export function CategoriesPage() {
         <Modal
           title={editing ? 'Edit category' : 'Add category'}
           onClose={closeForm}
-          darkSurface
           footer={
             <>
-              <SecondaryButton onClick={closeForm} disabled={saving} darkSurface>Cancel</SecondaryButton>
+              <SecondaryButton onClick={closeForm} disabled={saving} >Cancel</SecondaryButton>
               <button type="submit" form="category-form" disabled={saving} aria-busy={saving} className={primaryActionClass}>
                 {saving ? 'Saving…' : editing ? 'Save changes' : 'Create category'}
               </button>
@@ -374,15 +372,14 @@ export function CategoriesPage() {
         >
           <form id="category-form" onSubmit={handleSubmit}>
             <fieldset disabled={saving} className="space-y-4">
-              <ErrorBanner message={formError} darkSurface />
+              <ErrorBanner message={formError} />
               <Field
                 label="Category name"
                 value={form.name}
                 onChange={(name) => setForm((current) => ({ ...current, name }))}
                 maxLength={100}
                 placeholder="Fasteners"
-                darkSurface
-              />
+ />
               <Textarea
                 label="Description"
                 value={form.description}
@@ -390,35 +387,34 @@ export function CategoriesPage() {
                 required={false}
                 maxLength={2000}
                 placeholder="Nuts, bolts, screws and fixings"
-                darkSurface
-              />
-              <p className="text-xs text-slate-400">Names must be unique within your business.</p>
+ />
+              <p className="text-xs text-slate-600">Names must be unique within your business.</p>
             </fieldset>
           </form>
         </Modal>
       ) : null}
 
       {viewing ? (
-        <Modal title="Category details" onClose={() => setViewing(null)} darkSurface>
+        <Modal title="Category details" onClose={() => setViewing(null)} >
           <dl className="space-y-4">
             <div>
-              <dt className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Name</dt>
-              <dd className="mt-1 break-words text-base font-semibold text-slate-100">{viewing.name}</dd>
+              <dt className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Name</dt>
+              <dd className="mt-1 break-words text-base font-semibold text-slate-900">{viewing.name}</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Description</dt>
-              <dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">
+              <dt className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Description</dt>
+              <dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">
                 {viewing.description || 'No description provided.'}
               </dd>
             </div>
-            <div className="grid grid-cols-1 gap-4 border-t border-slate-800 pt-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
               <div>
-                <dt className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Created</dt>
-                <dd className="mt-1 text-sm text-slate-300">{formatDate(viewing.createdAt)}</dd>
+                <dt className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Created</dt>
+                <dd className="mt-1 text-sm text-slate-700">{formatDate(viewing.createdAt)}</dd>
               </div>
               <div>
-                <dt className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Last updated</dt>
-                <dd className="mt-1 text-sm text-slate-300">{formatDate(viewing.updatedAt)}</dd>
+                <dt className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Last updated</dt>
+                <dd className="mt-1 text-sm text-slate-700">{formatDate(viewing.updatedAt)}</dd>
               </div>
             </div>
           </dl>
@@ -434,10 +430,9 @@ export function CategoriesPage() {
         confirmLabel="Delete category"
         tone="danger"
         pending={deleting}
-        darkSurface
         onConfirm={() => void handleDelete()}
         onCancel={() => { if (!deleting) setDeleteCandidate(null); }}
-      />
+ />
     </div>
   );
 }
@@ -456,14 +451,14 @@ function CategoryActions({
   onDelete: (category: Category) => void;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-1 border-t border-slate-800 pt-2 lg:mt-0 lg:justify-end lg:border-0 lg:pt-0">
+    <div className="mt-3 flex flex-wrap gap-1 border-t border-slate-200 pt-2 lg:mt-0 lg:justify-end lg:border-0 lg:pt-0">
       <button type="button" onClick={() => onView(category)} className={rowActionClass}>View</button>
       <button type="button" onClick={() => onEdit(category)} className={rowActionClass}>Edit</button>
       {isOwner ? (
         <button
           type="button"
           onClick={() => onDelete(category)}
-          className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-rose-300 transition hover:bg-rose-400/[0.08] hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-1 focus-visible:ring-offset-[#101a2a]"
+          className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-400/[0.08] hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-1 focus-visible:ring-offset-white"
         >
           Delete
         </button>

@@ -182,29 +182,27 @@ export function PageHeader({
   description,
   actions,
   breadcrumbs,
-  darkSurface = false,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
-  darkSurface?: boolean;
   /** Rendered above the title; `PageHeader` owns the spacing either way. */
   breadcrumbs?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4">
-      <div>
+    <header className="workspace-page-header">
+      <div className="min-w-0">
         {breadcrumbs ? <div className="mb-2">{breadcrumbs}</div> : null}
-        <h1 className={`text-2xl font-bold tracking-tight ${darkSurface ? 'text-slate-100' : 'text-slate-900'}`}>
+        <h1>
           {title}
         </h1>
         {description ? (
-          <p className={`mt-1 text-sm ${darkSurface ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className="workspace-page-description">
             {description}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {actions ? <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }

@@ -41,9 +41,9 @@ const STATUS_LABEL: Record<OverstockStatus, string> = {
 };
 
 const STATUS_BADGE: Record<OverstockStatus, string> = {
-  OVERSTOCK: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
-  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
+  OVERSTOCK: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700',
+  INSUFFICIENT_DATA: 'border-slate-300 bg-slate-100 text-slate-700',
 };
 
 const STATUS_ICON: Record<OverstockStatus, string> = {
@@ -83,10 +83,10 @@ function StatusBadge({ status }: { status: OverstockStatus }) {
 
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
-      <p className="text-xs tracking-wide text-slate-400 uppercase">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-100 tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <p className="text-xs tracking-wide text-slate-600 uppercase">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">{value}</p>
+      {hint ? <p className="text-xs text-slate-600">{hint}</p> : null}
     </div>
   );
 }
@@ -246,43 +246,42 @@ export function OverstockPage() {
       <PageHeader
         title="Overstock"
         description="Identify excess inventory and understand where stock may be tied up."
-        darkSurface
-        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
-      />
+        actions={<SecondaryButton disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
+ />
 
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-slate-600">
         Overstock is assessed from historical days of cover. This page is read-only and does not recommend or change stock actions.
       </p>
 
       {statusCounts !== null ? (
         <section className="space-y-2">
           <div>
-            <h2 className="text-sm font-semibold tracking-wide text-slate-300 uppercase">Classification summary</h2>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-700 uppercase">Classification summary</h2>
             <p className="mt-1 text-xs text-slate-500">
               Counts follow search, category, and product status. Classification and confidence filters only narrow the list.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {STATUS_ORDER.map((level) => (
-              <Card key={level} darkSurface className="min-w-0 p-4">
+              <Card key={level}  className="min-w-0 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs tracking-wide text-slate-400 uppercase">{STATUS_LABEL[level]}</p>
+                  <p className="text-xs tracking-wide text-slate-600 uppercase">{STATUS_LABEL[level]}</p>
                   <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-sm font-bold ${STATUS_BADGE[level]}`} aria-hidden="true">
                     {STATUS_ICON[level]}
                   </span>
                 </div>
-                <p className="mt-2 text-2xl font-bold text-slate-100 tabular-nums">{statusCounts[level] ?? 0}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">{statusCounts[level] ?? 0}</p>
               </Card>
             ))}
           </div>
         </section>
       ) : (
-        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-700">
           Overstock classification totals are unavailable. Product assessments may still load below.
         </p>
       )}
 
-      <Card darkSurface className="p-4">
+      <Card className="p-4">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
             label="Search"
@@ -290,35 +289,31 @@ export function OverstockPage() {
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
-            darkSurface
-          />
+ />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
             disabled={categoriesLoading || categoriesError !== null}
             hint={categoriesError ? 'Category options are unavailable until the lookup succeeds.' : undefined}
-            darkSurface
             options={[
               { value: '', label: 'All categories' },
               ...(categories ?? []).map((category) => ({ value: category.id, label: category.name })),
             ]}
-          />
+ />
           <Select
             label="Status"
             value={overstockStatus}
             onChange={handleStatus}
-            darkSurface
             options={[
               { value: 'all', label: 'Any status' },
               ...STATUS_ORDER.map((level) => ({ value: level, label: STATUS_LABEL[level] })),
             ]}
-          />
+ />
           <Select
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
-            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -326,58 +321,57 @@ export function OverstockPage() {
               { value: 'LOW', label: 'Low confidence' },
               { value: 'INSUFFICIENT', label: 'Insufficient evidence' },
             ]}
-          />
+ />
           <Select
             label="Product status"
             value={status}
             onChange={handleActive}
-            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
               { value: 'false', label: 'Inactive only' },
             ]}
-          />
+ />
 
           <div className="flex flex-wrap items-end gap-2 xl:col-span-3">
             <button
               type="submit"
-              className="min-h-10 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]"
+              className="min-h-10 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               Search
             </button>
-            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
       {categoriesError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-700">
           <span>Category options could not be loaded: {categoriesError}</span>
-          <SecondaryButton darkSurface disabled={loading} onClick={reload}>Retry</SecondaryButton>
+          <SecondaryButton disabled={loading} onClick={reload}>Retry</SecondaryButton>
         </div>
       ) : null}
 
       {loading ? (
-        <Card darkSurface className="p-8"><Spinner darkSurface label="Assessing stock cover…" /></Card>
+        <Card className="p-8"><Spinner label="Assessing stock cover…" /></Card>
       ) : error ? (
-        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div role="alert" className="min-w-0">
-            <h2 className="font-semibold text-rose-200">Overstock assessments could not be loaded</h2>
-            <p className="mt-1 break-words text-sm text-rose-300">{error}</p>
+            <h2 className="font-semibold text-rose-700">Overstock assessments could not be loaded</h2>
+            <p className="mt-1 break-words text-sm text-rose-700">{error}</p>
           </div>
-          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          <SecondaryButton onClick={reload}>Try again</SecondaryButton>
         </Card>
       ) : items === null ? (
-        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
-            <h2 className="font-semibold text-slate-100">Overstock data is unavailable</h2>
-            <p className="mt-1 text-sm text-slate-400">The assessment list has not returned data yet.</p>
+            <h2 className="font-semibold text-slate-900">Overstock data is unavailable</h2>
+            <p className="mt-1 text-sm text-slate-600">The assessment list has not returned data yet.</p>
           </div>
-          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          <SecondaryButton onClick={reload}>Try again</SecondaryButton>
         </Card>
       ) : items.length === 0 ? (
-        <Card darkSurface>
+        <Card >
           <EmptyState
             title={hasFilters ? 'No products match these filters' : 'Nothing to assess yet'}
             description={
@@ -385,54 +379,53 @@ export function OverstockPage() {
                 ? 'Try widening the search, or clear the filters to see the full catalog.'
                 : 'Once you add products and record sales, each product gets a days-of-cover reading here.'
             }
-            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/products">Go to products</Link>}
-            darkSurface
-          />
+            action={hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" to="/app/products">Go to products</Link>}
+ />
         </Card>
       ) : (
         <>
         <div className="space-y-3 lg:hidden">
           {items.map((item) => (
-            <Card key={item.productId} darkSurface className="p-4">
+            <Card key={item.productId}  className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="break-words font-semibold text-slate-100">
+                  <h2 className="break-words font-semibold text-slate-900">
                     {item.name}
                     {!item.isActive ? <span className="ml-2 text-xs font-normal text-slate-500">inactive</span> : null}
                   </h2>
-                  <p className="mt-1 break-words text-xs text-slate-400">
+                  <p className="mt-1 break-words text-xs text-slate-600">
                     {item.sku}{item.category ? ` · ${item.category.name}` : ''}
                   </p>
                 </div>
                 <StatusBadge status={item.status} />
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <div><dt className="text-xs text-slate-400">Current stock</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.currentStock}</dd></div>
-                <div><dt className="text-xs text-slate-400">Average daily sales</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.averageDailySales30d}</dd></div>
-                <div><dt className="text-xs text-slate-400">Days of stock</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{optional(item.daysOfStock)}</dd></div>
-                <div><dt className="text-xs text-slate-400">Threshold</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.thresholdDays} days</dd></div>
-                <div className="col-span-2"><dt className="text-xs text-slate-400">Confidence</dt><dd className="mt-0.5 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
+                <div><dt className="text-xs text-slate-600">Current stock</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.currentStock}</dd></div>
+                <div><dt className="text-xs text-slate-600">Average daily sales</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.averageDailySales30d}</dd></div>
+                <div><dt className="text-xs text-slate-600">Days of stock</dt><dd className="mt-0.5 font-semibold text-slate-900 tabular-nums">{optional(item.daysOfStock)}</dd></div>
+                <div><dt className="text-xs text-slate-600">Threshold</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.thresholdDays} days</dd></div>
+                <div className="col-span-2"><dt className="text-xs text-slate-600">Confidence</dt><dd className="mt-0.5 text-slate-700">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
               </dl>
-              <div className="mt-4 border-t border-slate-800 pt-3">
-                <SecondaryButton darkSurface onClick={() => setSelected(item)}>View details</SecondaryButton>
+              <div className="mt-4 border-t border-slate-200 pt-3">
+                <SecondaryButton onClick={() => setSelected(item)}>View details</SecondaryButton>
               </div>
             </Card>
           ))}
-          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-600">
             <span>{meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}{meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}</span>
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
-                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
+                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
+                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
               </div>
             ) : null}
           </footer>
         </div>
 
-        <Card darkSurface className="hidden overflow-hidden lg:block">
+        <Card className="hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#0c1523] text-xs tracking-wide text-slate-400 uppercase">
+              <thead className="bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Status</th>
@@ -444,17 +437,17 @@ export function OverstockPage() {
                   <th scope="col" className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200">
                 {items.map((item) => (
-                  <tr key={item.productId} className="transition-colors hover:bg-white/[0.025]">
+                  <tr key={item.productId} className="transition-colors hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-100">
+                      <p className="font-medium text-slate-900">
                         {item.name}
                         {!item.isActive ? (
                           <span className="ml-2 text-xs text-slate-500">inactive</span>
                         ) : null}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-600">
                         {item.sku}
                         {item.category ? ` · ${item.category.name}` : ''}
                       </p>
@@ -462,21 +455,21 @@ export function OverstockPage() {
                     <td className="px-4 py-3">
                       <StatusBadge status={item.status} />
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {item.currentStock}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {item.averageDailySales30d}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-100 tabular-nums">
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
                       {optional(item.daysOfStock)}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-300 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-700 tabular-nums">
                       {item.thresholdDays}
                     </td>
-                    <td className="px-4 py-3 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-3 text-slate-700">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-3 text-right">
-                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -484,7 +477,7 @@ export function OverstockPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
             <span>
               {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
               {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -492,10 +485,10 @@ export function OverstockPage() {
 
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
                   Next
                 </SecondaryButton>
               </div>
@@ -506,57 +499,56 @@ export function OverstockPage() {
       )}
 
       {selected ? (
-        <Modal title={selected.name} darkSurface onClose={() => setSelected(null)}>
+        <Modal title={selected.name}  onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 className={STATUS_BADGE[selected.status]}
                 label={STATUS_LABEL[selected.status]}
-              />
-              <span className="text-sm text-slate-300">
+ />
+              <span className="text-sm text-slate-700">
                 {CONFIDENCE_LABEL[selected.confidence]}
               </span>
             </div>
 
             {/* The server's own words. Not paraphrased, not re-worded. */}
-            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm text-slate-300">
+            <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={STATUS_LABEL[selected.status]}
-              darkSurface
-            />
+ />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric
                 label="Current stock"
                 value={selected.currentStock}
                 hint="sum of the inventory ledger"
-              />
+ />
               <Metric
                 label="Average daily sales"
                 value={selected.averageDailySales30d}
                 hint={`${selected.unitsSold30d} units over ${selected.analysisWindowDays} days`}
-              />
+ />
               <Metric
                 label="Days of stock"
                 value={optional(selected.daysOfStock)}
                 hint="current stock divided by the recent daily rate"
-              />
+ />
               <Metric
                 label="Threshold"
                 value={`${selected.thresholdDays} days`}
                 hint="at or above this is overstocked"
-              />
+ />
             </div>
 
             <section className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
                 Evidence
               </h3>
-              <ul className="space-y-1 text-sm text-slate-300">
+              <ul className="space-y-1 text-sm text-slate-700">
                 <li>
                   Active sales days in the {selected.evidence.analysisWindowDays}-day window:{' '}
                   {selected.activeSalesDays30d}
@@ -572,29 +564,29 @@ export function OverstockPage() {
                 </li>
                 <li>Sufficient evidence: {selected.evidence.hasSufficientEvidence ? 'yes' : 'no'}</li>
                 {selected.evidence.unmetEvidenceGates.length > 0 ? (
-                  <li className="text-slate-400">
+                  <li className="text-slate-600">
                     Not met: {selected.evidence.unmetEvidenceGates.join(', ')}
                   </li>
                 ) : null}
               </ul>
             </section>
 
-            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-200">
+            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-700">
               This is a measurement, not a recommendation. Nothing on this page has been marked
               down, returned, discounted or ordered.
             </p>
 
-            <nav aria-label="Related inventory pages" className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
-              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to={`/app/inventory/${selected.productId}`}>
+            <nav aria-label="Related inventory pages" className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+              <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" to={`/app/inventory/${selected.productId}`}>
                 Inventory history
               </Link>
-              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/demand">
+              <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" to="/app/demand">
                 Demand Planning
               </Link>
-              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/reorder">
+              <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" to="/app/reorder">
                 Reorder
               </Link>
-              <Link className="rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" to="/app/purchase-orders">
+              <Link className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" to="/app/purchase-orders">
                 Purchase Orders
               </Link>
             </nav>

@@ -47,10 +47,10 @@ const DECISION_LABEL: Record<ReorderDecision, string> = {
 };
 
 const DECISION_BADGE: Record<ReorderDecision, string> = {
-  REORDER: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  NO_REORDER: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
-  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
-  DATA_ERROR: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
+  REORDER: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  NO_REORDER: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700',
+  INSUFFICIENT_DATA: 'border-slate-300 bg-slate-100 text-slate-700',
+  DATA_ERROR: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-700',
 };
 
 const DECISION_ICON: Record<ReorderDecision, string> = {
@@ -98,10 +98,10 @@ function DecisionBadge({ decision }: { decision: ReorderDecision }) {
 
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
-      <p className="text-xs tracking-wide text-slate-400 uppercase">{label}</p>
-      <p className="mt-1 text-lg font-bold text-slate-100 tabular-nums">{value}</p>
-      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <p className="text-xs tracking-wide text-slate-600 uppercase">{label}</p>
+      <p className="mt-1 text-lg font-bold text-slate-900 tabular-nums">{value}</p>
+      {hint ? <p className="text-xs text-slate-600">{hint}</p> : null}
     </div>
   );
 }
@@ -263,39 +263,38 @@ export function ReorderPage() {
       <PageHeader
         title="Reorder"
         description="Identify replenishment needs and manage restocking through purchase orders."
-        darkSurface
         actions={
           <div className="flex flex-wrap gap-2">
             <Link
               to="/app/purchase-orders"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               Create Purchase Order
             </Link>
-            <SecondaryButton darkSurface disabled={loading} onClick={reload}>
+            <SecondaryButton disabled={loading} onClick={reload}>
               Refresh
             </SecondaryButton>
           </div>
         }
-      />
+ />
 
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-slate-600">
         Recommendations are read-only. Creating an order and receiving stock happen through Purchase Orders.
       </p>
 
       {decisionCounts !== null ? (
         <section className="space-y-2">
           <div>
-            <h2 className="text-sm font-semibold tracking-wide text-slate-300 uppercase">Decision summary</h2>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-700 uppercase">Decision summary</h2>
             <p className="mt-1 text-xs text-slate-500">
               Counts follow search, category, and product status. Decision and confidence filters only narrow the list.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {DECISION_ORDER.map((level) => (
-              <Card key={level} darkSurface className="min-w-0 p-4">
+              <Card key={level}  className="min-w-0 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs tracking-wide text-slate-400 uppercase">{DECISION_LABEL[level]}</p>
+                  <p className="text-xs tracking-wide text-slate-600 uppercase">{DECISION_LABEL[level]}</p>
                   <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-sm font-bold ${DECISION_BADGE[level]}`} aria-hidden="true">
                     {DECISION_ICON[level]}
                   </span>
@@ -308,12 +307,12 @@ export function ReorderPage() {
           </div>
         </section>
       ) : (
-        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+        <p role="status" className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-700">
           Reorder decision totals are unavailable. Product recommendations may still load below.
         </p>
       )}
 
-      <Card darkSurface className="p-4">
+      <Card className="p-4">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
             label="Search"
@@ -321,35 +320,31 @@ export function ReorderPage() {
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
-            darkSurface
-          />
+ />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
             disabled={categoriesLoading || categoriesError !== null}
             hint={categoriesError ? 'Category options are unavailable until the lookup succeeds.' : undefined}
-            darkSurface
             options={[
               { value: '', label: 'All categories' },
               ...(categories ?? []).map((category) => ({ value: category.id, label: category.name })),
             ]}
-          />
+ />
           <Select
             label="Decision"
             value={decision}
             onChange={handleDecision}
-            darkSurface
             options={[
               { value: 'all', label: 'Any decision' },
               ...DECISION_ORDER.map((level) => ({ value: level, label: DECISION_LABEL[level] })),
             ]}
-          />
+ />
           <Select
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
-            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -357,60 +352,59 @@ export function ReorderPage() {
               { value: 'LOW', label: 'Low confidence' },
               { value: 'INSUFFICIENT', label: 'Insufficient evidence' },
             ]}
-          />
+ />
           <Select
             label="Product status"
             value={status}
             onChange={handleStatus}
-            darkSurface
             options={[
               { value: 'active', label: 'Active only' },
               { value: 'inactive', label: 'Inactive only' },
               { value: 'all', label: 'Active and inactive' },
             ]}
-          />
+ />
 
           <div className="flex flex-wrap items-end gap-2 xl:col-span-3">
             <button
               type="submit"
-              className="min-h-10 rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-[#06251a] shadow-sm transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]"
+              className="min-h-10 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               Search
             </button>
-            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
       {categoriesError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-200">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-700">
           <span>Category options could not be loaded: {categoriesError}</span>
-          <SecondaryButton darkSurface disabled={loading} onClick={reload}>Retry</SecondaryButton>
+          <SecondaryButton disabled={loading} onClick={reload}>Retry</SecondaryButton>
         </div>
       ) : null}
 
       {loading ? (
-        <Card darkSurface className="p-8">
-          <Spinner darkSurface label="Assessing reorder needs…" />
+        <Card className="p-8">
+          <Spinner label="Assessing reorder needs…" />
         </Card>
       ) : error ? (
-        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div role="alert" className="min-w-0">
-            <h2 className="font-semibold text-rose-200">Reorder recommendations could not be loaded</h2>
-            <p className="mt-1 break-words text-sm text-rose-300">{error}</p>
+            <h2 className="font-semibold text-rose-700">Reorder recommendations could not be loaded</h2>
+            <p className="mt-1 break-words text-sm text-rose-700">{error}</p>
           </div>
-          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          <SecondaryButton onClick={reload}>Try again</SecondaryButton>
         </Card>
       ) : items === null ? (
-        <Card darkSurface className="flex flex-wrap items-center justify-between gap-4 p-5">
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
           <div>
-            <h2 className="font-semibold text-slate-100">Reorder data is unavailable</h2>
-            <p className="mt-1 text-sm text-slate-400">The recommendation list has not returned data yet.</p>
+            <h2 className="font-semibold text-slate-900">Reorder data is unavailable</h2>
+            <p className="mt-1 text-sm text-slate-600">The recommendation list has not returned data yet.</p>
           </div>
-          <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+          <SecondaryButton onClick={reload}>Try again</SecondaryButton>
         </Card>
       ) : items.length === 0 ? (
-        <Card darkSurface>
+        <Card >
           <EmptyState
             title={hasFilters ? 'No products match these filters' : 'Nothing to assess yet'}
             description={
@@ -418,55 +412,54 @@ export function ReorderPage() {
                 ? 'Try widening the search, or clear the filters to see the full catalog.'
                 : 'Once you add products, record sales, and complete a purchase order, each product gets a reorder recommendation here.'
             }
-            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
-            darkSurface
-          />
+            action={hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
+ />
         </Card>
       ) : (
         <>
         <div className="space-y-3 lg:hidden">
           {items.map((item) => (
-            <Card key={item.productId} darkSurface className="p-4">
+            <Card key={item.productId}  className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="break-words font-semibold text-slate-100">
+                  <h2 className="break-words font-semibold text-slate-900">
                     {item.name}
                     {!item.isActive ? <span className="ml-2 text-xs font-normal text-slate-500">inactive</span> : null}
                   </h2>
-                  <p className="mt-1 break-words text-xs text-slate-400">
+                  <p className="mt-1 break-words text-xs text-slate-600">
                     {item.sku}{item.category ? ` · ${item.category.name}` : ''}
                   </p>
                 </div>
                 <DecisionBadge decision={item.decision} />
               </div>
               <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                <div><dt className="text-xs text-slate-400">On hand</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.currentStock}</dd></div>
-                <div><dt className="text-xs text-slate-400">On order</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.onOrderQuantity}</dd></div>
-                <div><dt className="text-xs text-slate-400">Available</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{item.netAvailable}</dd></div>
-                <div><dt className="text-xs text-slate-400">Reorder point</dt><dd className="mt-0.5 font-medium text-slate-100 tabular-nums">{optional(item.reorderPoint)}</dd></div>
-                <div><dt className="text-xs text-slate-400">Suggested quantity</dt><dd className="mt-0.5 font-semibold text-slate-100 tabular-nums">{item.reorder ? optional(item.recommendedQuantity) : '—'}</dd></div>
-                <div><dt className="text-xs text-slate-400">Confidence</dt><dd className="mt-0.5 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
+                <div><dt className="text-xs text-slate-600">On hand</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.currentStock}</dd></div>
+                <div><dt className="text-xs text-slate-600">On order</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.onOrderQuantity}</dd></div>
+                <div><dt className="text-xs text-slate-600">Available</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{item.netAvailable}</dd></div>
+                <div><dt className="text-xs text-slate-600">Reorder point</dt><dd className="mt-0.5 font-medium text-slate-900 tabular-nums">{optional(item.reorderPoint)}</dd></div>
+                <div><dt className="text-xs text-slate-600">Suggested quantity</dt><dd className="mt-0.5 font-semibold text-slate-900 tabular-nums">{item.reorder ? optional(item.recommendedQuantity) : '—'}</dd></div>
+                <div><dt className="text-xs text-slate-600">Confidence</dt><dd className="mt-0.5 text-slate-700">{CONFIDENCE_LABEL[item.confidence]}</dd></div>
               </dl>
-              <div className="mt-4 border-t border-slate-800 pt-3">
-                <SecondaryButton darkSurface onClick={() => setSelected(item)}>View details</SecondaryButton>
+              <div className="mt-4 border-t border-slate-200 pt-3">
+                <SecondaryButton onClick={() => setSelected(item)}>View details</SecondaryButton>
               </div>
             </Card>
           ))}
-          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 px-1 text-sm text-slate-600">
             <span>{meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}{meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}</span>
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
-                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
+                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</SecondaryButton>
+                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</SecondaryButton>
               </div>
             ) : null}
           </footer>
         </div>
 
-        <Card darkSurface className="hidden overflow-hidden lg:block">
+        <Card className="hidden overflow-hidden lg:block">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-[#0c1523] text-xs tracking-wide text-slate-400 uppercase">
+              <thead className="bg-slate-50 text-xs tracking-wide text-slate-600 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Decision</th>
@@ -479,17 +472,17 @@ export function ReorderPage() {
                   <th scope="col" className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200">
                 {items.map((item) => (
-                  <tr key={item.productId} className="transition-colors hover:bg-white/[0.025]">
+                  <tr key={item.productId} className="transition-colors hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-100">
+                      <p className="font-medium text-slate-900">
                         {item.name}
                         {!item.isActive ? (
                           <span className="ml-2 text-xs text-slate-500">inactive</span>
                         ) : null}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-600">
                         {item.sku}
                         {item.category ? ` · ${item.category.name}` : ''}
                       </p>
@@ -497,24 +490,24 @@ export function ReorderPage() {
                     <td className="px-4 py-3">
                       <DecisionBadge decision={item.decision} />
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {item.currentStock}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {item.onOrderQuantity}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {item.netAvailable}
                     </td>
-                    <td className="px-4 py-3 text-right text-slate-200 tabular-nums">
+                    <td className="px-4 py-3 text-right text-slate-800 tabular-nums">
                       {optional(item.reorderPoint)}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-100 tabular-nums">
+                    <td className="px-4 py-3 text-right font-semibold text-slate-900 tabular-nums">
                       {item.reorder ? optional(item.recommendedQuantity) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-300">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-3 text-slate-700">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-3 text-right">
-                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -522,7 +515,7 @@ export function ReorderPage() {
             </table>
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
             <span>
               {meta ? `${meta.total} product${meta.total === 1 ? '' : 's'}` : '—'}
               {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -530,10 +523,10 @@ export function ReorderPage() {
 
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                <SecondaryButton disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton darkSurface disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                <SecondaryButton disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
                   Next
                 </SecondaryButton>
               </div>
@@ -544,45 +537,44 @@ export function ReorderPage() {
       )}
 
       {selected ? (
-        <Modal title={selected.name} darkSurface onClose={() => setSelected(null)}>
+        <Modal title={selected.name}  onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge
                 className={DECISION_BADGE[selected.decision]}
                 label={DECISION_LABEL[selected.decision]}
-              />
-              <span className="text-sm text-slate-300">
+ />
+              <span className="text-sm text-slate-700">
                 {CONFIDENCE_LABEL[selected.confidence]}
               </span>
             </div>
 
             {/* The server's own words. Not paraphrased, not re-worded. */}
-            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm text-slate-300">
+            <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={DECISION_LABEL[selected.decision]}
-              darkSurface
-            />
+ />
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Metric
                 label="On hand"
                 value={selected.currentStock}
                 hint="sum of the inventory ledger"
-              />
+ />
               <Metric
                 label="On order"
                 value={selected.onOrderQuantity}
                 hint="ordered or partly received"
-              />
+ />
               <Metric
                 label="Available"
                 value={selected.netAvailable}
                 hint="on hand plus on order"
-              />
+ />
               <Metric
                 label="Reorder point"
                 value={optional(selected.reorderPoint)}
@@ -591,12 +583,12 @@ export function ReorderPage() {
                     ? 'no lead-time evidence'
                     : `${selected.effectiveLeadTimeDays} day(s) of lead time plus ${selected.safetyStockDays} days of safety stock`
                 }
-              />
+ />
               <Metric
                 label="Safety stock"
                 value={optional(selected.safetyStock)}
                 hint={`${selected.safetyStockDays} days of cover`}
-              />
+ />
               <Metric
                 label="Suggested quantity"
                 value={selected.reorder ? optional(selected.recommendedQuantity) : '—'}
@@ -605,14 +597,14 @@ export function ReorderPage() {
                     ? 'brings available stock up to the reorder point'
                     : 'no order is needed'
                 }
-              />
+ />
             </div>
 
             <section className="space-y-1">
-              <h3 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+              <h3 className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
                 Evidence
               </h3>
-              <ul className="space-y-1 text-sm text-slate-300">
+              <ul className="space-y-1 text-sm text-slate-700">
                 <li>Units sold in the 30-day window: {selected.evidence.unitsSold30d}</li>
                 <li>Days with a sale in the 30-day window: {selected.evidence.activeSalesDays30d}</li>
                 <li>Completed purchase orders behind the lead time: {selected.evidence.leadTimeSamples}</li>
@@ -623,14 +615,14 @@ export function ReorderPage() {
                     : `${selected.evidence.leadTimeSpreadDays} days`}
                 </li>
                 {selected.evidence.leadTimeUnreliable ? (
-                  <li className="text-amber-200">
+                  <li className="text-amber-700">
                     Lead time is unusually long or inconsistent, which caps confidence.
                   </li>
                 ) : null}
               </ul>
             </section>
 
-            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-200">
+            <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3 text-xs text-amber-700">
               This is a recommendation, not an order. Nothing on this page has been placed with a
               supplier, and no stock has been changed.
             </p>

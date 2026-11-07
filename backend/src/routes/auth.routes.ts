@@ -61,15 +61,21 @@ authRouter.post(
   }),
 );
 
-/** POST /api/auth/login — exchanges credentials for a session cookie. */
+/** POST /api/auth/login — exchanges credentials for a session or a workspace choice. */
 authRouter.post(
   '/login',
   loginRateLimiter,
   asyncHandler(async (req, res) => {
     const input = parseOrThrow(loginSchema, req.body);
 
-    const session = await authService.login(input);
+    const result = await authService.login(input);
 
+    if ('workspaces' in result) {
+      res.status(200).json({ data: { workspaces: result.workspaces } });
+      return;
+    }
+
+    const { session } = result;
     setSessionCookie(res, session.token, session.expiresAt);
 
     res.status(200).json({ data: { user: session.user } });

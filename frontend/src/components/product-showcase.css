@@ -19,8 +19,7 @@
 .sp-workspace-preview { padding: 10px; border-radius: 23px; background: linear-gradient(125deg,#edf6ff,#f3f0fe 60%,#e8f7ff); border: 1px solid #e2eaf3; box-shadow: 0 24px 55px -35px #364d794f; }
 .sp-workspace-shell { overflow: hidden; background: #fff; border: 1px solid #dfe7f1; border-radius: 15px; }
 .sp-workspace-toolbar { height: 57px; padding: 0 21px; display: flex; align-items: center; gap: 26px; border-bottom: 1px solid #e9edf4; }
-.sp-workspace-brand { display: flex; align-items: center; gap: 7px; color: #213c61; font-weight: 700; font-size: 13px; }
-.sp-workspace-brand > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; color: white; background: #4d88d9; }
+.sp-workspace-brand { --stockpilot-logo-size: 23px; --stockpilot-logo-radius: 7px; display: flex; align-items: center; gap: 7px; color: #213c61; font-weight: 700; font-size: 13px; }
 .sp-workspace-path { color: #64788e; font-size: 14px; }
 .sp-workspace-path > span { margin: 0 10px; color: #b8c3cf; }
 .sp-workspace-demo { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: #61788e; }

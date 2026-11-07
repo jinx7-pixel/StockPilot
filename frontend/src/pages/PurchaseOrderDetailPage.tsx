@@ -21,6 +21,7 @@ import {
   SecondaryButton,
   Spinner,
   Textarea,
+  secondaryButtonClass,
 } from '../components/ui';
 import { ApiError } from '../lib/request';
 import {
@@ -32,14 +33,13 @@ import {
 } from '../lib/purchasing';
 
 const STATUS_STYLE: Record<PurchaseOrderStatus, string> = {
-  draft: 'border border-slate-700 bg-slate-800 text-slate-200',
-  ordered: 'border border-sky-400/20 bg-sky-400/[0.08] text-sky-200',
-  partially_received: 'border border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  received: 'border border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
-  cancelled: 'border border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
+  draft: 'border border-slate-300 bg-slate-100 text-slate-800',
+  ordered: 'border border-sky-400/20 bg-sky-400/[0.08] text-sky-700',
+  partially_received: 'border border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  received: 'border border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700',
+  cancelled: 'border border-rose-400/20 bg-rose-400/[0.08] text-rose-700',
 };
 
-const darkSecondaryLinkClass = 'inline-flex items-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
 
 export function PurchaseOrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -194,13 +194,13 @@ export function PurchaseOrderDetailPage() {
     }
   }
 
-  if (loading) return <Spinner darkSurface label="Loading purchase order…" />;
+  if (loading) return <Spinner label="Loading purchase order…" />;
 
   if (error && !order) {
     return (
       <div className="space-y-6">
-        <ErrorBanner darkSurface message={error} />
-        <Link className={darkSecondaryLinkClass} to="/app/purchase-orders">
+        <ErrorBanner message={error} />
+        <Link className={secondaryButtonClass} to="/app/purchase-orders">
           Back to purchase orders
         </Link>
       </div>
@@ -219,43 +219,41 @@ export function PurchaseOrderDetailPage() {
       <PageHeader
         breadcrumbs={
           <Breadcrumbs
-            darkSurface
             items={[
               { label: 'Purchase orders', to: '/app/purchase-orders' },
               { label: order.supplierName },
             ]}
-          />
+ />
         }
         title={order.supplierName}
         description={`Raised ${new Date(order.createdAt).toLocaleString()}`}
-        darkSurface
         actions={
-          <Link className={darkSecondaryLinkClass} to="/app/purchase-orders">
+          <Link className={secondaryButtonClass} to="/app/purchase-orders">
             Back
           </Link>
         }
-      />
+ />
 
-      {error ? <ErrorBanner darkSurface message={error} /> : null}
+      {error ? <ErrorBanner message={error} /> : null}
       {notice ? (
-        <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-200">
+        <p className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-700">
           {notice}
         </p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Total</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Total</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {formatAmount(order.totalAmount)}
           </p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Items</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">{order.itemCount}</p>
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Items</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{order.itemCount}</p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Status</p>
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Status</p>
           <p
             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-sm font-medium capitalize ${
               STATUS_STYLE[order.status]
@@ -264,48 +262,48 @@ export function PurchaseOrderDetailPage() {
             {order.status.replace(/_/g, ' ')}
           </p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Raised by</p>
-          <p className="mt-1 truncate text-lg font-semibold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Raised by</p>
+          <p className="mt-1 truncate text-lg font-semibold text-slate-900">
             {order.createdBy.name}
           </p>
         </Card>
       </div>
 
-      <Card darkSurface className="flex flex-wrap items-center gap-3 p-4">
+      <Card className="flex flex-wrap items-center gap-3 p-4">
         {canPlace ? (
-          <SecondaryButton darkSurface onClick={openDraftEdit} disabled={busy}>
+          <SecondaryButton onClick={openDraftEdit} disabled={busy}>
             Edit draft details
           </SecondaryButton>
         ) : null}
 
         {canPlace ? (
-          <PrimaryButton darkSurface onClick={() => void handlePlace()} disabled={busy}>
+          <PrimaryButton onClick={() => void handlePlace()} disabled={busy}>
             Place order
           </PrimaryButton>
         ) : null}
 
         {canReceive ? (
-          <PrimaryButton darkSurface onClick={openReceive} disabled={busy}>
+          <PrimaryButton onClick={openReceive} disabled={busy}>
             Receive goods
           </PrimaryButton>
         ) : null}
 
         {canCancel ? (
-          <SecondaryButton darkSurface onClick={() => void handleCancel()} disabled={busy}>
+          <SecondaryButton onClick={() => void handleCancel()} disabled={busy}>
             Cancel order
           </SecondaryButton>
         ) : null}
 
         {isTerminal ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600">
             {order.status === 'received'
               ? 'Fully received. This order is complete and cannot be changed.'
               : 'Cancelled. This order is closed and cannot receive goods.'}
           </p>
         ) : null}
 
-        <p className="ml-auto text-xs text-slate-400">
+        <p className="ml-auto text-xs text-slate-600">
           {order.orderedAt ? `Ordered ${new Date(order.orderedAt).toLocaleString()}` : 'Not yet placed'}
           {order.expectedAt
             ? ` · expected ${new Date(order.expectedAt).toLocaleDateString()}`
@@ -316,17 +314,17 @@ export function PurchaseOrderDetailPage() {
         </p>
       </Card>
 
-      <Card darkSurface>
-        <header className="border-b border-slate-800 px-6 py-4">
-          <h2 className="font-semibold text-slate-100">Items</h2>
-          <p className="text-sm text-slate-400">
+      <Card >
+        <header className="border-b border-slate-200 px-6 py-4">
+          <h2 className="font-semibold text-slate-900">Items</h2>
+          <p className="text-sm text-slate-600">
             Received and remaining quantities are computed by the server, never entered by hand.
           </p>
         </header>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-800 text-xs tracking-wide text-slate-400 uppercase">
+            <thead className="border-b border-slate-200 text-xs tracking-wide text-slate-600 uppercase">
               <tr>
                 <th scope="col" className="px-6 py-3 font-medium">Product</th>
                 <th scope="col" className="px-6 py-3 font-medium">SKU</th>
@@ -338,43 +336,43 @@ export function PurchaseOrderDetailPage() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-200">
               {(order.items ?? []).map((item) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4">
                     <Link
                       to={`/app/inventory/${item.productId}`}
-                      className="font-medium text-emerald-300 hover:text-emerald-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                      className="font-medium text-emerald-700 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                     >
                       {item.productName}
                     </Link>
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-300">{item.sku}</td>
-                  <td className="px-6 py-4 text-right text-slate-300">
+                  <td className="px-6 py-4 font-mono text-xs text-slate-700">{item.sku}</td>
+                  <td className="px-6 py-4 text-right text-slate-700">
                     {formatQuantity(item.quantity)} {item.unit}
                   </td>
-                  <td className="px-6 py-4 text-right font-medium text-slate-100">
+                  <td className="px-6 py-4 text-right font-medium text-slate-900">
                     {formatQuantity(item.receivedQuantity)} {item.unit}
                   </td>
-                  <td className="px-6 py-4 text-right text-slate-300">
+                  <td className="px-6 py-4 text-right text-slate-700">
                     {formatQuantity(item.remainingQuantity)} {item.unit}
                   </td>
-                  <td className="px-6 py-4 text-right text-slate-300">
+                  <td className="px-6 py-4 text-right text-slate-700">
                     {formatAmount(item.unitCost)}
                   </td>
-                  <td className="px-6 py-4 text-right font-medium text-slate-100">
+                  <td className="px-6 py-4 text-right font-medium text-slate-900">
                     {formatAmount(item.lineTotal)}
                   </td>
                 </tr>
               ))}
             </tbody>
 
-            <tfoot className="border-t border-slate-800 bg-[#0b1220]">
+            <tfoot className="border-t border-slate-200 bg-white">
               <tr>
-                <td colSpan={6} className="px-6 py-3 text-right text-sm font-medium text-slate-300">
+                <td colSpan={6} className="px-6 py-3 text-right text-sm font-medium text-slate-700">
                   Total
                 </td>
-                <td className="px-6 py-3 text-right text-base font-bold text-slate-100">
+                <td className="px-6 py-3 text-right text-base font-bold text-slate-900">
                   {formatAmount(order.totalAmount)}
                 </td>
               </tr>
@@ -384,32 +382,31 @@ export function PurchaseOrderDetailPage() {
       </Card>
 
       {order.notes ? (
-        <Card darkSurface className="p-4">
-          <h2 className="text-sm font-semibold text-slate-100">Notes</h2>
-          <p className="mt-1 text-sm text-slate-300">{order.notes}</p>
+        <Card className="p-4">
+          <h2 className="text-sm font-semibold text-slate-900">Notes</h2>
+          <p className="mt-1 text-sm text-slate-700">{order.notes}</p>
         </Card>
       ) : null}
 
       {receiving ? (
         <Modal
           title="Receive goods"
-          darkSurface
           onClose={() => setReceiving(false)}
           footer={
             <>
-              <SecondaryButton darkSurface onClick={() => setReceiving(false)} disabled={busy}>
+              <SecondaryButton onClick={() => setReceiving(false)} disabled={busy}>
                 Cancel
               </SecondaryButton>
-              <PrimaryButton darkSurface type="submit" form="receive-form" disabled={busy}>
+              <PrimaryButton type="submit" form="receive-form" disabled={busy}>
                 {busy ? 'Recording…' : 'Record receipt'}
               </PrimaryButton>
             </>
           }
         >
           <form id="receive-form" onSubmit={handleReceive} className="space-y-4">
-            <ErrorBanner darkSurface message={receiveError} />
+            <ErrorBanner message={receiveError} />
 
-            <p className="rounded-lg border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-sm text-sky-200">
+            <p className="rounded-lg border border-sky-400/20 bg-sky-400/[0.07] px-3 py-2 text-sm text-sky-700">
               Enter the quantity arriving <em>now</em>. Stock increases by exactly this
               amount, as immutable inventory movements.
             </p>
@@ -430,13 +427,12 @@ export function PurchaseOrderDetailPage() {
                       setAmounts((current) => ({ ...current, [item.productId]: value }))
                     }
                     placeholder="0"
-                    darkSurface
-                  />
+ />
                 </div>
               ))}
 
             {(order.items ?? []).every((item) => Number(item.remainingQuantity) <= 0) ? (
-              <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.07] px-3 py-2 text-sm text-amber-200">
+              <p className="rounded-lg border border-amber-400/20 bg-amber-400/[0.07] px-3 py-2 text-sm text-amber-700">
                 Everything on this order has already been received.
               </p>
             ) : null}
@@ -447,29 +443,27 @@ export function PurchaseOrderDetailPage() {
       {editingDraft ? (
         <Modal
           title="Edit draft details"
-          darkSurface
           onClose={() => setEditingDraft(false)}
           footer={
             <>
-              <SecondaryButton darkSurface onClick={() => setEditingDraft(false)} disabled={busy}>
+              <SecondaryButton onClick={() => setEditingDraft(false)} disabled={busy}>
                 Cancel
               </SecondaryButton>
-              <PrimaryButton darkSurface type="submit" form="edit-draft-po-form" disabled={busy}>
+              <PrimaryButton type="submit" form="edit-draft-po-form" disabled={busy}>
                 {busy ? 'Saving…' : 'Save draft'}
               </PrimaryButton>
             </>
           }
         >
           <form id="edit-draft-po-form" onSubmit={handleSaveDraft} className="space-y-4">
-            <ErrorBanner darkSurface message={draftError} />
+            <ErrorBanner message={draftError} />
             <Field
               label="Expected delivery"
               type="date"
               value={draftExpectedAt}
               onChange={setDraftExpectedAt}
               required={false}
-              darkSurface
-            />
+ />
             <Textarea
               label="Notes"
               value={draftNotes}
@@ -478,9 +472,8 @@ export function PurchaseOrderDetailPage() {
               maxLength={2000}
               rows={3}
               placeholder="Optional note for your records"
-              darkSurface
-            />
-            <p className="text-xs text-slate-400">
+ />
+            <p className="text-xs text-slate-600">
               Order items and unit costs stay as originally recorded. Cancel and raise a new order to change them.
             </p>
           </form>

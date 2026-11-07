@@ -68,8 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (input: LoginInput) => {
     setError(null);
     const data = await api.login(input);
+    if ('workspaces' in data) return data.workspaces;
+
     setUser(data.user);
     setStatus('authenticated');
+    return null;
   }, []);
 
   const register = useCallback(async (input: RegisterInput) => {

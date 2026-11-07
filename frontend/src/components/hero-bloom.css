@@ -14,8 +14,16 @@
 }
 .sp-header > nav { height: 100%; max-width: 1440px; }
 .sp-header .sp-brand { font-size: 21px; letter-spacing: -.7px; gap: 10px; }
-.sp-header .sp-brand-mark { background: #fff; border-radius: 11px; width: 36px; height: 36px; }
-.sp-header .sp-brand-mark svg { color: #2467cb; width: 21px; height: 21px; }
+.sp-header .sp-brand-mark .stockpilot-logo-image {
+  animation: sp-brand-flower-breathe 3.6s ease-in-out infinite;
+}
+.landing-page:has(.sp-motion-toggle[aria-pressed='true']) .sp-brand-mark .stockpilot-logo-image {
+  animation-play-state: paused;
+}
+@keyframes sp-brand-flower-breathe {
+  0%, 100% { transform: rotate(-7deg) scale(.96, 1.02); }
+  50% { transform: rotate(8deg) scale(1.07, .96); }
+}
 .sp-header .sp-nav-link { color: #fff; border-radius: 999px; min-height: 44px; display: inline-flex; align-items: center; }
 .sp-header .sp-nav-link:hover { background: rgb(255 255 255 / 12%); border-color: transparent; }
 .sp-header .sp-nav-login { color: white; background: rgb(0 44 100 / 24%); }
@@ -139,7 +147,7 @@
 @media (max-width: 640px) {
   .sp-header { height: 68px; margin-bottom: -68px; }
   .sp-header .sp-brand { font-size: 19px; }
-  .sp-header .sp-brand-mark { width: 32px; height: 32px; }
+  .sp-header .sp-brand-mark { --stockpilot-logo-size: 32px; }
   .sp-hero { min-height: 760px; min-height: max(740px, 100svh); padding: 132px 22px 116px; }
   .sp-bloom-stage { width: 620px; height: 620px; top: 41%; }
   .sp-bloom-haze { filter: blur(14px) saturate(2.2) contrast(1.12); }
@@ -158,6 +166,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sp-header { transition: none; }
+  .sp-header .sp-brand-mark .stockpilot-logo-image { animation: none; }
   .sp-bloom-motion { animation: none; will-change: auto; }
   .sp-motion-toggle { display: none; }
   .sp-hero a, .sp-header a { transition: none; }

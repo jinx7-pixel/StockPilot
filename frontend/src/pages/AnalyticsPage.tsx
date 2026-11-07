@@ -92,25 +92,21 @@ function MetricCard({
   icon: MetricIcon;
 }) {
   const toneStyles: Record<MetricTone, { icon: string; value: string }> = {
-    emerald: { icon: 'border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-300', value: 'text-white' },
-    blue: { icon: 'border-sky-400/15 bg-sky-400/[0.08] text-sky-300', value: 'text-white' },
-    amber: { icon: 'border-amber-400/15 bg-amber-400/[0.08] text-amber-200', value: 'text-amber-100' },
-    rose: { icon: 'border-rose-400/15 bg-rose-400/[0.08] text-rose-300', value: 'text-rose-200' },
+    emerald: { icon: 'border-emerald-400/15 bg-emerald-400/[0.08] text-emerald-700', value: 'text-slate-950' },
+    blue: { icon: 'border-sky-400/15 bg-sky-400/[0.08] text-sky-700', value: 'text-slate-950' },
+    amber: { icon: 'border-amber-400/15 bg-amber-400/[0.08] text-amber-700', value: 'text-amber-800' },
+    rose: { icon: 'border-rose-400/15 bg-rose-400/[0.08] text-rose-700', value: 'text-rose-700' },
   };
   const styles = toneStyles[tone];
 
   return (
-    <article className="min-w-0 rounded-2xl border border-slate-800/90 bg-[#101a2a] p-4 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)] sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">{label}</p>
-          <p className={'mt-2 truncate text-2xl font-semibold tracking-tight sm:text-[1.7rem] ' + styles.value}>{value}</p>
-        </div>
-        <span className={'grid h-9 w-9 shrink-0 place-items-center rounded-xl border ' + styles.icon}>
-          <MetricSymbol icon={icon} />
-        </span>
-      </div>
-      <p className="mt-2 min-h-8 text-xs leading-4 text-slate-500">{hint}</p>
+    <article className="workspace-metric">
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${styles.icon}`}>
+        <MetricSymbol icon={icon} />
+      </span>
+      <p className="workspace-metric-label">{label}</p>
+      <p className={`workspace-metric-value mt-1 ${styles.value}`}>{value}</p>
+      <p className="workspace-metric-detail">{hint}</p>
     </article>
   );
 }
@@ -129,10 +125,10 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={'min-w-0 overflow-hidden rounded-2xl border border-slate-800/90 bg-[#101a2a] shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)] ' + className}>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800/80 px-5 py-4 sm:px-6">
+    <section className={'min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ' + className}>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-slate-100 sm:text-base">{title}</h2>
+          <h2 className="text-sm font-semibold text-slate-900 sm:text-base">{title}</h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">{subtitle}</p>
         </div>
         {action}
@@ -145,23 +141,23 @@ function SectionCard({
 function PanelMessage({ children, loading = false }: { children: React.ReactNode; loading?: boolean }) {
   return (
     <div role="status" className="px-5 py-10 text-center sm:px-6">
-      {loading ? <span aria-hidden="true" className="mx-auto mb-3 block h-5 w-5 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400 motion-reduce:animate-none" /> : null}
-      <p className="text-sm font-medium text-slate-300">{children}</p>
+      {loading ? <span aria-hidden="true" className="mx-auto mb-3 block h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600 motion-reduce:animate-none" /> : null}
+      <p className="text-sm font-medium text-slate-700">{children}</p>
     </div>
   );
 }
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block min-w-0 text-xs font-medium text-slate-400">
+    <label className="block min-w-0 text-xs font-medium text-slate-600">
       {label}
       {children}
     </label>
   );
 }
 
-const controlClass = 'mt-1 block h-10 w-full min-w-0 rounded-lg border border-slate-700/80 bg-[#0b1220] px-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/15 scheme-dark';
-const buttonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 text-sm font-medium text-slate-200 transition hover:border-slate-600 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400';
+const controlClass = 'mt-1 block h-10 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 scheme-light';
+const buttonClass = 'inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600';
 
 function SalesTrendChart({ sales }: { sales: SalesAnalytics }) {
   const width = 720;
@@ -183,10 +179,10 @@ function SalesTrendChart({ sales }: { sales: SalesAnalytics }) {
   return (
     <div className="px-4 pb-4 pt-5 sm:px-6">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+        <div className="flex items-center gap-2 text-xs text-slate-600">
+          <span className="h-2 w-2 rounded-full bg-brand-600" />
           Units sold
-          <span className="text-slate-600">·</span>
+          <span className="text-slate-500">·</span>
           <span>Completed sales</span>
         </div>
         <span className="text-xs text-slate-500">{formatCount(sales.series.length)} active {sales.groupBy} {sales.series.length === 1 ? 'period' : 'periods'}</span>
@@ -194,20 +190,20 @@ function SalesTrendChart({ sales }: { sales: SalesAnalytics }) {
       <svg viewBox={'0 0 ' + width + ' ' + height} role="img" aria-label={'Units sold by ' + sales.groupBy + '. Periods without completed sales are omitted.'} className="block h-auto w-full overflow-visible">
         <defs>
           <linearGradient id="analytics-sales-bars" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#34d399" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.32" />
+            <stop offset="0%" stopColor="#2760cc" />
+            <stop offset="100%" stopColor="#72a3f1" />
           </linearGradient>
         </defs>
         {ticks.map((tick) => {
           const y = yAt(tick);
           return (
             <g key={tick}>
-              <line x1={left} x2={right} y1={y} y2={y} stroke="#233044" strokeDasharray="3 6" />
-              <text x={left - 10} y={y + 4} textAnchor="end" fill="#718096" fontSize="11">{formatQuantity(tick)}</text>
+              <line x1={left} x2={right} y1={y} y2={y} stroke="#d9e2ef" strokeDasharray="3 6" />
+              <text x={left - 10} y={y + 4} textAnchor="end" fill="#51627a" fontSize="11">{formatQuantity(tick)}</text>
             </g>
           );
         })}
-        <line x1={left} x2={right} y1={bottom} y2={bottom} stroke="#334155" />
+        <line x1={left} x2={right} y1={bottom} y2={bottom} stroke="#becbdf" />
         {sales.series.map((point, index) => {
           const x = xAt(index);
           const y = yAt(point.unitsSold);
@@ -223,10 +219,10 @@ function SalesTrendChart({ sales }: { sales: SalesAnalytics }) {
         {labelIndexes.map((index) => {
           const point = sales.series[index];
           if (!point) return null;
-          return <text key={point.period} x={xAt(index)} y={bottom + 26} textAnchor="middle" fill="#718096" fontSize="11">{formatPeriod(point.period, sales.groupBy)}</text>;
+          return <text key={point.period} x={xAt(index)} y={bottom + 26} textAnchor="middle" fill="#51627a" fontSize="11">{formatPeriod(point.period, sales.groupBy)}</text>;
         })}
       </svg>
-      <p className="mt-2 text-[11px] leading-5 text-slate-600">The API returns periods with completed sales; periods without sales are omitted.</p>
+      <p className="mt-2 text-[11px] leading-5 text-slate-500">The API returns periods with completed sales; periods without sales are omitted.</p>
     </div>
   );
 }
@@ -244,25 +240,25 @@ function MovementBreakdown({ inventory }: { inventory: InventoryAnalytics }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Net movement</p>
-          <p className={'mt-1 text-2xl font-semibold tracking-tight ' + (Number(inventory.movements.netMovement) < 0 ? 'text-amber-200' : 'text-emerald-200')}>
+          <p className={'mt-1 text-2xl font-semibold tracking-tight ' + (Number(inventory.movements.netMovement) < 0 ? 'text-amber-700' : 'text-emerald-700')}>
             {formatQuantity(inventory.movements.netMovement)} <span className="text-sm font-medium text-slate-500">units</span>
           </p>
         </div>
         <p className="text-xs text-slate-500">{formatCount(inventory.movements.movementCount)} ledger entries</p>
       </div>
-      <div className="space-y-4 rounded-xl border border-slate-800/80 bg-[#0c1523] p-4 sm:p-5" role="group" aria-label="Stock movement totals">
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5" role="group" aria-label="Stock movement totals">
         {rows.map((row) => (
           <div key={row.label} className="grid grid-cols-[76px_minmax(0,1fr)_58px] items-center gap-3">
-            <span className="text-xs text-slate-400">{row.label}</span>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+            <span className="text-xs text-slate-600">{row.label}</span>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
               <span className={'block h-full rounded-full ' + row.color} style={{ width: String((Math.abs(row.value) / maxValue) * 100) + '%' }} />
             </div>
-            <span className="text-right text-xs font-medium tabular-nums text-slate-300">{formatQuantity(row.value)}</span>
+            <span className="text-right text-xs font-medium tabular-nums text-slate-700">{formatQuantity(row.value)}</span>
           </div>
         ))}
       </div>
       {inventory.movements.movementCount === 0 ? <p className="text-xs text-slate-500">No stock movements were recorded in this date range.</p> : null}
-      <p className="text-[11px] leading-5 text-slate-600">Totals are from the stock ledger for the selected dates; adjustment quantities may be positive or negative.</p>
+      <p className="text-[11px] leading-5 text-slate-500">Totals are from the stock ledger for the selected dates; adjustment quantities may be positive or negative.</p>
     </div>
   );
 }
@@ -279,13 +275,13 @@ function InventoryHealth({ overview }: { overview: Overview }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">Products in catalog</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{formatCount(totalProducts)}</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{formatCount(totalProducts)}</p>
         </div>
-        <span className="rounded-full border border-slate-700/80 bg-slate-900/50 px-2.5 py-1 text-[11px] text-slate-400">Current stock snapshot</span>
+        <span className="rounded-full border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600">Current stock snapshot</span>
       </div>
       {totalProducts > 0 ? (
         <div className="mt-6" role="img" aria-label={formatCount(inStock) + ' products with stock and ' + formatCount(outOfStock) + ' out of stock, out of ' + formatCount(totalProducts) + ' total products'}>
-          <div className="flex h-3 overflow-hidden rounded-full bg-slate-800">
+          <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
             <span className="h-full bg-emerald-400" style={{ width: String(inStockPercent) + '%' }} />
             <span className="h-full bg-rose-400/80" style={{ width: String(outOfStockPercent) + '%' }} />
           </div>
@@ -294,22 +290,22 @@ function InventoryHealth({ overview }: { overview: Overview }) {
               <span className="h-2 w-2 rounded-full bg-emerald-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-500">With stock</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-200">{formatCount(inStock)} <span className="text-xs font-normal text-slate-500">· {formatQuantity(inStockPercent)}%</span></p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-800">{formatCount(inStock)} <span className="text-xs font-normal text-slate-500">· {formatQuantity(inStockPercent)}%</span></p>
               </div>
             </div>
             <div className="flex items-center gap-2.5">
               <span className="h-2 w-2 rounded-full bg-rose-400" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-slate-500">Out of stock</p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-200">{formatCount(outOfStock)} <span className="text-xs font-normal text-slate-500">· {formatQuantity(outOfStockPercent)}%</span></p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-800">{formatCount(outOfStock)} <span className="text-xs font-normal text-slate-500">· {formatQuantity(outOfStockPercent)}%</span></p>
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <p className="mt-5 rounded-xl border border-dashed border-slate-700 px-4 py-5 text-sm text-slate-400">Add products to see the stock health breakdown.</p>
+        <p className="mt-5 rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-600">Add products to see the stock health breakdown.</p>
       )}
-      <p className="mt-5 border-t border-slate-800/80 pt-4 text-xs text-slate-500">
+      <p className="mt-5 border-t border-slate-200 pt-4 text-xs text-slate-500">
         {formatCount(overview.inventory.productsWithNoMovements)} products have no recorded stock movements.
       </p>
     </div>
@@ -350,7 +346,7 @@ function ProductPerformance({
         <>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[650px] text-left text-sm">
-              <thead className="border-b border-slate-800/80 bg-[#0c1523] text-[11px] tracking-wide text-slate-500 uppercase">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
                 <tr>
                   <th scope="col" className="px-5 py-3 font-medium sm:px-6">Product</th>
                   <th scope="col" className="px-4 py-3 text-right font-medium">On hand</th>
@@ -359,16 +355,16 @@ function ProductPerformance({
                   <th scope="col" className="px-5 py-3 text-right font-medium sm:px-6">Last sale</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/70">
+              <tbody className="divide-y divide-slate-100">
                 {products.map((product) => (
-                  <tr key={product.productId} className="transition hover:bg-white/[0.02]">
+                  <tr key={product.productId} className="transition hover:bg-slate-50">
                     <td className="px-5 py-3.5 sm:px-6">
-                      <Link to={'/app/inventory/' + product.productId} className="font-medium text-slate-200 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">{product.name}</Link>
-                      <p className="mt-0.5 font-mono text-[11px] text-slate-600">{product.sku}{product.category ? ' · ' + product.category.name : ''}</p>
+                      <Link to={'/app/inventory/' + product.productId} className="font-medium text-slate-800 transition hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{product.name}</Link>
+                      <p className="mt-0.5 font-mono text-[11px] text-slate-500">{product.sku}{product.category ? ' · ' + product.category.name : ''}</p>
                     </td>
-                    <td className={'px-4 py-3.5 text-right tabular-nums ' + (product.currentStock <= 0 ? 'text-rose-300' : 'text-slate-300')}>{formatQuantity(product.currentStock)}</td>
-                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{formatQuantity(product.unitsSold)}</td>
-                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{formatAmount(product.revenue)}</td>
+                    <td className={'px-4 py-3.5 text-right tabular-nums ' + (product.currentStock <= 0 ? 'text-rose-700' : 'text-slate-700')}>{formatQuantity(product.currentStock)}</td>
+                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{formatQuantity(product.unitsSold)}</td>
+                    <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{formatAmount(product.revenue)}</td>
                     <td className="px-5 py-3.5 text-right text-xs text-slate-500 sm:px-6">{formatDate(product.lastSaleAt)}</td>
                   </tr>
                 ))}
@@ -376,14 +372,14 @@ function ProductPerformance({
             </table>
           </div>
           {meta && meta.totalPages > 1 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80 px-5 py-3 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 sm:px-6">
               <p className="text-xs text-slate-500">Page {formatCount(page)} of {formatCount(meta.totalPages)} · alphabetical order</p>
               <div className="flex gap-2">
                 <button type="button" onClick={previousPage} disabled={page <= 1 || loading} className={buttonClass}>Previous</button>
                 <button type="button" onClick={nextPage} disabled={page >= meta.totalPages || loading} className={buttonClass}>Next</button>
               </div>
             </div>
-          ) : meta ? <p className="border-t border-slate-800/80 px-5 py-3 text-xs text-slate-500 sm:px-6">Products shown in alphabetical order.</p> : null}
+          ) : meta ? <p className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500 sm:px-6">Products shown in alphabetical order.</p> : null}
         </>
       )}
     </SectionCard>
@@ -400,7 +396,7 @@ function SupplierPerformance({ suppliers, loading }: { suppliers: SupplierAnalyt
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left text-sm">
-            <thead className="border-b border-slate-800/80 bg-[#0c1523] text-[11px] tracking-wide text-slate-500 uppercase">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
               <tr>
                 <th scope="col" className="px-5 py-3 font-medium sm:px-6">Supplier</th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">Orders</th>
@@ -409,17 +405,17 @@ function SupplierPerformance({ suppliers, loading }: { suppliers: SupplierAnalyt
                 <th scope="col" className="px-5 py-3 text-right font-medium sm:px-6">Avg. lead time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/70">
+            <tbody className="divide-y divide-slate-100">
               {suppliers.map((supplier) => (
-                <tr key={supplier.supplierId} className="transition hover:bg-white/[0.02]">
+                <tr key={supplier.supplierId} className="transition hover:bg-slate-50">
                   <td className="px-5 py-3.5 sm:px-6">
-                    <Link to="/app/suppliers" className="font-medium text-slate-200 transition hover:text-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">{supplier.supplierName}</Link>
-                    {!supplier.isActive ? <span className="ml-2 rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-500">inactive</span> : null}
+                    <Link to="/app/suppliers" className="font-medium text-slate-800 transition hover:text-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">{supplier.supplierName}</Link>
+                    {!supplier.isActive ? <span className="ml-2 rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-500">inactive</span> : null}
                   </td>
-                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{formatCount(supplier.purchaseOrderCount)}</td>
-                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{formatQuantity(supplier.unitsReceived)}</td>
-                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-300">{formatAmount(supplier.purchaseValue)}</td>
-                  <td className="px-5 py-3.5 text-right text-slate-400 sm:px-6">{supplier.averageLeadTimeDays === null ? '—' : formatQuantity(supplier.averageLeadTimeDays) + ' days'}</td>
+                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{formatCount(supplier.purchaseOrderCount)}</td>
+                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{formatQuantity(supplier.unitsReceived)}</td>
+                  <td className="px-4 py-3.5 text-right tabular-nums text-slate-700">{formatAmount(supplier.purchaseValue)}</td>
+                  <td className="px-5 py-3.5 text-right text-slate-600 sm:px-6">{supplier.averageLeadTimeDays === null ? '—' : formatQuantity(supplier.averageLeadTimeDays) + ' days'}</td>
                 </tr>
               ))}
             </tbody>
@@ -552,11 +548,11 @@ export function AnalyticsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-6 sm:space-y-7" aria-busy={loading}>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="workspace-page-header">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold tracking-[0.2em] text-emerald-300 uppercase">Performance overview</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">Analytics</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Understand your stock movement, sales performance, and inventory trends.</p>
+          <p className="text-[11px] font-semibold tracking-[0.2em] text-brand-600 uppercase">Performance overview</p>
+          <h1 className="mt-2">Analytics</h1>
+          <p className="workspace-page-description">Understand your stock movement, sales performance, and inventory trends.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 text-right">
@@ -573,9 +569,9 @@ export function AnalyticsPage() {
         </div>
       </header>
 
-      {error ? <div role="alert" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm leading-6 text-amber-100">{error}</div> : null}
+      {error ? <div role="alert" className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-4 py-3 text-sm leading-6 text-amber-800">{error}</div> : null}
 
-      <section aria-label="Analytics filters" className="rounded-2xl border border-slate-800/90 bg-[#101a2a] p-4 shadow-[0_18px_45px_-32px_rgba(0,0,0,0.9)] sm:p-5">
+      <section aria-label="Analytics filters" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(130px,1fr)_minmax(130px,1fr)_minmax(130px,0.9fr)_minmax(150px,1.1fr)_auto] xl:items-end">
           <FilterField label="From">
             <input type="date" value={from} max={to} onChange={(event) => { setFrom(event.target.value); setProductPage(1); }} className={controlClass} />
@@ -600,10 +596,10 @@ export function AnalyticsPage() {
           ) : null}
           <button type="button" onClick={resetRange} className={buttonClass}>Reset 30 days</button>
         </div>
-        <p className="mt-3 text-[11px] text-slate-600">The selected dates filter sales, stock movements, and product sales. Inventory health is a current snapshot; supplier figures are historical totals.</p>
+        <p className="mt-3 text-[11px] text-slate-500">The selected dates filter sales, stock movements, and product sales. Inventory health is a current snapshot; supplier figures are historical totals.</p>
       </section>
 
-      <section aria-label="Analytics key metrics" className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <section aria-label="Analytics key metrics" className="workspace-metric-grid">
         <MetricCard label="Stock received" value={inventory ? formatQuantity(inventory.movements.inQuantity) : '—'} hint={inventory ? 'Units entered in the selected range' : 'Stock movement data unavailable'} tone="emerald" icon="received" />
         <MetricCard label="Units issued" value={inventory ? formatQuantity(inventory.movements.outQuantity) : '—'} hint={inventory ? 'Outgoing ledger quantity in range' : 'Stock movement data unavailable'} tone="blue" icon="issued" />
         <MetricCard label="Units sold" value={sales ? formatQuantity(sales.summary.unitsSold) : '—'} hint={sales ? formatCount(sales.summary.salesCount) + ' completed sales in range' : 'Sales data unavailable'} tone="emerald" icon="sales" />
@@ -613,12 +609,12 @@ export function AnalyticsPage() {
       </section>
 
       {hasNoActivity ? (
-        <section className="flex flex-col gap-4 rounded-2xl border border-dashed border-slate-700 bg-[#0d1726] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <section className="flex flex-col gap-4 rounded-2xl border border-dashed border-slate-300 bg-brand-50/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <h2 className="font-semibold text-slate-100">Your analytics will build as you work</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-400">Add products, record stock movements, and complete sales to see your real inventory activity here.</p>
+            <h2 className="font-semibold text-slate-900">Your analytics will build as you work</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-600">Add products, record stock movements, and complete sales to see your real inventory activity here.</p>
           </div>
-          <Link to="/app/products" className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-emerald-400 px-4 text-sm font-semibold text-[#06251a] transition hover:bg-emerald-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200">Add a product</Link>
+          <Link to="/app/products" className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">Add a product</Link>
         </section>
       ) : null}
 
@@ -640,7 +636,7 @@ export function AnalyticsPage() {
 
       <SupplierPerformance suppliers={suppliers} loading={loading} />
 
-      {overview ? <p className="text-right text-[11px] text-slate-600">Current inventory and catalog snapshot generated {formatDateTime(overview.generatedAt)}.</p> : null}
+      {overview ? <p className="text-right text-[11px] text-slate-500">Current inventory and catalog snapshot generated {formatDateTime(overview.generatedAt)}.</p> : null}
     </div>
   );
 }

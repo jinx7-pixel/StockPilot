@@ -4,14 +4,16 @@
  * Deliberately tiny — one business is created per registration.
  */
 
+import type { PoolClient } from 'pg';
+
 import { query } from '../db/pool.js';
 import type { BusinessRow } from './auth.types.js';
 
 const COLUMNS = 'id, name, created_at, updated_at';
 
-/** Insert a business. Callers run this inside a transaction during registration. */
-export async function createBusiness(name: string): Promise<BusinessRow> {
-  const result = await query<BusinessRow>(
+/** Insert a business in the caller's registration transaction. */
+export async function createBusiness(client: PoolClient, name: string): Promise<BusinessRow> {
+  const result = await client.query<BusinessRow>(
     `INSERT INTO businesses (name)
      VALUES ($1)
      RETURNING ${COLUMNS}`,

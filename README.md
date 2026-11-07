@@ -344,9 +344,9 @@ Status of each planned module. Only those marked ✅ are built.
   SHA-256 digest is persisted, so a database leak yields no usable credential.
 - **Tenant scope** is always derived from the session, never from client input,
   and repositories require an explicit `businessId` for client-driven lookups.
-- **Login** returns one indistinguishable error for an unknown email, a wrong
-  password and an ambiguous email, and spends comparable CPU in each case, so
-  accounts cannot be enumerated.
+- **Login** returns the same error for unknown emails and incorrect passwords.
+  If legacy accounts share both an email and a password, users choose a
+  workspace after verification. New signups reject emails already in use.
 - **Credential endpoints are rate limited**, and `TRUST_PROXY` must be set
   correctly in production or every client would share one bucket.
 

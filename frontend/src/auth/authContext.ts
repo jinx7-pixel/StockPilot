@@ -7,14 +7,14 @@
 
 import { createContext, useContext } from 'react';
 
-import type { AuthenticatedUser, LoginInput, RegisterInput } from '../lib/api';
+import type { AuthenticatedUser, LoginInput, LoginWorkspace, RegisterInput } from '../lib/api';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 export interface AuthContextValue {
   status: AuthStatus;
   user: AuthenticatedUser | null;
-  login: (input: LoginInput) => Promise<void>;
+  login: (input: LoginInput) => Promise<LoginWorkspace[] | null>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   /** Set when a sign-in attempt fails, for display on the form. */

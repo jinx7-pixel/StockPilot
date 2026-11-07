@@ -5,9 +5,8 @@
  * takes a `businessId`. There is deliberately no unscoped "find user by id"
  * helper, so forgetting the scope is a compile error rather than a data leak.
  *
- * The two unscoped reads here are safe by construction — `findUsersByEmail` is
- * only ever used to *authenticate* (the caller must still prove knowledge of the
- * password), and it always joins the owning business.
+ * The authentication flow can look up an email across tenants. Those lookups
+ * are used only to prevent repeat signups and verify login credentials.
  */
 
 import type { PoolClient } from 'pg';
@@ -45,15 +44,28 @@ export async function createUser(
 }
 
 /**
- * Every user registered with this email address, across all businesses.
- *
- * Email is unique per business rather than globally, so this can legitimately
- * return more than one row. Callers must handle the ambiguous case.
+ * Reserve the normalized email for this registration transaction before checking
+ * it. Concurrent signups for the same address wait for the first to commit.
+ * The per-business constraint stays in place so existing accounts are preserved.
  */
-export async function findUsersByEmail(email: string): Promise<UserWithBusinessRow[]> {
-  const result = await query<UserWithBusinessRow>(
-    `${WITH_BUSINESS} WHERE u.email = $1`,
+export async function emailIsTakenForRegistration(client: PoolClient, email: string): Promise<boolean> {
+  await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))', [
+    `auth-register:${email}`,
+  ]);
+  const result = await client.query<{ taken: boolean }>(
+    'SELECT EXISTS (SELECT 1 FROM users WHERE email = $1) AS taken',
     [email],
+  );
+  return result.rows[0]!.taken;
+}
+
+/** Find login candidates, optionally narrowed to the selected workspace. */
+export async function findUsersByEmail(email: string, workspaceId?: string): Promise<UserWithBusinessRow[]> {
+  const result = await query<UserWithBusinessRow>(
+    `${WITH_BUSINESS}
+      WHERE u.email = $1 AND ($2::uuid IS NULL OR u.business_id = $2)
+      ORDER BY u.created_at, u.id`,
+    [email, workspaceId ?? null],
   );
   return result.rows;
 }

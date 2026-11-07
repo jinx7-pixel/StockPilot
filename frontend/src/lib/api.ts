@@ -27,14 +27,18 @@ export interface RegisterInput {
 export interface LoginInput {
   email: string;
   password: string;
+  workspaceId?: string;
 }
+
+export type LoginWorkspace = AuthenticatedUser['business'];
+type LoginResult = { user: AuthenticatedUser } | { workspaces: LoginWorkspace[] };
 
 export const api = {
   register: (input: RegisterInput) =>
     request<{ user: AuthenticatedUser }>('/api/auth/register', { method: 'POST', body: input }),
 
   login: (input: LoginInput) =>
-    request<{ user: AuthenticatedUser }>('/api/auth/login', { method: 'POST', body: input }),
+    request<LoginResult>('/api/auth/login', { method: 'POST', body: input }),
 
   logout: () => request<{ loggedOut: boolean }>('/api/auth/logout', { method: 'POST' }),
 

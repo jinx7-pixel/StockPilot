@@ -1,9 +1,10 @@
-﻿import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/authContext';
-import { ApiError } from '../lib/api';
+import { ApiError, type LoginWorkspace } from '../lib/api';
 import { AuthCard, Field, FormError, SubmitButton } from '../auth/components';
+import { Select } from '../components/ui';
 
 interface LocationState {
   from?: string;
@@ -19,6 +20,13 @@ export function LoginPage() {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [recoveryNotice, setRecoveryNotice] = useState(false);
+  const [workspaces, setWorkspaces] = useState<LoginWorkspace[] | null>(null);
+  const [workspaceId, setWorkspaceId] = useState('');
+
+  function clearWorkspaceChoice() {
+    setWorkspaces(null);
+    setWorkspaceId('');
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,7 +35,12 @@ export function LoginPage() {
     clearError();
 
     try {
-      await login({ email, password });
+      const choices = await login({ email, password, ...(workspaceId ? { workspaceId } : {}) });
+      if (choices) {
+        setWorkspaces(choices);
+        setWorkspaceId('');
+        return;
+      }
       const target = (location.state as LocationState | null)?.from ?? '/app';
       navigate(target, { replace: true });
     } catch (cause) {
@@ -41,46 +54,45 @@ export function LoginPage() {
 
   return (
     <AuthCard
-      darkSurface
       title="Sign in"
-      subtitle="Access your business inventory workspace."
+      subtitle="Welcome back to your inventory workspace."
+      artHeading={<>Know your stock.<br />Plan what’s next.</>}
+      artDescription="Stock levels, movements, and reorder decisions in one workspace."
       footer={
         <>
-          Need an account?{' '}
-          <Link to="/register" className="font-semibold text-accent-400 hover:text-accent-300">
-            Create one
-          </Link>
+          New to StockPilot?{' '}
+          <Link to="/register" className="auth-text-link">Create an account</Link>
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FormError message={formError ?? error} darkSurface />
+      <form onSubmit={handleSubmit} className="auth-form">
+        <FormError message={formError ?? error} />
 
         <Field
           label="Email"
           type="email"
           value={email}
-          onChange={setEmail}
+          onChange={(value) => { setEmail(value); clearWorkspaceChoice(); }}
+          disabled={pending}
           autoComplete="email"
           placeholder="you@business.com"
-          darkSurface
         />
 
-        <div className="space-y-2">
+        <div>
           <Field
             label="Password"
             type="password"
             value={password}
-            onChange={setPassword}
+            onChange={(value) => { setPassword(value); clearWorkspaceChoice(); }}
+            disabled={pending}
             autoComplete="current-password"
-            darkSurface
             showPasswordToggle
           />
-          <div className="flex justify-end">
+          <div className="auth-recovery">
             <button
               type="button"
               onClick={() => setRecoveryNotice(true)}
-              className="rounded text-sm font-semibold text-accent-400 underline-offset-4 transition hover:text-accent-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+              className="auth-text-link"
             >
               Forgot password?
             </button>
@@ -88,41 +100,35 @@ export function LoginPage() {
         </div>
 
         {recoveryNotice ? (
-          <p role="status" className="text-xs text-slate-400">
+          <p role="status" className="auth-notice">
             Password recovery is not configured yet.
           </p>
         ) : null}
 
-        <SubmitButton pending={pending} label="Sign in" darkSurface />
+        {workspaces ? (
+          <>
+            <p role="status" className="auth-notice">These sign-in details match more than one workspace.</p>
+            <Select
+              label="Workspace"
+              value={workspaceId}
+              onChange={setWorkspaceId}
+              options={[
+                { value: '', label: 'Choose your workspace' },
+                ...workspaces.map(({ id, name }, index) => ({
+                  value: id,
+                  label: workspaces.some((other) => other.id !== id && other.name === name)
+                    ? `${name} (${index + 1})`
+                    : name,
+                })),
+              ]}
+              required
+              disabled={pending}
+            />
+          </>
+        ) : null}
+
+        <SubmitButton pending={pending} label={workspaces ? 'Open workspace' : 'Sign in'} />
       </form>
-
-      <div
-        aria-hidden="true"
-        className="mt-5 flex items-center gap-4 text-xs font-medium tracking-[0.18em] text-slate-500"
-      >
-        <span className="h-px flex-1 bg-slate-700" />
-        <span>OR</span>
-        <span className="h-px flex-1 bg-slate-700" />
-      </div>
-
-      <button
-        type="button"
-        disabled
-        aria-describedby="google-sign-in-status"
-        className="mt-4 flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-lg border border-slate-700 bg-navy-900 px-4 py-2.5 text-sm font-medium text-slate-400 opacity-75"
-      >
-        <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 48 48" fill="none">
-          <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.7-.4-4H24v7.6h11c-.5 2.4-1.8 4.4-3.9 5.8v4.9h6.3c3.7-3.4 5.8-8.4 5.8-14.3Z" />
-          <path fill="#34A853" d="M24 44c5.4 0 9.9-1.8 13.2-5.2L31 33c-1.8 1.2-4.1 2-7 2-5.4 0-9.9-3.7-11.5-8.6H6.1v5.1C9.4 39 16.1 44 24 44Z" />
-          <path fill="#FBBC05" d="M12.5 26.4a12 12 0 0 1 0-4.8v-5.1H6.1a20 20 0 0 0 0 15Z" />
-          <path fill="#EA4335" d="M24 12.9c3 0 5.7 1 7.8 3l5.8-5.8C34.1 6.8 29.4 4.8 24 4.8c-7.9 0-14.6 5-17.9 11.7l6.4 5.1c1.6-4.9 6.1-8.7 11.5-8.7Z" />
-        </svg>
-        Continue with Google
-      </button>
-      <p id="google-sign-in-status" className="mt-3 text-center text-xs text-slate-500">
-        Google sign-in is not configured yet.
-      </p>
     </AuthCard>
   );
 }
-

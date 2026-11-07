@@ -272,9 +272,7 @@ describe('Workspace navigation — shell', () => {
       expect(el.className).not.toContain('ring-brand-100');
     }
 
-    // The workspace rail is dark navy; a brand-blue ring reads as a shadow
-    // there rather than as focus, so the ring must be the emerald one.
-    expect(signOut.className).toContain('focus-visible:ring-emerald-400');
+    expect(signOut.className).toContain('focus-visible:ring-brand-600');
     // The ring is only announced on keyboard focus, not on mouse press.
     expect(signOut.className).toContain('focus-visible:');
   });

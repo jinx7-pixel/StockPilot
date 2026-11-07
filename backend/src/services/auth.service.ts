@@ -13,14 +13,14 @@
  *     from a body, query parameter or header. It is selected from the database
  *     via a join, and repositories require an explicit `businessId` for any
  *     lookup driven by client-supplied identity.
- *  3. **No account enumeration.** Login returns one indistinguishable error for
- *     an unknown email, a wrong password and an ambiguous email, and spends
- *     comparable CPU in the "no such user" branch.
+ *  3. **Login requires valid credentials.** Unknown emails and wrong passwords
+ *     return the same error. A legacy workspace choice only includes accounts
+ *     whose passwords were verified.
  */
 
 import { env } from '../config/env.js';
 import { withTransaction } from '../db/pool.js';
-import { AuthenticationError } from '../errors.js';
+import { AuthenticationError, ConflictError } from '../errors.js';
 import type { UserRole } from '../repositories/auth.types.js';
 import { createBusiness } from '../repositories/business.repository.js';
 import {
@@ -29,7 +29,7 @@ import {
   findSessionContextByTokenHash,
   touchSession,
 } from '../repositories/session.repository.js';
-import { createUser, findUsersByEmail } from '../repositories/user.repository.js';
+import { createUser, emailIsTakenForRegistration, findUsersByEmail } from '../repositories/user.repository.js';
 import {
   assertPasswordPolicy,
   hashPassword,
@@ -66,6 +66,8 @@ export interface SessionContext {
   sessionId: string;
 }
 
+type LoginResult = { session: IssuedSession } | { workspaces: AuthenticatedUser['business'][] };
+
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function sessionExpiry(): Date {
@@ -86,7 +88,11 @@ export async function registerBusinessOwner(input: RegisterInput): Promise<Issue
   const passwordHash = await hashPassword(input.password);
 
   const { business, user } = await withTransaction(async (client) => {
-    const createdBusiness = await createBusiness(input.businessName);
+    if (await emailIsTakenForRegistration(client, input.email)) {
+      throw new ConflictError('This email is already registered. Sign in instead.', 'EMAIL_ALREADY_REGISTERED');
+    }
+
+    const createdBusiness = await createBusiness(client, input.businessName);
     const createdUser = await createUser(client, {
       businessId: createdBusiness.id,
       name: input.name,
@@ -108,39 +114,35 @@ export async function registerBusinessOwner(input: RegisterInput): Promise<Issue
   });
 }
 
-/** Authenticate an existing user and open a session. */
-export async function login(input: LoginInput): Promise<IssuedSession> {
-  const candidates = await findUsersByEmail(input.email);
-
-  // Email is unique per business rather than globally, so the same address may
-  // legitimately exist in several tenants. Login is keyed on (email, password)
-  // only, so more than one match is unresolvable — fail closed rather than guess
-  // which tenant the caller meant. See "Limitations" in the step report.
-  if (candidates.length !== 1) {
-    // Spend comparable CPU so response timing does not distinguish this branch.
+/** Authenticate an existing user, asking them to choose if multiple accounts match. */
+export async function login(input: LoginInput): Promise<LoginResult> {
+  const candidates = await findUsersByEmail(input.email, input.workspaceId);
+  if (candidates.length === 0) {
     await simulatePasswordVerification(input.password);
     throw invalidCredentials();
   }
 
-  const user = candidates[0];
-  if (!user) {
-    await simulatePasswordVerification(input.password);
-    throw invalidCredentials();
+  // Older registrations may share an email. Check each password before showing
+  // any workspace choices, and re-check the selected account on the next request.
+  const matches: AuthenticatedUser[] = [];
+  for (const user of candidates) {
+    if (await verifyPassword(user.password_hash, input.password)) {
+      matches.push({
+        id: user.id,
+        businessId: user.business_id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        business: { id: user.business_id, name: user.business_name },
+      });
+    }
   }
 
-  const passwordMatches = await verifyPassword(user.password_hash, input.password);
-  if (!passwordMatches) {
-    throw invalidCredentials();
-  }
+  const [user] = matches;
+  if (!user) throw invalidCredentials();
+  if (matches.length > 1) return { workspaces: matches.map(({ business }) => business) };
 
-  return issueSession({
-    id: user.id,
-    businessId: user.business_id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    business: { id: user.business_id, name: user.business_name },
-  });
+  return { session: await issueSession(user) };
 }
 
 /** Resolve a session token to its user and tenant, or null when absent/expired. */

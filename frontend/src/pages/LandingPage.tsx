@@ -11,6 +11,7 @@ import { BenefitsSection } from '../components/BenefitsSection';
 import { FAQSection } from '../components/FAQSection';
 import { FinalCTASection } from '../components/FinalCTASection';
 import { Footer } from '../components/Footer';
+import { StockPilotLogo } from '../components/StockPilotLogo';
 
 /** In-page anchors exposed in the landing navbar. */
 const SECTIONS = [
@@ -22,14 +23,8 @@ const SECTIONS = [
 
 const MENU_ID = 'landing-drawer';
 
-/**
- * Focus ring for the navy bar.
- *
- * `ring-offset` must match the navy it sits on, otherwise the offset shows as a
- * pale gap around the control.
- */
 const focusRing =
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900';
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-sky-700';
 
 /**
  * Nav link styling.
@@ -99,7 +94,7 @@ export function LandingPage() {
   }, [drawerOpen]);
 
   return (
-    <div className="landing-page min-h-screen bg-navy-900 font-landing">
+    <div className="landing-page min-h-screen bg-white font-landing">
       <header className="sp-header sticky top-0 z-40" data-surface={atTop ? 'hero' : 'scrolled'}>
         <nav
           aria-label="Main"
@@ -119,21 +114,7 @@ export function LandingPage() {
               }}
               className={`sp-brand flex shrink-0 items-center gap-2 rounded-md text-base font-semibold tracking-tight text-white ${focusRing}`}
             >
-              <span
-                aria-hidden="true"
-                className="sp-brand-mark flex h-8 w-8 items-center justify-center rounded-lg"
-              >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 text-navy-900" fill="currentColor">
-                  <path
-                    d="M5 13.5 9 17l10-11"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </span>
+              <StockPilotLogo className="sp-brand-mark" />
               StockPilot
             </Link>
           </div>
@@ -176,7 +157,7 @@ export function LandingPage() {
               aria-expanded={drawerOpen}
               aria-controls={MENU_ID}
               aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
-              className={`sp-menu-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-transparent text-slate-300 transition-colors hover:border-accent-500 hover:bg-navy-800 hover:text-white motion-reduce:transition-none lg:hidden ${focusRing}`}
+              className={`sp-menu-toggle inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-transparent text-white transition-colors motion-reduce:transition-none lg:hidden ${focusRing}`}
             >
               <svg
                 viewBox="0 0 24 24"

@@ -1,0 +1,18 @@
+.stockpilot-logo {
+  display: inline-grid;
+  width: var(--stockpilot-logo-size, 36px);
+  height: var(--stockpilot-logo-size, 36px);
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--stockpilot-logo-radius, 11px);
+  background: radial-gradient(circle at 50% 55%, #e5f7ff, #fff 76%);
+  box-shadow: inset 0 0 0 1px #dcebf7;
+}
+
+.stockpilot-logo-image {
+  display: block;
+  width: 82%;
+  height: auto;
+  filter: saturate(1.35) contrast(1.08);
+}

@@ -58,6 +58,7 @@ export const loginSchema = z
   .object({
     email: emailSchema,
     password: loginPasswordSchema,
+    workspaceId: z.uuid().optional(),
   })
   .strict();
 

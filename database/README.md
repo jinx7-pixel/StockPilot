@@ -63,8 +63,8 @@ A tenant. Every user belongs to exactly one.
 Indexes and constraints:
 
 - `users_business_id_idx` — every tenant-scoped query filters on this.
-- `users_business_id_email_key` — **unique per business**, not globally. Two
-  unrelated businesses may each register the same address.
+- `users_business_id_email_key` — **unique per business**, so legacy workspaces
+  with the same address remain valid. Public signup rejects an existing email.
 - `users_email_lowercase_check` — `email = lower(email)`, so normalisation is
   guaranteed by the database and not merely by application code.
 - `users_business_id_fkey` — deleting a business removes its users.
@@ -273,12 +273,12 @@ There is no membership join table: a user belongs to exactly one business. The
 tenant (`business_id`) is read from the session via a database join and is never
 taken from a request body, query parameter or header.
 
-> **Known design tension.** Because email is unique *per business* rather than
-> globally, the same address can exist in several tenants. `login` takes only an
-> email and password, so more than one match is unresolvable — it fails closed
-> with the same 401 as a wrong password. If that proves too strict in practice,
-> the options are a global unique index on `email`, or a business identifier in
-> the login payload. Both are deliberate product decisions, deferred.
+Public signup checks for an existing normalized email while holding a lock for
+that address, so two simultaneous requests cannot create duplicate workspaces.
+Login verifies passwords against any legacy accounts with the same email. When
+more than one password matches, it returns those workspace choices without
+creating a session. Selecting a workspace sends its ID with the credentials,
+which the server checks again against that workspace's account.
 
 ## Layout
 

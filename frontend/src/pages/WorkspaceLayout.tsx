@@ -4,6 +4,8 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '../auth/authContext';
+import { StockPilotLogo } from '../components/StockPilotLogo';
+import './workspace.css';
 
 interface NavItem {
   to: string;
@@ -105,16 +107,10 @@ function groupLabelId(groupId: string): string {
 }
 
 function navClass(isActive: boolean): string {
-  return [
-    'flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400',
-    isActive
-      ? 'border-emerald-400/15 bg-emerald-400/[0.09] text-emerald-200 shadow-[inset_2px_0_0_0_#34d399]'
-      : 'border-transparent text-slate-400 hover:bg-white/[0.045] hover:text-slate-100',
-  ].join(' ');
+  return `workspace-nav-link flex min-w-0 items-center gap-2.5 ${focusRing} ${isActive ? 'workspace-nav-current' : ''}`;
 }
 
-const signOutFocusRing =
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b1220]';
+const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2';
 
 export function WorkspaceLayout() {
   const { user, logout } = useAuth();
@@ -123,26 +119,9 @@ export function WorkspaceLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [railTooltip, setRailTooltip] = useState<{ label: string; top: number; left: number } | null>(null);
   const isDevelopmentPreview = import.meta.env.DEV && user?.id === 'dev-preview-user';
-  const isDashboard = location.pathname === '/app';
-  const isAnalytics = location.pathname === '/app/analytics';
-  const isProducts = location.pathname === '/app/products';
-  const isSuppliers = location.pathname === '/app/suppliers';
-  const isCategories = location.pathname === '/app/categories';
-  const isInventory = location.pathname === '/app/inventory';
-  const isSales = location.pathname === '/app/sales';
-  const isStockRisk = location.pathname === '/app/stock-risk';
-  const isPurchaseOrders = location.pathname === '/app/purchase-orders';
-  const isPurchaseOrderPage = location.pathname.startsWith('/app/purchase-orders');
-  const isDemand = location.pathname === '/app/demand';
-  const isReorder = location.pathname === '/app/reorder';
-  const isOverstock = location.pathname === '/app/overstock';
-  const isIntelligence = location.pathname === '/app/intelligence';
-  const isRecommendations = location.pathname === '/app/recommendations';
-  const isActions = location.pathname === '/app/actions';
-  const isSlowDead = location.pathname === '/app/slow-dead';
-  const isSupplierIntelligence = location.pathname === '/app/supplier-intelligence';
-  const isDarkWorkspacePage = isDashboard || isAnalytics || isProducts || isSuppliers || isCategories || isInventory || isSales || isPurchaseOrderPage || isStockRisk || isDemand || isReorder || isOverstock || isIntelligence || isRecommendations || isActions || isSlowDead || isSupplierIntelligence;
-  const isWideWorkspacePage = isDashboard || isAnalytics || isProducts || isPurchaseOrders || isStockRisk || isDemand || isReorder || isOverstock || isSlowDead || isSupplierIntelligence;
+  const route = location.pathname.split('/').slice(0, 3).join('/');
+  const currentGroup = NAV_GROUPS.find((group) => group.items.some((item) => item.to === route));
+  const currentItem = currentGroup?.items.find((item) => item.to === route);
   const menuButtonId = 'workspace-nav-toggle';
 
   useEffect(() => {
@@ -162,10 +141,16 @@ export function WorkspaceLayout() {
 
   if (!user) return null;
 
+  const initials = user.name.trim().split(/\s+/).slice(0, 2).map((name) => name.charAt(0)).join('').toUpperCase();
+
+  function dismissMenu() {
+    setMenuOpen(false);
+    document.getElementById(menuButtonId)?.focus();
+  }
+
   function handleNavKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (menuOpen && event.key === 'Escape') {
-      setMenuOpen(false);
-      document.getElementById(menuButtonId)?.focus();
+      dismissMenu();
     }
   }
 
@@ -175,13 +160,11 @@ export function WorkspaceLayout() {
   }
 
   return (
-    <div onKeyDown={handleNavKeyDown} className="min-h-screen bg-[#0a1120] text-slate-100 lg:flex">
-      <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-slate-800 bg-[#0a1120]/95 px-4 backdrop-blur lg:hidden">
+    <div onKeyDown={handleNavKeyDown} className="workspace-shell min-h-screen lg:flex">
+      <header className="workspace-topbar sticky top-0 z-30 flex items-center justify-between px-4 lg:hidden">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-400 text-[#06251a]">
-            <svg aria-hidden="true" viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m4.5 10.3 3.2 3.2 7.8-7.8" /></svg>
-          </span>
-          <span className="text-sm font-semibold tracking-tight text-white">Stock<span className="text-emerald-300">Pilot</span></span>
+          <StockPilotLogo className="workspace-mark" />
+          <span className="workspace-wordmark">StockPilot</span>
         </div>
         <button
           type="button"
@@ -189,9 +172,9 @@ export function WorkspaceLayout() {
           aria-expanded={menuOpen}
           aria-controls={NAV_GROUPS_ID}
           onClick={() => setMenuOpen((open) => !open)}
-          className={`inline-flex h-10 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 text-sm font-medium text-slate-200 transition hover:bg-slate-800 ${signOutFocusRing}`}
+          className={`workspace-menu-button ${focusRing}`}
         >
-          <span aria-hidden="true" className="text-lg leading-none">{menuOpen ? '×' : '☰'}</span>
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d="M3 5h14M3 10h14M3 15h14" /></svg>
           Menu
         </button>
       </header>
@@ -201,18 +184,16 @@ export function WorkspaceLayout() {
           type="button"
           aria-label="Dismiss navigation backdrop"
           tabIndex={-1}
-          onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-[2px] lg:hidden"
+          onClick={dismissMenu}
+          className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden"
         />
       ) : null}
 
-      <aside aria-hidden={sidebarCollapsed} inert={sidebarCollapsed} className={`${menuOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-50 w-[min(19rem,86vw)] flex-col border-r border-slate-800 bg-[#0b1220] shadow-2xl lg:sticky lg:top-0 lg:z-auto lg:flex lg:h-screen lg:min-w-0 lg:shrink-0 lg:overflow-hidden lg:shadow-none lg:transition-[width,opacity] lg:duration-300 lg:ease-in-out motion-reduce:transition-none ${sidebarCollapsed ? 'lg:w-0 lg:border-r-0 lg:opacity-0 lg:pointer-events-none' : 'lg:w-[260px] lg:opacity-100'}`}>
-        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-slate-800/80 px-5">
+      <aside aria-hidden={sidebarCollapsed} inert={sidebarCollapsed} className={`${menuOpen ? 'flex' : 'hidden'} workspace-sidebar fixed inset-y-0 left-0 z-50 w-[min(19rem,86vw)] flex-col border-r border-slate-200 bg-white shadow-xl lg:sticky lg:top-0 lg:z-auto lg:flex lg:h-screen lg:min-w-0 lg:shrink-0 lg:overflow-hidden lg:shadow-none lg:transition-[width,opacity] lg:duration-200 motion-reduce:transition-none ${sidebarCollapsed ? 'lg:w-0 lg:border-r-0 lg:opacity-0 lg:pointer-events-none' : 'lg:w-[236px] lg:opacity-100'}`}>
+        <div className="workspace-sidebar-brand flex shrink-0 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400 text-[#06251a] shadow-[0_0_26px_-10px_rgba(52,211,153,0.9)]">
-              <svg aria-hidden="true" viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m4.5 10.3 3.2 3.2 7.8-7.8" /></svg>
-            </span>
-            <span className="text-base font-semibold tracking-tight text-white">Stock<span className="text-emerald-300">Pilot</span></span>
+            <StockPilotLogo className="workspace-mark" />
+            <span className="workspace-wordmark">StockPilot</span>
           </div>
           <button
             type="button"
@@ -227,21 +208,21 @@ export function WorkspaceLayout() {
             onMouseLeave={() => setRailTooltip(null)}
             onFocus={(event) => showRailTooltip('Collapse sidebar', event.currentTarget)}
             onBlur={() => setRailTooltip(null)}
-            className={`hidden h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 lg:grid ${signOutFocusRing}`}
+            className={`workspace-icon-button hidden lg:grid ${focusRing}`}
           >
             <SidebarToggleIcon />
           </button>
-          <button type="button" onClick={() => setMenuOpen(false)} aria-label="Close workspace navigation" className={`grid h-8 w-8 place-items-center rounded-lg text-lg text-slate-500 hover:bg-white/5 hover:text-white lg:hidden ${signOutFocusRing}`}>×</button>
+          <button type="button" onClick={dismissMenu} aria-label="Close workspace navigation" className={`workspace-icon-button grid text-xl lg:hidden ${focusRing}`}>×</button>
         </div>
 
-        <nav aria-label="Workspace" id={NAV_GROUPS_ID} className="workspace-nav-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-5">
-          <div className="space-y-6">
+        <nav aria-label="Workspace" id={NAV_GROUPS_ID} className="workspace-nav-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pt-2">
+          <div className="space-y-4 pb-4">
             {NAV_GROUPS.map((group) => {
               const labelId = groupLabelId(group.id);
               return (
                 <section key={group.id} aria-labelledby={labelId}>
-                  <span id={labelId} className="block px-3 text-[10px] font-semibold tracking-[0.18em] text-slate-600 uppercase">{group.label}</span>
-                  <ul aria-labelledby={labelId} className="min-w-0 mt-2 space-y-1">
+                  <span id={labelId} className="workspace-nav-label">{group.label}</span>
+                  <ul aria-labelledby={labelId} className="min-w-0 mt-1.5 space-y-0.5">
                     {group.items.map((item) => (
                       <li key={item.to}>
                         <NavLink
@@ -261,15 +242,18 @@ export function WorkspaceLayout() {
             })}
           </div>
 
-          <div className="mt-auto pt-6">
-            <div className="mb-3 rounded-xl border border-slate-800/80 bg-white/[0.025] p-3">
-              <p className="truncate text-sm font-medium text-slate-200">{user.business.name}</p>
-              <p className="mt-1 truncate text-xs text-slate-500">{user.name} <span className="px-1 text-slate-700">·</span> <span className="capitalize">{user.role}</span></p>
+          <div className="workspace-account sticky bottom-0 mt-auto bg-white pb-3 pt-2">
+            <div className="workspace-business">
+              <span className="workspace-avatar" aria-hidden="true">{initials}</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900" title={user.business.name}>{user.business.name}</p>
+                <p className="truncate text-xs text-slate-500"><span className="capitalize">{user.role}</span> workspace</p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => void logout()}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-400 transition hover:bg-white/[0.045] hover:text-slate-100 ${signOutFocusRing}`}
+              className={`workspace-nav-link mt-1 flex w-full items-center gap-2.5 text-left ${focusRing}`}
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></svg>
               Sign out
@@ -278,8 +262,8 @@ export function WorkspaceLayout() {
         </nav>
       </aside>
 
-      <aside aria-label="Collapsed workspace sidebar" aria-hidden={!sidebarCollapsed} inert={!sidebarCollapsed} className={`hidden h-screen min-w-0 shrink-0 flex-col overflow-hidden border-r border-slate-800 bg-[#0b1220] lg:sticky lg:top-0 lg:flex lg:transition-[width,opacity] lg:duration-300 lg:ease-in-out motion-reduce:transition-none ${sidebarCollapsed ? 'lg:w-16 lg:opacity-100' : 'lg:w-0 lg:border-r-0 lg:opacity-0 lg:pointer-events-none'}`}>
-          <div className="flex h-[76px] shrink-0 items-center justify-center border-b border-slate-800/80">
+      <aside aria-label="Collapsed workspace sidebar" aria-hidden={!sidebarCollapsed} inert={!sidebarCollapsed} className={`hidden h-screen min-w-0 shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white lg:sticky lg:top-0 lg:flex lg:transition-[width,opacity] lg:duration-200 motion-reduce:transition-none ${sidebarCollapsed ? 'lg:w-16 lg:opacity-100' : 'lg:w-0 lg:border-r-0 lg:opacity-0 lg:pointer-events-none'}`}>
+          <div className="workspace-sidebar-brand flex shrink-0 items-center justify-center">
             <button
               type="button"
               aria-label="Expand sidebar"
@@ -293,14 +277,14 @@ export function WorkspaceLayout() {
               onMouseLeave={() => setRailTooltip(null)}
               onFocus={(event) => showRailTooltip('Expand sidebar', event.currentTarget)}
               onBlur={() => setRailTooltip(null)}
-              className={`grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${signOutFocusRing}`}
+              className={`workspace-icon-button grid ${focusRing}`}
             >
               <SidebarToggleIcon />
             </button>
           </div>
 
-          <nav aria-label="Workspace" className="workspace-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-4">
-            <ul className="space-y-2">
+          <nav aria-label="Workspace" className="workspace-nav-scroll min-h-0 flex-1 overflow-y-auto px-2 py-2">
+            <ul className="space-y-1">
               {NAV_GROUPS.flatMap((group) => group.items).map((item) => (
                 <li key={item.to}>
                   <NavLink
@@ -312,12 +296,7 @@ export function WorkspaceLayout() {
                     onMouseLeave={() => setRailTooltip(null)}
                     onFocus={(event) => showRailTooltip(item.label, event.currentTarget)}
                     onBlur={() => setRailTooltip(null)}
-                    className={({ isActive }) => [
-                      'mx-auto grid h-10 w-10 place-items-center rounded-xl border transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400',
-                      isActive
-                        ? 'border-emerald-400/15 bg-emerald-400/[0.09] text-emerald-200'
-                        : 'border-transparent text-slate-500 hover:bg-white/[0.045] hover:text-slate-100',
-                    ].join(' ')}
+                    className={({ isActive }) => `workspace-icon-button mx-auto grid ${focusRing} ${isActive ? 'workspace-nav-current' : ''}`}
                   >
                     <NavigationIcon to={item.to} />
                   </NavLink>
@@ -326,7 +305,7 @@ export function WorkspaceLayout() {
             </ul>
           </nav>
 
-          <div className="shrink-0 border-t border-slate-800/80 p-2">
+          <div className="shrink-0 border-t border-slate-200 p-2">
             <button
               type="button"
               aria-label="Sign out"
@@ -335,7 +314,7 @@ export function WorkspaceLayout() {
               onMouseLeave={() => setRailTooltip(null)}
               onFocus={(event) => showRailTooltip('Sign out', event.currentTarget)}
               onBlur={() => setRailTooltip(null)}
-              className={`mx-auto grid h-10 w-10 place-items-center rounded-xl text-slate-500 transition hover:bg-white/[0.045] hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${signOutFocusRing}`}
+              className={`workspace-icon-button mx-auto grid ${focusRing}`}
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M10 17l5-5-5-5M15 12H3M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" /></svg>
             </button>
@@ -345,18 +324,30 @@ export function WorkspaceLayout() {
       {railTooltip ? (
         <div
           role="tooltip"
-          className="pointer-events-none fixed z-[60] -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-[#0b1220] px-2.5 py-1.5 text-xs font-medium text-slate-200 shadow-xl"
+          className="pointer-events-none fixed z-[60] -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-md"
           style={{ top: railTooltip.top, left: railTooltip.left }}
         >
           {railTooltip.label}
         </div>
       ) : null}
 
-      <main className={`min-w-0 flex-1 ${isDarkWorkspacePage ? 'bg-[#0a1120] text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-        <div className={isWideWorkspacePage ? 'mx-auto w-full max-w-[1740px] px-4 py-6 sm:px-6 lg:px-8 lg:py-9' : 'mx-auto max-w-5xl px-6 py-8'}>
+      <main className="min-w-0 flex-1">
+        <div className="workspace-topbar sticky top-0 z-20 hidden items-center justify-between gap-4 px-7 lg:flex" aria-label="Workspace context">
+          <div className="flex min-w-0 items-center gap-2.5 text-sm text-slate-500">
+            {currentItem ? <NavigationIcon to={currentItem.to} /> : null}
+            <span>Workspace</span>
+            <span aria-hidden="true">/</span>
+            <span className="truncate font-semibold text-slate-900">{currentItem?.label ?? 'Overview'}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-2.5 border-l border-slate-200 pl-4">
+            <span className="truncate text-sm font-medium text-slate-700" title={user.name}>{user.name}</span>
+            <span className="workspace-avatar" aria-hidden="true">{initials}</span>
+          </div>
+        </div>
+        <div className="workspace-content mx-auto w-full max-w-[1620px] px-4 py-5 sm:px-6 lg:px-7 lg:py-7 2xl:px-9">
           {isDevelopmentPreview ? (
-            <p className={`mb-6 rounded-xl border px-4 py-3 text-sm ${isDarkWorkspacePage ? 'border-amber-300/15 bg-amber-300/[0.06] text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
-              Development preview · illustrative sample data, not live business data.
+            <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+              Development preview · Sample data
             </p>
           ) : null}
           <Outlet />

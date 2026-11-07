@@ -169,7 +169,7 @@ export function InventoryDetailPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-xs tracking-wide text-slate-500 uppercase">Current stock</p>
           <p
@@ -202,8 +202,8 @@ export function InventoryDetailPage() {
 
         <div className="flex flex-wrap gap-2">
           <PrimaryButton onClick={() => setMoving('in')}>Stock in</PrimaryButton>
-          <PrimaryButton onClick={() => setMoving('out')}>Stock out</PrimaryButton>
-          <PrimaryButton onClick={() => setMoving('adjustment')}>Adjust</PrimaryButton>
+          <SecondaryButton onClick={() => setMoving('out')}>Stock out</SecondaryButton>
+          <SecondaryButton onClick={() => setMoving('adjustment')}>Adjust</SecondaryButton>
         </div>
       </Card>
 

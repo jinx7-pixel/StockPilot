@@ -19,6 +19,7 @@ import {
   SecondaryButton,
   Select,
   Spinner,
+  secondaryButtonClass,
 } from '../components/ui';
 import { catalogApi } from '../lib/catalog';
 import { ApiError } from '../lib/request';
@@ -40,10 +41,10 @@ const STATUS_LABEL: Record<SlowDeadStatus, string> = {
 };
 
 const STATUS_BADGE: Record<SlowDeadStatus, string> = {
-  DEAD: 'border-red-400/20 bg-red-400/[0.08] text-red-200',
-  SLOW: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200',
-  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800/70 text-slate-300',
+  DEAD: 'border-red-400/20 bg-red-400/[0.08] text-red-700',
+  SLOW: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  NORMAL: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700',
+  INSUFFICIENT_DATA: 'border-slate-300 bg-slate-100 text-slate-700',
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -56,7 +57,6 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 /** Ordered from the most attention-worthy classification to the least. */
 const STATUS_ORDER: SlowDeadStatus[] = ['DEAD', 'SLOW', 'NORMAL', 'INSUFFICIENT_DATA'];
 
-const darkSecondaryLinkClass = 'rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
 
 function StatusBadge({ status }: { status: SlowDeadStatus }) {
   return (
@@ -68,9 +68,9 @@ function StatusBadge({ status }: { status: SlowDeadStatus }) {
 
 function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-[#0b1220] p-3">
-      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-1 text-lg font-bold tabular-nums text-slate-100">{value}</dd>
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <dt className="text-xs uppercase tracking-wide text-slate-600">{label}</dt>
+      <dd className="mt-1 text-lg font-bold tabular-nums text-slate-900">{value}</dd>
       {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
     </div>
   );
@@ -90,9 +90,9 @@ function SummaryCard({
   const value = loading ? '…' : available ? (count ?? 0).toLocaleString() : '—';
 
   return (
-    <Card darkSurface className="p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{STATUS_LABEL[status]}</p>
-      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-100">{value}</p>
+    <Card className="p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{STATUS_LABEL[status]}</p>
+      <p className="mt-2 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
       <p className="mt-1 text-xs text-slate-500">
         {loading ? 'Loading classification count…' : available ? 'Products in the current catalog scope' : 'Count unavailable'}
       </p>
@@ -263,48 +263,47 @@ export function SlowDeadPage() {
       <PageHeader
         title="Slow / Dead Stock"
         description="Identify inventory that is moving slowly or has stopped moving, using available stock and sales history."
-        darkSurface
-        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
-      />
+        actions={<SecondaryButton disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
+ />
 
       <section aria-labelledby="slow-dead-guide-heading" className="space-y-3">
         <div>
-          <h2 id="slow-dead-guide-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <h2 id="slow-dead-guide-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">
             How the classifications work
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-600">
             The authenticated API applies the classification policy and returns its evidence with each product.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Card darkSurface className="p-4">
+          <Card className="p-4">
             <StatusBadge status="DEAD" />
-            <p className="mt-3 text-sm leading-5 text-slate-400">No units sold in the analysis window while stock is still held, after enough history is available.</p>
+            <p className="mt-3 text-sm leading-5 text-slate-600">No units sold in the analysis window while stock is still held, after enough history is available.</p>
           </Card>
-          <Card darkSurface className="p-4">
+          <Card className="p-4">
             <StatusBadge status="SLOW" />
-            <p className="mt-3 text-sm leading-5 text-slate-400">Stock remains on hand, and sales occurred on no more active days than the server policy allows.</p>
+            <p className="mt-3 text-sm leading-5 text-slate-600">Stock remains on hand, and sales occurred on no more active days than the server policy allows.</p>
           </Card>
-          <Card darkSurface className="p-4">
+          <Card className="p-4">
             <StatusBadge status="NORMAL" />
-            <p className="mt-3 text-sm leading-5 text-slate-400">With enough history, neither condition applies; no stock held is classified as normal.</p>
+            <p className="mt-3 text-sm leading-5 text-slate-600">With enough history, neither condition applies; no stock held is classified as normal.</p>
           </Card>
-          <Card darkSurface className="p-4">
+          <Card className="p-4">
             <StatusBadge status="INSUFFICIENT_DATA" />
-            <p className="mt-3 text-sm leading-5 text-slate-400">There is not enough observable history to draw a reliable conclusion.</p>
+            <p className="mt-3 text-sm leading-5 text-slate-600">There is not enough observable history to draw a reliable conclusion.</p>
           </Card>
         </div>
-        <p className="rounded-lg border border-slate-800 bg-[#0c1523] px-4 py-3 text-sm text-slate-400">
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
           This assessment uses sales history and current ledger stock. The API does not provide a last-sale date or include non-sale stock movements in this classification; open a product&apos;s stock history for the dated ledger.
         </p>
       </section>
 
       <section aria-labelledby="slow-dead-summary-heading" className="space-y-3">
         <div>
-          <h2 id="slow-dead-summary-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <h2 id="slow-dead-summary-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">
             Classification totals
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-600">
             Counts follow the applied search, category, and product-status scope. They include every classification and confidence level.
           </p>
         </div>
@@ -316,12 +315,12 @@ export function SlowDeadPage() {
               count={statusCounts?.[level]}
               available={statusCounts !== null}
               loading={loading}
-            />
+ />
           ))}
         </div>
       </section>
 
-      <Card darkSurface className="p-4 sm:p-5">
+      <Card className="p-4 sm:p-5">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field
             label="Search product"
@@ -329,13 +328,11 @@ export function SlowDeadPage() {
             onChange={setSearchInput}
             placeholder="Name or SKU"
             required={false}
-            darkSurface
-          />
+ />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
-            darkSurface
             disabled={categoriesLoading || categoriesError !== null}
             hint={
               categoriesLoading
@@ -348,22 +345,20 @@ export function SlowDeadPage() {
               { value: '', label: categoriesError ? 'Categories unavailable' : 'All categories' },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
             ]}
-          />
+ />
           <Select
             label="Classification"
             value={status}
             onChange={handleStatus}
-            darkSurface
             options={[
               { value: 'all', label: 'All classifications' },
               ...STATUS_ORDER.map((level) => ({ value: level, label: STATUS_LABEL[level] })),
             ]}
-          />
+ />
           <Select
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
-            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -371,48 +366,47 @@ export function SlowDeadPage() {
               { value: 'LOW', label: 'Low confidence' },
               { value: 'INSUFFICIENT', label: 'Insufficient evidence' },
             ]}
-          />
+ />
           <Select
             label="Product status"
             value={activeStatus}
             onChange={handleActive}
-            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
               { value: 'false', label: 'Inactive only' },
             ]}
-          />
+ />
 
           <div className="flex items-end gap-2 xl:col-span-3">
-            <PrimaryButton type="submit" variant="emerald">Apply filters</PrimaryButton>
-            {hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            <PrimaryButton type="submit">Apply filters</PrimaryButton>
+            {hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
         {categoriesError ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-300/[0.06] px-3 py-2 text-sm text-amber-200">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-300/[0.06] px-3 py-2 text-sm text-amber-700">
             <p>Categories could not be loaded: {categoriesError}</p>
-            <SecondaryButton darkSurface disabled={categoriesLoading} onClick={retryCategories}>Retry categories</SecondaryButton>
+            <SecondaryButton disabled={categoriesLoading} onClick={retryCategories}>Retry categories</SecondaryButton>
           </div>
         ) : null}
       </Card>
 
       {loading ? (
-        <Card darkSurface className="flex min-h-48 items-center justify-center p-6">
-          <Spinner darkSurface label="Loading server-assessed stock classifications…" />
+        <Card className="flex min-h-48 items-center justify-center p-6">
+          <Spinner label="Loading server-assessed stock classifications…" />
         </Card>
       ) : error ? (
-        <Card darkSurface className="border-red-400/20 bg-red-400/[0.06] p-5">
+        <Card className="border-red-400/20 bg-red-400/[0.06] p-5">
           <div role="alert" className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="font-semibold text-red-200">Slow / dead stock could not be loaded</h2>
-              <p className="mt-1 text-sm text-red-100">{error}</p>
+              <h2 className="font-semibold text-red-700">Slow / dead stock could not be loaded</h2>
+              <p className="mt-1 text-sm text-red-800">{error}</p>
             </div>
-            <SecondaryButton darkSurface onClick={reload}>Try again</SecondaryButton>
+            <SecondaryButton onClick={reload}>Try again</SecondaryButton>
           </div>
         </Card>
       ) : items && items.length === 0 ? (
-        <Card darkSurface>
+        <Card >
           <EmptyState
             title={hasFilters ? 'No products match these filters' : 'No products to assess yet'}
             description={
@@ -420,21 +414,20 @@ export function SlowDeadPage() {
                 ? 'Adjust your filters or clear them to see the full catalog.'
                 : 'Add products and record sales to see server-assessed slow and dead stock here.'
             }
-            darkSurface
             action={
               hasFilters ? (
-                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <Link className={darkSecondaryLinkClass} to="/app/products">Go to products</Link>
+                <Link className={secondaryButtonClass} to="/app/products">Go to products</Link>
               )
             }
-          />
+ />
         </Card>
       ) : items ? (
-        <Card darkSurface className="overflow-hidden">
-          <div className="border-b border-slate-800 px-4 py-4 sm:px-5">
-            <h2 className="font-semibold text-slate-100">Product assessments</h2>
-            <p className="mt-1 text-sm text-slate-400">
+        <Card className="overflow-hidden">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+            <h2 className="font-semibold text-slate-900">Product assessments</h2>
+            <p className="mt-1 text-sm text-slate-600">
               {meta?.total.toLocaleString() ?? '—'} matching product{meta?.total === 1 ? '' : 's'}
               {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
             </p>
@@ -442,7 +435,7 @@ export function SlowDeadPage() {
 
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[980px] text-left text-sm">
-              <thead className="bg-[#0b1220] text-xs uppercase tracking-wide text-slate-400">
+              <thead className="bg-white text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th scope="col" className="px-4 py-3">Product</th>
                   <th scope="col" className="px-4 py-3">Classification</th>
@@ -454,11 +447,11 @@ export function SlowDeadPage() {
                   <th scope="col" className="px-4 py-3"><span className="sr-only">Product details</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200">
                 {items.map((item) => (
-                  <tr key={item.productId} className="align-top transition hover:bg-white/[0.025]">
+                  <tr key={item.productId} className="align-top transition hover:bg-slate-50">
                     <td className="px-4 py-4">
-                      <p className="font-semibold text-slate-100">{item.name}</p>
+                      <p className="font-semibold text-slate-900">{item.name}</p>
                       <p className="mt-0.5 text-xs text-slate-500">
                         {item.sku}{item.category ? ` · ${item.category.name}` : ' · No category'}
                         {!item.isActive ? ' · Inactive' : ''}
@@ -466,21 +459,21 @@ export function SlowDeadPage() {
                     </td>
                     <td className="max-w-sm px-4 py-4">
                       <StatusBadge status={item.status} />
-                      <p className="mt-2 text-xs leading-5 text-slate-400">{item.reason}</p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">{item.reason}</p>
                     </td>
-                    <td className="px-4 py-4 text-right font-medium tabular-nums text-slate-100">{item.currentStock}</td>
-                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">
+                    <td className="px-4 py-4 text-right font-medium tabular-nums text-slate-900">{item.currentStock}</td>
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-700">
                       <span className="block">{item.unitsSold90d}</span>
-                      <span className="text-xs text-slate-400">{item.analysisWindowDays} days</span>
+                      <span className="text-xs text-slate-600">{item.analysisWindowDays} days</span>
                     </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-700">
                       <span className="block">{item.activeSalesDays90d}</span>
-                      <span className="text-xs text-slate-400">{item.analysisWindowDays} days</span>
+                      <span className="text-xs text-slate-600">{item.analysisWindowDays} days</span>
                     </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-slate-300">{item.averageDailySales90d}</td>
-                    <td className="px-4 py-4 text-slate-400">{CONFIDENCE_LABEL[item.confidence]}</td>
+                    <td className="px-4 py-4 text-right tabular-nums text-slate-700">{item.averageDailySales90d}</td>
+                    <td className="px-4 py-4 text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</td>
                     <td className="px-4 py-4 text-right">
-                      <SecondaryButton darkSurface onClick={() => setSelected(item)}>Details</SecondaryButton>
+                      <SecondaryButton onClick={() => setSelected(item)}>Details</SecondaryButton>
                     </td>
                   </tr>
                 ))}
@@ -490,10 +483,10 @@ export function SlowDeadPage() {
 
           <div className="space-y-3 p-3 md:hidden">
             {items.map((item) => (
-              <article key={item.productId} className="rounded-xl border border-slate-800 bg-[#0b1220] p-4 shadow-sm">
+              <article key={item.productId} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="break-words font-semibold text-slate-100">{item.name}</h3>
+                    <h3 className="break-words font-semibold text-slate-900">{item.name}</h3>
                     <p className="mt-1 break-words text-xs text-slate-500">
                       {item.sku}{item.category ? ` · ${item.category.name}` : ' · No category'}
                       {!item.isActive ? ' · Inactive' : ''}
@@ -508,25 +501,25 @@ export function SlowDeadPage() {
                   <Metric label="Average daily sales" value={item.averageDailySales90d} />
                 </dl>
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-xs text-slate-400">{CONFIDENCE_LABEL[item.confidence]}</span>
-                  <SecondaryButton darkSurface onClick={() => setSelected(item)}>View assessment</SecondaryButton>
+                  <span className="text-xs text-slate-600">{CONFIDENCE_LABEL[item.confidence]}</span>
+                  <SecondaryButton onClick={() => setSelected(item)}>View assessment</SecondaryButton>
                 </div>
-                <p className="mt-3 border-t border-slate-800 pt-3 text-sm leading-5 text-slate-400">{item.reason}</p>
+                <p className="mt-3 border-t border-slate-200 pt-3 text-sm leading-5 text-slate-600">{item.reason}</p>
               </article>
             ))}
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
             <span>
               {meta ? `${meta.total.toLocaleString()} matching product${meta.total === 1 ? '' : 's'}` : 'Product count unavailable'}
               {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
             </span>
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)}>
+                <SecondaryButton disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)}>
                   Previous
                 </SecondaryButton>
-                <SecondaryButton darkSurface disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>
+                <SecondaryButton disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>
                   Next
                 </SecondaryButton>
               </div>
@@ -537,40 +530,39 @@ export function SlowDeadPage() {
 
       <section aria-labelledby="slow-dead-workflows-heading" className="space-y-3">
         <div>
-          <h2 id="slow-dead-workflows-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <h2 id="slow-dead-workflows-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">
             Related workflows
           </h2>
-          <p className="mt-1 text-xs text-slate-400">Review stock history and the existing sales and inventory-planning tools.</p>
+          <p className="mt-1 text-xs text-slate-600">Review stock history and the existing sales and inventory-planning tools.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link className={darkSecondaryLinkClass} to="/app/inventory">Inventory</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/sales">Sales</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/demand">Demand planning</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/analytics">Analytics</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/overstock">Overstock</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/reorder">Reorder</Link>
-          <Link className={darkSecondaryLinkClass} to="/app/recommendations">Recommendations</Link>
+          <Link className={secondaryButtonClass} to="/app/inventory">Inventory</Link>
+          <Link className={secondaryButtonClass} to="/app/sales">Sales</Link>
+          <Link className={secondaryButtonClass} to="/app/demand">Demand planning</Link>
+          <Link className={secondaryButtonClass} to="/app/analytics">Analytics</Link>
+          <Link className={secondaryButtonClass} to="/app/overstock">Overstock</Link>
+          <Link className={secondaryButtonClass} to="/app/reorder">Reorder</Link>
+          <Link className={secondaryButtonClass} to="/app/recommendations">Recommendations</Link>
         </div>
       </section>
 
       {selected ? (
-        <Modal darkSurface title={selected.name} onClose={() => setSelected(null)}>
+        <Modal title={selected.name} onClose={() => setSelected(null)}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <StatusBadge status={selected.status} />
-              <span className="text-sm text-slate-300">{CONFIDENCE_LABEL[selected.confidence]}</span>
-              <span className="text-sm text-slate-400">{selected.sku}</span>
+              <span className="text-sm text-slate-700">{CONFIDENCE_LABEL[selected.confidence]}</span>
+              <span className="text-sm text-slate-600">{selected.sku}</span>
             </div>
 
-            <p className="rounded-lg border border-slate-800 bg-[#0b1220] p-3 text-sm leading-6 text-slate-300">
+            <p className="rounded-lg border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700">
               {selected.reason}
             </p>
 
             <DecisionExplanationView
               explanation={selected.explanation}
               decisionLabel={STATUS_LABEL[selected.status]}
-              darkSurface
-            />
+ />
 
             <dl className="grid gap-3 sm:grid-cols-2">
               <Metric label="Current stock" value={selected.currentStock} hint="Calculated from the inventory ledger" />
@@ -580,8 +572,8 @@ export function SlowDeadPage() {
             </dl>
 
             <section className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Server evidence</h3>
-              <ul className="space-y-1 text-sm text-slate-300">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Server evidence</h3>
+              <ul className="space-y-1 text-sm text-slate-700">
                 <li>Analysis window: {selected.evidence.analysisWindowDays} days</li>
                 <li>Minimum observable history: {selected.evidence.minimumObservableDays} days</li>
                 <li>Slow-stock limit: {selected.evidence.slowMaxActiveSalesDays} active sale days</li>
@@ -591,18 +583,18 @@ export function SlowDeadPage() {
               </ul>
             </section>
 
-            <div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4" aria-label="Related product workflows">
-              <Link className={darkSecondaryLinkClass} to={`/app/inventory/${encodeURIComponent(selected.productId)}`}>
+            <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4" aria-label="Related product workflows">
+              <Link className={secondaryButtonClass} to={`/app/inventory/${encodeURIComponent(selected.productId)}`}>
                 View stock history
               </Link>
-              <Link className={darkSecondaryLinkClass} to="/app/demand">Demand planning</Link>
-              <Link className={darkSecondaryLinkClass} to="/app/analytics">Analytics</Link>
-              <Link className={darkSecondaryLinkClass} to="/app/overstock">Overstock</Link>
-              <Link className={darkSecondaryLinkClass} to="/app/reorder">Reorder</Link>
-              <Link className={darkSecondaryLinkClass} to="/app/recommendations">Recommendations</Link>
+              <Link className={secondaryButtonClass} to="/app/demand">Demand planning</Link>
+              <Link className={secondaryButtonClass} to="/app/analytics">Analytics</Link>
+              <Link className={secondaryButtonClass} to="/app/overstock">Overstock</Link>
+              <Link className={secondaryButtonClass} to="/app/reorder">Reorder</Link>
+              <Link className={secondaryButtonClass} to="/app/recommendations">Recommendations</Link>
             </div>
 
-            <p className="rounded-lg border border-amber-400/20 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-200">
+            <p className="rounded-lg border border-amber-400/20 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-700">
               This page reports a server classification only. It does not markdown, write off, deactivate, adjust, transfer, or order stock.
             </p>
           </div>

@@ -263,17 +263,15 @@ export function SalesPage() {
       <PageHeader
         title="Sales"
         description="Track sales transactions and manage sales activity."
-        actions={<PrimaryButton onClick={() => setCreating(true)} darkSurface>New Sale</PrimaryButton>}
-        darkSurface
-      />
+        actions={<PrimaryButton onClick={() => setCreating(true)} >New Sale</PrimaryButton>}
+ />
 
-      {error ? <ErrorBanner message={error} darkSurface /> : null}
-      {rangeError ? <ErrorBanner message={rangeError} darkSurface /> : null}
+      {error ? <ErrorBanner message={error} /> : null}
+      {rangeError ? <ErrorBanner message={rangeError} /> : null}
       {summaryError ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ErrorBanner message={`Sales summary unavailable: ${summaryError}`} darkSurface />
+          <ErrorBanner message={`Sales summary unavailable: ${summaryError}`} />
           <SecondaryButton
-            darkSurface
             onClick={() => {
               setSummaryLoading(true);
               setSummaryError(null);
@@ -285,43 +283,43 @@ export function SalesPage() {
         </div>
       ) : null}
       {notice ? (
-        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 text-sm text-emerald-200">
+        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 text-sm text-emerald-700">
           {notice}
         </p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Sales · {periodLabel}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Sales · {periodLabel}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {summary?.summary.salesCount ?? '—'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-600">
             {summary ? 'Completed transactions' : summaryLoading ? 'Loading summary' : 'Unavailable'}
           </p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Units sold · {periodLabel}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Units sold · {periodLabel}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {summary ? formatQuantity(String(summary.summary.unitsSold)) : '—'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">Quantities from completed sales</p>
+          <p className="mt-1 text-xs text-slate-600">Quantities from completed sales</p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Revenue · {periodLabel}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Revenue · {periodLabel}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {summary ? formatAmount(summary.summary.revenue) : '—'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">Server-calculated sale totals</p>
+          <p className="mt-1 text-xs text-slate-600">Server-calculated sale totals</p>
         </Card>
-        <Card darkSurface className="p-4">
-          <p className="text-xs tracking-wide text-slate-400 uppercase">Average sale · {periodLabel}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-100">
+        <Card className="p-4">
+          <p className="text-xs tracking-wide text-slate-600 uppercase">Average sale · {periodLabel}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
             {summary && summary.summary.salesCount > 0
               ? formatAmount(summary.summary.averageSaleValue)
               : '—'}
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-slate-600">
             {summary?.summary.salesCount === 0
               ? 'No completed sales in this period'
               : 'Server-calculated average transaction value'}
@@ -329,7 +327,7 @@ export function SalesPage() {
         </Card>
       </div>
 
-      <Card darkSurface className="p-4">
+      <Card className="p-4">
         <form onSubmit={applyFilters} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Field
             label="Search customer"
@@ -338,8 +336,7 @@ export function SalesPage() {
             required={false}
             maxLength={150}
             placeholder="Name or phone"
-            darkSurface
-          />
+ />
 
           <Select
             label="Status"
@@ -354,8 +351,7 @@ export function SalesPage() {
               { value: 'all', label: 'All statuses' },
               { value: 'completed', label: 'Completed' },
             ]}
-            darkSurface
-          />
+ />
 
           <Field
             label="From"
@@ -366,8 +362,7 @@ export function SalesPage() {
               setRangeError(null);
             }}
             required={false}
-            darkSurface
-          />
+ />
           <Field
             label="To"
             type="date"
@@ -377,26 +372,24 @@ export function SalesPage() {
               setRangeError(null);
             }}
             required={false}
-            darkSurface
-          />
+ />
 
           <div className="flex items-end gap-2">
-            <PrimaryButton type="submit" darkSurface>Apply</PrimaryButton>
-            {showClearFilters ? <SecondaryButton onClick={clearFilters} darkSurface>Clear</SecondaryButton> : null}
+            <PrimaryButton type="submit" >Apply</PrimaryButton>
+            {showClearFilters ? <SecondaryButton onClick={clearFilters} >Clear</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      <Card darkSurface className="overflow-hidden">
+      <Card className="overflow-hidden">
         {loading ? (
-          sales === null ? <Spinner label="Loading sales…" darkSurface /> : <Spinner label="Updating sales…" darkSurface />
+          sales === null ? <Spinner label="Loading sales…" /> : <Spinner label="Updating sales…" />
         ) : sales === null ? (
           <EmptyState
             title="Sales could not be loaded"
             description="Check the connection and retry to load your sales history."
-            action={<SecondaryButton onClick={reload} darkSurface>Retry</SecondaryButton>}
-            darkSurface
-          />
+            action={<SecondaryButton onClick={reload} >Retry</SecondaryButton>}
+ />
         ) : sales.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No sales match those filters' : 'No sales recorded yet'}
@@ -407,18 +400,17 @@ export function SalesPage() {
             }
             action={
               hasFilters ? (
-                <SecondaryButton onClick={clearFilters} darkSurface>Clear filters</SecondaryButton>
+                <SecondaryButton onClick={clearFilters} >Clear filters</SecondaryButton>
               ) : (
-                <PrimaryButton onClick={() => setCreating(true)} darkSurface>Record the first sale</PrimaryButton>
+                <PrimaryButton onClick={() => setCreating(true)} >Record the first sale</PrimaryButton>
               )
             }
-            darkSurface
-          />
+ />
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b border-slate-800 text-xs tracking-wide text-slate-500 uppercase">
+                <thead className="border-b border-slate-200 text-xs tracking-wide text-slate-500 uppercase">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">Sale</th>
                     <th scope="col" className="px-5 py-3 font-medium">Customer</th>
@@ -429,14 +421,14 @@ export function SalesPage() {
                     <th scope="col" className="px-5 py-3 font-medium">Recorded by</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-slate-200">
                   {sales.map((sale) => (
-                    <tr key={sale.id} className="transition-colors hover:bg-white/[0.02]">
+                    <tr key={sale.id} className="transition-colors hover:bg-slate-50">
                       <td className="px-5 py-4">
                         <Link
                           to={`/app/sales/${sale.id}`}
                           aria-label={`View sale ${sale.id}`}
-                          className="rounded font-mono text-xs font-medium text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                          className="rounded font-mono text-xs font-medium text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                           title={sale.id}
                         >
                           #{sale.id.slice(0, 8).toUpperCase()}
@@ -445,75 +437,75 @@ export function SalesPage() {
                       <td className="px-5 py-4">
                         <Link
                           to={`/app/sales/${sale.id}`}
-                          className="rounded font-medium text-slate-100 hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                          className="rounded font-medium text-slate-900 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                         >
                           {sale.customerName?.trim() || 'Walk-in customer'}
                         </Link>
                         {sale.customerPhone ? (
-                          <p className="text-xs text-slate-400">{sale.customerPhone}</p>
+                          <p className="text-xs text-slate-600">{sale.customerPhone}</p>
                         ) : null}
                       </td>
-                      <td className="px-5 py-4 text-slate-300">
+                      <td className="px-5 py-4 text-slate-700">
                         {sale.itemCount} {sale.itemCount === 1 ? 'item' : 'items'}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-200">
+                        <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-700">
                           {sale.status}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-right font-medium tabular-nums text-slate-100">
+                      <td className="px-5 py-4 text-right font-medium tabular-nums text-slate-900">
                         {formatAmount(sale.totalAmount)}
                       </td>
-                      <td className="px-5 py-4 text-slate-300">{formatSaleDate(sale.soldAt)}</td>
-                      <td className="px-5 py-4 text-slate-300">{sale.createdBy.name}</td>
+                      <td className="px-5 py-4 text-slate-700">{formatSaleDate(sale.soldAt)}</td>
+                      <td className="px-5 py-4 text-slate-700">{sale.createdBy.name}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="divide-y divide-slate-800 md:hidden">
+            <div className="divide-y divide-slate-200 md:hidden">
               {sales.map((sale) => (
                 <article key={sale.id} className="space-y-3 p-4">
                   <div className="flex min-w-0 items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Link
                         to={`/app/sales/${sale.id}`}
-                        className="break-words rounded font-semibold text-slate-100 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                        className="break-words rounded font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                       >
                         {sale.customerName?.trim() || 'Walk-in customer'}
                       </Link>
                       <p className="mt-1 font-mono text-[11px] text-slate-500">Sale #{sale.id.slice(0, 8).toUpperCase()}</p>
                     </div>
-                    <span className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-200">
+                    <span className="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 py-0.5 text-xs font-medium text-emerald-700">
                       {sale.status}
                     </span>
                   </div>
 
-                  {sale.customerPhone ? <p className="text-sm text-slate-300">{sale.customerPhone}</p> : null}
+                  {sale.customerPhone ? <p className="text-sm text-slate-700">{sale.customerPhone}</p> : null}
 
-                  <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-800 bg-[#0c1523] p-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
                     <div>
-                      <p className="text-xs text-slate-400">Total</p>
-                      <p className="mt-0.5 font-semibold tabular-nums text-slate-100">{formatAmount(sale.totalAmount)}</p>
+                      <p className="text-xs text-slate-600">Total</p>
+                      <p className="mt-0.5 font-semibold tabular-nums text-slate-900">{formatAmount(sale.totalAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Items</p>
-                      <p className="mt-0.5 font-medium text-slate-200">{sale.itemCount}</p>
+                      <p className="text-xs text-slate-600">Items</p>
+                      <p className="mt-0.5 font-medium text-slate-800">{sale.itemCount}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Sold at</p>
-                      <p className="mt-0.5 text-slate-300">{formatSaleDate(sale.soldAt)}</p>
+                      <p className="text-xs text-slate-600">Sold at</p>
+                      <p className="mt-0.5 text-slate-700">{formatSaleDate(sale.soldAt)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400">Recorded by</p>
-                      <p className="mt-0.5 truncate text-slate-300">{sale.createdBy.name}</p>
+                      <p className="text-xs text-slate-600">Recorded by</p>
+                      <p className="mt-0.5 truncate text-slate-700">{sale.createdBy.name}</p>
                     </div>
                   </div>
 
                   <Link
                     to={`/app/sales/${sale.id}`}
-                    className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-300 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                    className="inline-flex min-h-9 items-center rounded-lg px-2 text-sm font-medium text-emerald-700 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
                   >
                     View sale details <span aria-hidden="true" className="ml-1">→</span>
                   </Link>
@@ -521,7 +513,7 @@ export function SalesPage() {
               ))}
             </div>
 
-            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400 sm:px-6">
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:px-6">
               <span>
                 {meta ? `${meta.total} sale${meta.total === 1 ? '' : 's'}` : '—'}
                 {meta && meta.total > PAGE_SIZE ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -529,7 +521,6 @@ export function SalesPage() {
               {meta && meta.totalPages > 1 ? (
                 <div className="flex gap-2">
                   <SecondaryButton
-                    darkSurface
                     disabled={page <= 1}
                     onClick={() => {
                       setPage((current) => current - 1);
@@ -540,7 +531,6 @@ export function SalesPage() {
                     Previous
                   </SecondaryButton>
                   <SecondaryButton
-                    darkSurface
                     disabled={page >= totalPages}
                     onClick={() => {
                       setPage((current) => current + 1);
@@ -558,28 +548,27 @@ export function SalesPage() {
       </Card>
 
       {creating ? (
-        <Modal title="New sale" onClose={() => setCreating(false)} darkSurface>
+        <Modal title="New sale" onClose={() => setCreating(false)} >
           {productsLoading ? (
-            <Spinner label="Loading active products and stock…" darkSurface />
+            <Spinner label="Loading active products and stock…" />
           ) : productsError ? (
             <div className="space-y-3">
-              <ErrorBanner message={`Product data unavailable: ${productsError}`} darkSurface />
+              <ErrorBanner message={`Product data unavailable: ${productsError}`} />
               <div className="flex justify-end">
-                <SecondaryButton onClick={reload} darkSurface>Retry product loading</SecondaryButton>
+                <SecondaryButton onClick={reload} >Retry product loading</SecondaryButton>
               </div>
             </div>
           ) : (
             <CreateSaleForm
               products={sellable}
               onClose={() => setCreating(false)}
-              darkSurface
               onCreated={(sale) => {
                 setNotice(`Recorded sale for ${formatAmount(sale.totalAmount)}.`);
                 setCreating(false);
                 setPage(1);
                 reload();
               }}
-            />
+ />
           )}
         </Modal>
       ) : null}

@@ -40,9 +40,9 @@ const STABILITY_LABEL: Record<SupplierStability, string> = {
 };
 
 const STABILITY_BADGE: Record<SupplierStability, string> = {
-  STABLE: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
-  VARIABLE: 'border-amber-400/20 bg-amber-400/10 text-amber-200',
-  INSUFFICIENT_DATA: 'border-slate-700 bg-slate-800 text-slate-300',
+  STABLE: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-700',
+  VARIABLE: 'border-amber-400/20 bg-amber-400/10 text-amber-700',
+  INSUFFICIENT_DATA: 'border-slate-300 bg-slate-100 text-slate-700',
 };
 
 const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
@@ -54,7 +54,7 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 
 const STABILITY_ORDER: SupplierStability[] = ['STABLE', 'VARIABLE', 'INSUFFICIENT_DATA'];
 const darkSecondaryButtonClass =
-  'inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-sm font-medium text-slate-200 shadow-sm transition hover:border-slate-600 hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1120]';
+  'inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:border-slate-400 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
 
 function displayError(cause: unknown, fallback: string): string {
   return cause instanceof ApiError ? cause.message : fallback;
@@ -94,31 +94,31 @@ function MetricCard({
   detail: string;
 }) {
   return (
-    <Card darkSurface className="min-w-0 p-4 sm:p-5">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-2 truncate text-2xl font-semibold tabular-nums text-slate-100">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+    <Card className="min-w-0 p-4 sm:p-5">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-600">{label}</p>
+      <p className="mt-2 truncate text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p>
     </Card>
   );
 }
 
 function DetailMetric({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-[#0c1523] p-3">
-      <dt className="text-xs font-medium text-slate-400">{label}</dt>
-      <dd className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{value}</dd>
-      {hint ? <p className="text-xs leading-5 text-slate-400">{hint}</p> : null}
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <dt className="text-xs font-medium text-slate-600">{label}</dt>
+      <dd className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{value}</dd>
+      {hint ? <p className="text-xs leading-5 text-slate-600">{hint}</p> : null}
     </div>
   );
 }
 
 function PurchaseOrderStatusSummary({ supplier }: { supplier: Supplier }) {
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-400" aria-label="Purchase order status counts">
-      <span>Received <strong className="font-semibold tabular-nums text-slate-200">{supplier.completedPOCount}</strong></span>
-      <span>Open <strong className="font-semibold tabular-nums text-slate-200">{supplier.openPOCount}</strong></span>
-      <span>Draft <strong className="font-semibold tabular-nums text-slate-200">{supplier.draftPOCount}</strong></span>
-      <span>Cancelled <strong className="font-semibold tabular-nums text-slate-200">{supplier.cancelledPOCount}</strong></span>
+    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-600" aria-label="Purchase order status counts">
+      <span>Received <strong className="font-semibold tabular-nums text-slate-800">{supplier.completedPOCount}</strong></span>
+      <span>Open <strong className="font-semibold tabular-nums text-slate-800">{supplier.openPOCount}</strong></span>
+      <span>Draft <strong className="font-semibold tabular-nums text-slate-800">{supplier.draftPOCount}</strong></span>
+      <span>Cancelled <strong className="font-semibold tabular-nums text-slate-800">{supplier.cancelledPOCount}</strong></span>
     </div>
   );
 }
@@ -310,55 +310,54 @@ export function SupplierIntelligencePage() {
       <PageHeader
         title="Supplier Intelligence"
         description="Understand supplier activity, purchasing history, and available performance signals."
-        darkSurface
         actions={(
           <div className="flex flex-wrap gap-2">
-            <SecondaryButton darkSurface disabled={listLoading || analyticsLoading} onClick={refresh}>Refresh</SecondaryButton>
+            <SecondaryButton disabled={listLoading || analyticsLoading} onClick={refresh}>Refresh</SecondaryButton>
             <Link className={darkSecondaryButtonClass} to="/app/suppliers">Manage suppliers</Link>
             <Link className={darkSecondaryButtonClass} to="/app/purchase-orders">Review purchase orders</Link>
           </div>
         )}
-      />
+ />
 
       <section aria-labelledby="supplier-portfolio-heading" className="space-y-3">
         <div>
-          <h2 id="supplier-portfolio-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">Supplier portfolio</h2>
-          <p className="mt-1 text-xs text-slate-400">Business-wide totals from the supplier analytics API · all time.</p>
+          <h2 id="supplier-portfolio-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">Supplier portfolio</h2>
+          <p className="mt-1 text-xs text-slate-600">Business-wide totals from the supplier analytics API · all time.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             label="Suppliers"
             value={analyticsLoading ? '…' : totalSupplierCount === undefined ? '—' : formatCount(totalSupplierCount)}
             detail={analyticsLoading ? 'Loading supplier totals…' : totalSupplierCount === undefined ? 'Total unavailable' : 'All active and inactive suppliers'}
-          />
+ />
           <MetricCard
             label="Active suppliers"
             value={analyticsLoading ? '…' : activeSupplierCount === undefined ? '—' : formatCount(activeSupplierCount)}
             detail={analyticsLoading ? 'Loading supplier totals…' : activeSupplierCount === undefined ? 'Active total unavailable' : 'Current supplier status'}
-          />
+ />
           <MetricCard
             label="Suppliers with purchase orders"
             value={analyticsLoading ? '…' : suppliersWithOrdersCount === undefined ? '—' : formatCount(suppliersWithOrdersCount)}
             detail={analyticsLoading ? 'Loading purchasing activity…' : suppliersWithOrdersCount === undefined ? 'Purchasing total unavailable' : 'At least one non-cancelled order'}
-          />
+ />
           <MetricCard
             label="Non-cancelled purchase orders"
             value={analyticsLoading ? '…' : nonCancelledOrderCount === undefined ? '—' : formatCount(nonCancelledOrderCount)}
             detail={analyticsLoading ? 'Loading order totals…' : nonCancelledOrderCount === undefined ? 'Order total unavailable' : 'All time; includes drafts and open orders'}
-          />
+ />
         </div>
         {analyticsError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-400/25 bg-red-400/[0.07] px-4 py-3 text-sm text-red-200" role="alert">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-400/25 bg-red-400/[0.07] px-4 py-3 text-sm text-red-700" role="alert">
             <p>Supplier purchasing aggregates could not be loaded: {analyticsError}</p>
-            <SecondaryButton darkSurface disabled={analyticsLoading} onClick={() => setAnalyticsReloadToken((token) => token + 1)}>Retry purchasing data</SecondaryButton>
+            <SecondaryButton disabled={analyticsLoading} onClick={() => setAnalyticsReloadToken((token) => token + 1)}>Retry purchasing data</SecondaryButton>
           </div>
         ) : null}
       </section>
 
       <section aria-labelledby="supplier-consistency-heading" className="space-y-3">
         <div>
-          <h2 id="supplier-consistency-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">Delivery-time consistency</h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <h2 id="supplier-consistency-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">Delivery-time consistency</h2>
+          <p className="mt-1 text-xs text-slate-600">
             Counts follow the applied supplier-name search and active-status filter; they include all confidence and consistency classes.
           </p>
         </div>
@@ -371,11 +370,11 @@ export function SupplierIntelligencePage() {
         </div>
       </section>
 
-      <div className="rounded-lg border border-slate-800 bg-[#101a2a] px-4 py-3 text-sm leading-6 text-slate-300">
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-700">
         Purchase totals are all-time aggregates. Recorded order value excludes cancelled orders but includes draft and open orders, so it is not a paid-spend total. Delivery measurements use received orders with valid timestamps; no promised delivery date is stored, so on-time or late-delivery rates are unavailable.
       </div>
 
-      <Card darkSurface className="p-4 sm:p-5">
+      <Card className="p-4 sm:p-5">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Field
             label="Search supplier name"
@@ -383,23 +382,20 @@ export function SupplierIntelligencePage() {
             onChange={setSearchInput}
             placeholder="Supplier name"
             required={false}
-            darkSurface
-          />
+ />
           <Select
             label="Delivery consistency"
             value={stability}
             onChange={handleStability}
-            darkSurface
             options={[
               { value: 'all', label: 'Any consistency' },
               ...STABILITY_ORDER.map((level) => ({ value: level, label: STABILITY_LABEL[level] })),
             ]}
-          />
+ />
           <Select
             label="Evidence confidence"
             value={confidence}
             onChange={handleConfidence}
-            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -407,57 +403,55 @@ export function SupplierIntelligencePage() {
               { value: 'LOW', label: 'Low confidence' },
               { value: 'INSUFFICIENT', label: 'No completed orders' },
             ]}
-          />
+ />
           <Select
             label="Supplier status"
             value={activeStatus}
             onChange={handleActive}
-            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
               { value: 'false', label: 'Inactive only' },
             ]}
-          />
+ />
           <div className="flex items-end gap-2 xl:col-span-4">
-            <PrimaryButton darkSurface type="submit">Apply filters</PrimaryButton>
-            {hasFilters || hasUnappliedSearch ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            <PrimaryButton type="submit">Apply filters</PrimaryButton>
+            {hasFilters || hasUnappliedSearch ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
       {listLoading ? (
-        <Card darkSurface className="flex min-h-48 items-center justify-center p-6">
-          <Spinner darkSurface label="Loading supplier performance and purchasing history…" />
+        <Card className="flex min-h-48 items-center justify-center p-6">
+          <Spinner label="Loading supplier performance and purchasing history…" />
         </Card>
       ) : listError ? (
-        <Card darkSurface className="border-red-400/25 bg-red-400/[0.07] p-5">
+        <Card className="border-red-400/25 bg-red-400/[0.07] p-5">
           <div role="alert" className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="font-semibold text-red-200">Supplier delivery measurements could not be loaded</h2>
-              <p className="mt-1 text-sm text-red-200/90">{listError}</p>
+              <h2 className="font-semibold text-red-700">Supplier delivery measurements could not be loaded</h2>
+              <p className="mt-1 text-sm text-red-700">{listError}</p>
             </div>
-            <SecondaryButton darkSurface onClick={() => setListReloadToken((token) => token + 1)}>Try again</SecondaryButton>
+            <SecondaryButton onClick={() => setListReloadToken((token) => token + 1)}>Try again</SecondaryButton>
           </div>
         </Card>
       ) : items && items.length === 0 ? (
-        <Card darkSurface>
+        <Card >
           <EmptyState
-            darkSurface
             title={hasFilters ? 'No suppliers match these filters' : 'No suppliers yet'}
             description={
               hasFilters
                 ? 'Try a different name or filter, or clear the filters to see every supplier.'
                 : 'Add suppliers and record purchase orders to see their purchasing history and delivery measurements here.'
             }
-            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
-          />
+            action={hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
+ />
         </Card>
       ) : items ? (
-        <Card darkSurface className="overflow-hidden">
-          <div className="border-b border-slate-800 px-4 py-4 sm:px-5">
-            <h2 className="font-semibold text-slate-100">Supplier purchasing and delivery history</h2>
-            <p className="mt-1 text-sm text-slate-400">
+        <Card className="overflow-hidden">
+          <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+            <h2 className="font-semibold text-slate-900">Supplier purchasing and delivery history</h2>
+            <p className="mt-1 text-sm text-slate-600">
               {meta ? `${formatCount(meta.total)} matching supplier${meta.total === 1 ? '' : 's'}` : 'Supplier count unavailable'}
               {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
             </p>
@@ -465,7 +459,7 @@ export function SupplierIntelligencePage() {
 
           <div className="hidden overflow-x-auto xl:block">
             <table className="w-full min-w-[1380px] text-left text-sm">
-              <thead className="bg-[#0c1523] text-xs uppercase tracking-wide text-slate-400">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th scope="col" className="px-4 py-3">Supplier</th>
                   <th scope="col" className="px-4 py-3">PO status summary</th>
@@ -478,36 +472,36 @@ export function SupplierIntelligencePage() {
                   <th scope="col" className="px-4 py-3"><span className="sr-only">Supplier details</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-slate-200">
                 {items.map((supplier) => {
                   const aggregate = analyticsBySupplierId.get(supplier.supplierId);
                   return (
-                    <tr key={supplier.supplierId} className="align-top transition hover:bg-white/[0.025]">
+                    <tr key={supplier.supplierId} className="align-top transition hover:bg-slate-50">
                       <td className="px-4 py-4">
-                        <p className="font-semibold text-slate-100">{supplier.supplierName}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                        <p className="font-semibold text-slate-900">{supplier.supplierName}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                           <span>{supplier.isActive ? 'Active supplier' : 'Inactive supplier'}</span>
                           {aggregate ? <span>· {formatCount(aggregate.productCount)} products in non-cancelled orders</span> : null}
                         </div>
                       </td>
                       <td className="min-w-52 px-4 py-4"><PurchaseOrderStatusSummary supplier={supplier} /></td>
-                      <td className="px-4 py-4 text-right tabular-nums text-slate-200">
+                      <td className="px-4 py-4 text-right tabular-nums text-slate-800">
                         {aggregate ? formatAmount(aggregate.purchaseValue) : '—'}
-                        <span className="mt-1 block text-xs text-slate-400">{aggregate ? 'all time · excl. cancelled' : 'purchasing data unavailable'}</span>
+                        <span className="mt-1 block text-xs text-slate-600">{aggregate ? 'all time · excl. cancelled' : 'purchasing data unavailable'}</span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-300">
+                      <td className="px-4 py-4 text-sm text-slate-700">
                         <span className="block">Order: {formatDate(aggregate?.lastOrderAt ?? null)}</span>
-                        <span className="mt-1 block text-xs text-slate-400">Received: {formatDate(aggregate?.lastReceivedAt ?? null)}</span>
+                        <span className="mt-1 block text-xs text-slate-600">Received: {formatDate(aggregate?.lastReceivedAt ?? null)}</span>
                       </td>
-                      <td className="px-4 py-4 text-right tabular-nums text-slate-200">
+                      <td className="px-4 py-4 text-right tabular-nums text-slate-800">
                         <span className="block">{supplier.medianLeadTimeDays === null ? '—' : `${supplier.medianLeadTimeDays} d`}</span>
-                        <span className="mt-1 block text-xs text-slate-400">P90 {supplier.p90LeadTimeDays === null ? '—' : `${supplier.p90LeadTimeDays} d`}</span>
+                        <span className="mt-1 block text-xs text-slate-600">P90 {supplier.p90LeadTimeDays === null ? '—' : `${supplier.p90LeadTimeDays} d`}</span>
                       </td>
-                      <td className="px-4 py-4 text-right tabular-nums text-slate-300">{supplier.leadTimeCV ?? '—'}</td>
+                      <td className="px-4 py-4 text-right tabular-nums text-slate-700">{supplier.leadTimeCV ?? '—'}</td>
                       <td className="px-4 py-4"><StabilityBadge stability={supplier.stability} /></td>
-                      <td className="px-4 py-4 text-slate-300">{CONFIDENCE_LABEL[supplier.confidence]}</td>
+                      <td className="px-4 py-4 text-slate-700">{CONFIDENCE_LABEL[supplier.confidence]}</td>
                       <td className="px-4 py-4 text-right">
-                        <SecondaryButton darkSurface disabled={detailLoading} onClick={() => openDetail(supplier)}>
+                        <SecondaryButton disabled={detailLoading} onClick={() => openDetail(supplier)}>
                           {detailLoading && selected?.supplierId === supplier.supplierId ? 'Loading…' : 'Details'}
                         </SecondaryButton>
                       </td>
@@ -522,19 +516,19 @@ export function SupplierIntelligencePage() {
             {items.map((supplier) => {
               const aggregate = analyticsBySupplierId.get(supplier.supplierId);
               return (
-                <article key={supplier.supplierId} className="rounded-xl border border-slate-800 bg-[#0c1523] p-4 shadow-sm shadow-black/20">
+                <article key={supplier.supplierId} className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm shadow-slate-900/10">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="break-words font-semibold text-slate-100">{supplier.supplierName}</h3>
-                      <p className="mt-1 text-xs text-slate-400">
+                      <h3 className="break-words font-semibold text-slate-900">{supplier.supplierName}</h3>
+                      <p className="mt-1 text-xs text-slate-600">
                         {supplier.isActive ? 'Active supplier' : 'Inactive supplier'}
                         {aggregate ? ` · ${formatCount(aggregate.productCount)} products in non-cancelled orders` : ''}
                       </p>
                     </div>
                     <StabilityBadge stability={supplier.stability} />
                   </div>
-                  <div className="mt-4 rounded-lg border border-slate-800 bg-[#101a2a] p-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Purchase order statuses</p>
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Purchase order statuses</p>
                     <PurchaseOrderStatusSummary supplier={supplier} />
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-3">
@@ -545,9 +539,9 @@ export function SupplierIntelligencePage() {
                     <DetailMetric label="Latest placed order" value={formatDate(aggregate?.lastOrderAt ?? null)} />
                     <DetailMetric label="Latest receipt" value={formatDate(aggregate?.lastReceivedAt ?? null)} />
                   </dl>
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
-                    <span className="text-xs text-slate-400">{CONFIDENCE_LABEL[supplier.confidence]}</span>
-                    <SecondaryButton darkSurface disabled={detailLoading} onClick={() => openDetail(supplier)}>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
+                    <span className="text-xs text-slate-600">{CONFIDENCE_LABEL[supplier.confidence]}</span>
+                    <SecondaryButton disabled={detailLoading} onClick={() => openDetail(supplier)}>
                       {detailLoading && selected?.supplierId === supplier.supplierId ? 'Loading…' : 'View evidence'}
                     </SecondaryButton>
                   </div>
@@ -556,7 +550,7 @@ export function SupplierIntelligencePage() {
             })}
           </div>
 
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400">
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
             <span>
               {meta ? `${formatCount(meta.total)} matching supplier${meta.total === 1 ? '' : 's'}` : 'Supplier count unavailable'}
               {meta && meta.totalPages > 1 ? ` · page ${meta.page} of ${meta.totalPages}` : ''}
@@ -564,8 +558,8 @@ export function SupplierIntelligencePage() {
             </span>
             {meta && meta.totalPages > 1 ? (
               <div className="flex gap-2">
-                <SecondaryButton darkSurface disabled={listLoading || page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</SecondaryButton>
-                <SecondaryButton darkSurface disabled={listLoading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</SecondaryButton>
+                <SecondaryButton disabled={listLoading || page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</SecondaryButton>
+                <SecondaryButton disabled={listLoading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</SecondaryButton>
               </div>
             ) : null}
           </footer>
@@ -574,8 +568,8 @@ export function SupplierIntelligencePage() {
 
       <section aria-labelledby="supplier-workflows-heading" className="space-y-3">
         <div>
-          <h2 id="supplier-workflows-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-300">Related workflows</h2>
-          <p className="mt-1 text-xs text-slate-400">Continue with the existing supplier and purchasing screens.</p>
+          <h2 id="supplier-workflows-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-700">Related workflows</h2>
+          <p className="mt-1 text-xs text-slate-600">Continue with the existing supplier and purchasing screens.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link className={darkSecondaryButtonClass} to="/app/suppliers">Supplier management</Link>
@@ -586,33 +580,32 @@ export function SupplierIntelligencePage() {
       </section>
 
       {selected ? (
-        <Modal darkSurface title={selected.supplierName} onClose={() => setSelected(null)}>
+        <Modal title={selected.supplierName} onClose={() => setSelected(null)}>
           {detailLoading ? (
-            <Spinner darkSurface label="Loading completed-order evidence…" />
+            <Spinner label="Loading completed-order evidence…" />
           ) : detailError ? (
             <div className="space-y-3">
-              <p role="alert" className="rounded-lg border border-red-400/25 bg-red-400/[0.07] p-3 text-sm text-red-200">
+              <p role="alert" className="rounded-lg border border-red-400/25 bg-red-400/[0.07] p-3 text-sm text-red-700">
                 Supplier evidence could not be loaded: {detailError}
               </p>
               <div className="flex justify-end">
-                <SecondaryButton darkSurface onClick={retryDetail}>Retry evidence</SecondaryButton>
+                <SecondaryButton onClick={retryDetail}>Retry evidence</SecondaryButton>
               </div>
             </div>
           ) : (
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
                 <StabilityBadge stability={selected.stability} />
-                <span className="text-sm text-slate-300">{CONFIDENCE_LABEL[selected.confidence]}</span>
-                <span className="text-sm text-slate-400">{selected.completedPOCount} received orders</span>
+                <span className="text-sm text-slate-700">{CONFIDENCE_LABEL[selected.confidence]}</span>
+                <span className="text-sm text-slate-600">{selected.completedPOCount} received orders</span>
               </div>
 
-              <p className="rounded-lg border border-slate-800 bg-[#0c1523] p-3 text-sm leading-6 text-slate-300">{selected.reason}</p>
+              <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">{selected.reason}</p>
 
               <DecisionExplanationView
                 explanation={selected.explanation}
                 decisionLabel={STABILITY_LABEL[selected.stability]}
-                darkSurface
-              />
+ />
 
               <dl className="grid gap-3 sm:grid-cols-2">
                 <DetailMetric label="Median lead time" value={selected.medianLeadTimeDays === null ? '—' : `${selected.medianLeadTimeDays} days`} hint={`${selected.leadTimeSampleCount} completed orders with usable timestamps`} />
@@ -624,13 +617,13 @@ export function SupplierIntelligencePage() {
               </dl>
 
               <section className="space-y-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">Completed-order lead-time observations</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Completed-order lead-time observations</h3>
                 {(selected.leadTimeObservations ?? []).length === 0 ? (
-                  <p className="text-sm text-slate-400">No received order has both valid ordered and received timestamps, so there is no lead time to measure.</p>
+                  <p className="text-sm text-slate-600">No received order has both valid ordered and received timestamps, so there is no lead time to measure.</p>
                 ) : (
-                  <div className="max-h-72 overflow-auto rounded-lg border border-slate-800">
+                  <div className="max-h-72 overflow-auto rounded-lg border border-slate-200">
                     <table className="w-full min-w-[620px] text-left text-sm">
-                      <thead className="sticky top-0 bg-[#0c1523] text-xs uppercase tracking-wide text-slate-400">
+                      <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                         <tr>
                           <th scope="col" className="px-3 py-2">Purchase order</th>
                           <th scope="col" className="px-3 py-2">Ordered</th>
@@ -638,17 +631,17 @@ export function SupplierIntelligencePage() {
                           <th scope="col" className="px-3 py-2 text-right">Elapsed time</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-800">
+                      <tbody className="divide-y divide-slate-200">
                         {(selected.leadTimeObservations ?? []).map((observation) => (
                           <tr key={observation.purchaseOrderId}>
                             <td className="px-3 py-2">
-                              <Link className="font-mono text-xs text-emerald-300 underline-offset-2 hover:text-emerald-200 hover:underline" to={`/app/purchase-orders/${encodeURIComponent(observation.purchaseOrderId)}`}>
+                              <Link className="font-mono text-xs text-brand-600 underline-offset-2 hover:text-brand-700 hover:underline" to={`/app/purchase-orders/${encodeURIComponent(observation.purchaseOrderId)}`}>
                                 {observation.purchaseOrderId.slice(0, 8)}
                               </Link>
                             </td>
-                            <td className="px-3 py-2 text-slate-300">{formatDate(observation.orderedAt)}</td>
-                            <td className="px-3 py-2 text-slate-300">{formatDate(observation.receivedAt)}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-slate-100">{observation.leadTimeDays} days</td>
+                            <td className="px-3 py-2 text-slate-700">{formatDate(observation.orderedAt)}</td>
+                            <td className="px-3 py-2 text-slate-700">{formatDate(observation.receivedAt)}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-slate-900">{observation.leadTimeDays} days</td>
                           </tr>
                         ))}
                       </tbody>
@@ -657,11 +650,11 @@ export function SupplierIntelligencePage() {
                 )}
               </section>
 
-              <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-200">
+              <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-xs leading-5 text-amber-700">
                 The database has no promised delivery dates. These elapsed times cannot establish whether an order was early, on time, or late; cancellations are reported as order history, not as supplier fault.
               </p>
 
-              <div className="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                 <Link className={darkSecondaryButtonClass} to="/app/purchase-orders">Review purchase orders</Link>
                 <Link className={darkSecondaryButtonClass} to="/app/suppliers">Manage suppliers</Link>
               </div>

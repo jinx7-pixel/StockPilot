@@ -59,8 +59,8 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
     <span
       className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${
         isActive
-          ? 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-200'
-          : 'border-slate-700 bg-slate-800 text-slate-300'
+          ? 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-700'
+          : 'border-slate-300 bg-slate-100 text-slate-700'
       }`}
     >
       {isActive ? 'Active' : 'Inactive'}
@@ -78,10 +78,10 @@ function SummaryCard({
   detail: string;
 }) {
   return (
-    <Card darkSurface className="min-w-0 p-4 sm:p-5">
-      <p className="text-xs font-semibold tracking-[0.12em] text-slate-400 uppercase">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-100">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-400">{detail}</p>
+    <Card className="min-w-0 p-4 sm:p-5">
+      <p className="text-xs font-semibold tracking-[0.12em] text-slate-600 uppercase">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p>
     </Card>
   );
 }
@@ -91,8 +91,8 @@ function DetailField({ label, value }: { label: string; value: string | null }) 
 
   return (
     <div className="min-w-0">
-      <dt className="text-xs font-medium text-slate-400">{label}</dt>
-      <dd className="mt-1 break-words text-sm text-slate-200">{value}</dd>
+      <dt className="text-xs font-medium text-slate-600">{label}</dt>
+      <dd className="mt-1 break-words text-sm text-slate-800">{value}</dd>
     </div>
   );
 }
@@ -366,13 +366,12 @@ export function SuppliersPage() {
       <PageHeader
         title="Suppliers"
         description="Manage supplier information and keep purchasing organized."
-        darkSurface
-        actions={<PrimaryButton darkSurface onClick={openCreate}>Add Supplier</PrimaryButton>}
-      />
+        actions={<PrimaryButton onClick={openCreate}>Add Supplier</PrimaryButton>}
+ />
 
-      {error && suppliers !== null ? <ErrorBanner darkSurface message={error} /> : null}
+      {error && suppliers !== null ? <ErrorBanner message={error} /> : null}
       {notice ? (
-        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-200">
+        <p role="status" className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.08] px-3 py-2 text-sm text-emerald-700">
           {notice}
         </p>
       ) : null}
@@ -380,9 +379,9 @@ export function SuppliersPage() {
       {summaryError ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <ErrorBanner darkSurface message={`Supplier totals are unavailable: ${summaryError}`} />
+            <ErrorBanner message={`Supplier totals are unavailable: ${summaryError}`} />
           </div>
-          <SecondaryButton darkSurface onClick={retrySummary} disabled={summaryLoading}>Retry totals</SecondaryButton>
+          <SecondaryButton onClick={retrySummary} disabled={summaryLoading}>Retry totals</SecondaryButton>
         </div>
       ) : null}
 
@@ -391,15 +390,15 @@ export function SuppliersPage() {
           label="Total suppliers"
           value={totalCount === null ? '—' : formatCount(totalCount)}
           detail={totalCount !== null ? 'Across active and inactive records' : summaryLoading ? 'Loading supplier total…' : 'Total unavailable'}
-        />
+ />
         <SummaryCard
           label="Active suppliers"
           value={activeCount === null ? '—' : formatCount(activeCount)}
           detail={activeCount !== null ? 'Available for new purchase orders' : summaryLoading ? 'Loading active total…' : 'Active total unavailable'}
-        />
+ />
       </section>
 
-      <Card darkSurface className="p-4 sm:p-5">
+      <Card className="p-4 sm:p-5">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1.4fr)_minmax(12rem,1fr)_auto] lg:items-end">
           <Field
             label="Search supplier or contact name"
@@ -408,8 +407,7 @@ export function SuppliersPage() {
             required={false}
             maxLength={150}
             placeholder="Supplier or contact name"
-            darkSurface
-          />
+ />
 
           <Select
             label="Supplier status"
@@ -425,26 +423,24 @@ export function SuppliersPage() {
               { value: 'true', label: 'Active only' },
               { value: 'false', label: 'Inactive only' },
             ]}
-            darkSurface
-          />
+ />
 
           <div className="flex items-end gap-2">
-            <PrimaryButton darkSurface type="submit">Search</PrimaryButton>
-            {showClearFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            <PrimaryButton type="submit">Search</PrimaryButton>
+            {showClearFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
       </Card>
 
-      <Card darkSurface className="overflow-hidden">
+      <Card className="overflow-hidden">
         {loading ? (
-          <Spinner darkSurface label={suppliers === null ? 'Loading suppliers…' : 'Updating suppliers…'} />
+          <Spinner label={suppliers === null ? 'Loading suppliers…' : 'Updating suppliers…'} />
         ) : suppliers === null ? (
           <EmptyState
             title="Suppliers could not be loaded"
             description={error ?? 'Check your connection and retry to load the supplier directory.'}
-            action={<SecondaryButton darkSurface onClick={reload}>Retry</SecondaryButton>}
-            darkSurface
-          />
+            action={<SecondaryButton onClick={reload}>Retry</SecondaryButton>}
+ />
         ) : suppliers.length === 0 ? (
           <EmptyState
             title={hasFilters ? 'No suppliers match those filters' : 'No suppliers yet'}
@@ -455,25 +451,24 @@ export function SuppliersPage() {
             }
             action={
               hasFilters ? (
-                <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton>
+                <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton>
               ) : (
-                <PrimaryButton darkSurface onClick={openCreate}>Add the first supplier</PrimaryButton>
+                <PrimaryButton onClick={openCreate}>Add the first supplier</PrimaryButton>
               )
             }
-            darkSurface
-          />
+ />
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-3 sm:px-6">
-              <h2 className="text-sm font-semibold text-slate-100">Supplier directory</h2>
-              <p role={loading ? 'status' : undefined} className="text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 sm:px-6">
+              <h2 className="text-sm font-semibold text-slate-900">Supplier directory</h2>
+              <p role={loading ? 'status' : undefined} className="text-xs text-slate-600">
                 {loading ? 'Refreshing suppliers…' : `${formatCount(meta?.total ?? suppliers.length)} supplier${meta?.total === 1 ? '' : 's'}`}
               </p>
             </div>
 
             <div className="hidden overflow-x-auto xl:block">
               <table className="w-full min-w-[820px] text-left text-sm">
-                <thead className="border-b border-slate-800 bg-[#0b1220] text-xs tracking-wide text-slate-400 uppercase">
+                <thead className="border-b border-slate-200 bg-white text-xs tracking-wide text-slate-600 uppercase">
                   <tr>
                     <th scope="col" className="px-5 py-3 font-medium">Supplier</th>
                     <th scope="col" className="px-4 py-3 font-medium">Contact</th>
@@ -483,21 +478,21 @@ export function SuppliersPage() {
                     <th scope="col" className="px-5 py-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-slate-200">
                   {suppliers.map((supplier) => (
-                    <tr key={supplier.id} className="transition-colors hover:bg-white/[0.025]">
-                      <td className="px-5 py-4 font-medium text-slate-100">{supplier.name}</td>
-                      <td className="px-4 py-4 text-slate-300">{supplier.contactName || <span className="text-slate-500">—</span>}</td>
-                      <td className="px-4 py-4 text-slate-300">
+                    <tr key={supplier.id} className="transition-colors hover:bg-slate-50">
+                      <td className="px-5 py-4 font-medium text-slate-900">{supplier.name}</td>
+                      <td className="px-4 py-4 text-slate-700">{supplier.contactName || <span className="text-slate-500">—</span>}</td>
+                      <td className="px-4 py-4 text-slate-700">
                         {supplier.email ? (
-                          <a className="break-all text-emerald-300 hover:text-emerald-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" href={`mailto:${supplier.email}`}>
+                          <a className="break-all text-emerald-700 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" href={`mailto:${supplier.email}`}>
                             {supplier.email}
                           </a>
                         ) : <span className="text-slate-500">—</span>}
                       </td>
-                      <td className="px-4 py-4 text-slate-300">
+                      <td className="px-4 py-4 text-slate-700">
                         {supplier.phone ? (
-                          <a className="whitespace-nowrap text-emerald-300 hover:text-emerald-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400" href={`tel:${supplier.phone}`}>
+                          <a className="whitespace-nowrap text-emerald-700 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600" href={`tel:${supplier.phone}`}>
                             {supplier.phone}
                           </a>
                         ) : <span className="text-slate-500">—</span>}
@@ -505,9 +500,9 @@ export function SuppliersPage() {
                       <td className="px-4 py-4"><StatusBadge isActive={supplier.isActive} /></td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-2">
-                          <SecondaryButton darkSurface onClick={() => setViewing(supplier)}>View</SecondaryButton>
-                          <SecondaryButton darkSurface onClick={() => openEdit(supplier)}>Edit</SecondaryButton>
-                          <SecondaryButton darkSurface onClick={() => requestStatusChange(supplier)}>
+                          <SecondaryButton onClick={() => setViewing(supplier)}>View</SecondaryButton>
+                          <SecondaryButton onClick={() => openEdit(supplier)}>Edit</SecondaryButton>
+                          <SecondaryButton onClick={() => requestStatusChange(supplier)}>
                             {supplier.isActive ? 'Deactivate' : 'Reactivate'}
                           </SecondaryButton>
                         </div>
@@ -518,23 +513,23 @@ export function SuppliersPage() {
               </table>
             </div>
 
-            <div className="divide-y divide-slate-800 xl:hidden">
+            <div className="divide-y divide-slate-200 xl:hidden">
               {suppliers.map((supplier) => (
                 <article key={supplier.id} className="space-y-3 p-4 sm:p-5">
                   <div className="flex min-w-0 items-start justify-between gap-3">
-                    <h3 className="break-words text-base font-semibold text-slate-100">{supplier.name}</h3>
+                    <h3 className="break-words text-base font-semibold text-slate-900">{supplier.name}</h3>
                     <StatusBadge isActive={supplier.isActive} />
                   </div>
 
-                  {supplier.contactName ? <p className="text-sm text-slate-300">Contact: {supplier.contactName}</p> : null}
-                  {supplier.email ? <a className="block break-all text-sm text-emerald-300 hover:text-emerald-200 hover:underline" href={`mailto:${supplier.email}`}>{supplier.email}</a> : null}
-                  {supplier.phone ? <a className="block text-sm text-emerald-300 hover:text-emerald-200 hover:underline" href={`tel:${supplier.phone}`}>{supplier.phone}</a> : null}
-                  {supplier.address ? <p className="line-clamp-2 text-sm text-slate-400">{supplier.address}</p> : null}
+                  {supplier.contactName ? <p className="text-sm text-slate-700">Contact: {supplier.contactName}</p> : null}
+                  {supplier.email ? <a className="block break-all text-sm text-emerald-700 hover:text-emerald-700 hover:underline" href={`mailto:${supplier.email}`}>{supplier.email}</a> : null}
+                  {supplier.phone ? <a className="block text-sm text-emerald-700 hover:text-emerald-700 hover:underline" href={`tel:${supplier.phone}`}>{supplier.phone}</a> : null}
+                  {supplier.address ? <p className="line-clamp-2 text-sm text-slate-600">{supplier.address}</p> : null}
 
                   <div className="flex flex-wrap gap-2 pt-1">
-                    <SecondaryButton darkSurface onClick={() => setViewing(supplier)}>View</SecondaryButton>
-                    <SecondaryButton darkSurface onClick={() => openEdit(supplier)}>Edit</SecondaryButton>
-                    <SecondaryButton darkSurface onClick={() => requestStatusChange(supplier)}>
+                    <SecondaryButton onClick={() => setViewing(supplier)}>View</SecondaryButton>
+                    <SecondaryButton onClick={() => openEdit(supplier)}>Edit</SecondaryButton>
+                    <SecondaryButton onClick={() => requestStatusChange(supplier)}>
                       {supplier.isActive ? 'Deactivate' : 'Reactivate'}
                     </SecondaryButton>
                   </div>
@@ -543,12 +538,12 @@ export function SuppliersPage() {
             </div>
 
             {meta && meta.totalPages > 1 ? (
-              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-4 py-3 text-sm text-slate-400 sm:px-6">
+              <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:px-6">
                 <span>
                   {formatCount(meta.total)} supplier{meta.total === 1 ? '' : 's'} · Page {meta.page} of {meta.totalPages}
                 </span>
                 <div className="flex gap-2">
-                  <SecondaryButton darkSurface
+                  <SecondaryButton
                     disabled={page <= 1}
                     onClick={() => {
                       setPage((currentPage) => currentPage - 1);
@@ -558,7 +553,7 @@ export function SuppliersPage() {
                   >
                     Previous
                   </SecondaryButton>
-                  <SecondaryButton darkSurface
+                  <SecondaryButton
                     disabled={page >= totalPages}
                     onClick={() => {
                       setPage((currentPage) => currentPage + 1);
@@ -578,19 +573,18 @@ export function SuppliersPage() {
       {creating || editing ? (
         <Modal
           title={editing ? 'Edit supplier' : 'Add supplier'}
-          darkSurface
           onClose={closeForm}
           footer={
             <>
-              <SecondaryButton darkSurface onClick={closeForm} disabled={saving}>Cancel</SecondaryButton>
-              <PrimaryButton darkSurface type="submit" form="supplier-form" disabled={saving}>
+              <SecondaryButton onClick={closeForm} disabled={saving}>Cancel</SecondaryButton>
+              <PrimaryButton type="submit" form="supplier-form" disabled={saving}>
                 {saving ? 'Saving…' : editing ? 'Save changes' : 'Add supplier'}
               </PrimaryButton>
             </>
           }
         >
           <form id="supplier-form" onSubmit={handleSubmit} className="space-y-4">
-            <ErrorBanner darkSurface message={formError} />
+            <ErrorBanner message={formError} />
 
             <Field
               label="Supplier name"
@@ -599,8 +593,7 @@ export function SuppliersPage() {
               maxLength={150}
               placeholder="Acme Parts"
               disabled={saving}
-              darkSurface
-            />
+ />
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -610,8 +603,7 @@ export function SuppliersPage() {
                 required={false}
                 maxLength={100}
                 disabled={saving}
-                darkSurface
-              />
+ />
               <Field
                 label="Phone"
                 type="tel"
@@ -622,8 +614,7 @@ export function SuppliersPage() {
                 maxLength={30}
                 placeholder="+91 98765 43210"
                 disabled={saving}
-                darkSurface
-              />
+ />
             </div>
 
             <Field
@@ -634,8 +625,7 @@ export function SuppliersPage() {
               required={false}
               maxLength={255}
               disabled={saving}
-              darkSurface
-            />
+ />
 
             <Field
               label="Address"
@@ -644,8 +634,7 @@ export function SuppliersPage() {
               required={false}
               maxLength={255}
               disabled={saving}
-              darkSurface
-            />
+ />
 
             <Textarea
               label="Notes"
@@ -655,8 +644,7 @@ export function SuppliersPage() {
               maxLength={2000}
               rows={3}
               disabled={saving}
-              darkSurface
-            />
+ />
           </form>
         </Modal>
       ) : null}
@@ -664,18 +652,17 @@ export function SuppliersPage() {
       {viewing ? (
         <Modal
           title={viewing.name}
-          darkSurface
           onClose={() => setViewing(null)}
           footer={
             <>
-              <SecondaryButton darkSurface onClick={() => setViewing(null)}>Close</SecondaryButton>
-              <PrimaryButton darkSurface onClick={() => openEdit(viewing)}>Edit supplier</PrimaryButton>
+              <SecondaryButton onClick={() => setViewing(null)}>Close</SecondaryButton>
+              <PrimaryButton onClick={() => openEdit(viewing)}>Edit supplier</PrimaryButton>
             </>
           }
         >
           <div className="space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-slate-400">Supplier details</p>
+              <p className="text-sm text-slate-600">Supplier details</p>
               <StatusBadge isActive={viewing.isActive} />
             </div>
             <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -694,17 +681,16 @@ export function SuppliersPage() {
       {statusCandidate ? (
         <Modal
           title={statusCandidate.isActive ? 'Deactivate supplier?' : 'Reactivate supplier?'}
-          darkSurface
           onClose={closeStatusDialog}
           footer={
             <>
-              <SecondaryButton darkSurface onClick={closeStatusDialog} disabled={statusSaving}>Cancel</SecondaryButton>
+              <SecondaryButton onClick={closeStatusDialog} disabled={statusSaving}>Cancel</SecondaryButton>
               {statusCandidate.isActive ? (
-                <DangerButton darkSurface onClick={() => void confirmStatusChange()} disabled={statusSaving}>
+                <DangerButton onClick={() => void confirmStatusChange()} disabled={statusSaving}>
                   {statusSaving ? 'Deactivating…' : 'Deactivate supplier'}
                 </DangerButton>
               ) : (
-                <PrimaryButton darkSurface onClick={() => void confirmStatusChange()} disabled={statusSaving}>
+                <PrimaryButton onClick={() => void confirmStatusChange()} disabled={statusSaving}>
                   {statusSaving ? 'Reactivating…' : 'Reactivate supplier'}
                 </PrimaryButton>
               )}
@@ -712,8 +698,8 @@ export function SuppliersPage() {
           }
         >
           <div className="space-y-3">
-            <ErrorBanner darkSurface message={statusError} />
-            <p className="text-sm leading-6 text-slate-300">
+            <ErrorBanner message={statusError} />
+            <p className="text-sm leading-6 text-slate-700">
               {statusCandidate.isActive
                 ? 'Deactivation keeps supplier and purchase-order history intact, but prevents this supplier from being used on new purchase orders. You can reactivate it later.'
                 : 'Reactivating makes this supplier available for new purchase orders again.'}

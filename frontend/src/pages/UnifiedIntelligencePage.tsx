@@ -42,18 +42,18 @@ const TYPE_LABEL: Record<RecommendationType, string> = {
 };
 
 const TYPE_BADGE: Record<RecommendationType, string> = {
-  REPLENISH: 'border-sky-400/20 bg-sky-400/[0.08] text-sky-200',
-  REVIEW_REPLENISHMENT: 'border-orange-400/20 bg-orange-400/[0.08] text-orange-200',
-  REVIEW_OVERSTOCK: 'border-violet-400/20 bg-violet-400/[0.08] text-violet-200',
-  REVIEW_SLOW_STOCK: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-200',
-  REVIEW_DEAD_STOCK: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-200',
-  REVIEW_SUPPLIER: 'border-teal-400/20 bg-teal-400/[0.08] text-teal-200',
+  REPLENISH: 'border-sky-400/20 bg-sky-400/[0.08] text-sky-700',
+  REVIEW_REPLENISHMENT: 'border-orange-400/20 bg-orange-400/[0.08] text-orange-700',
+  REVIEW_OVERSTOCK: 'border-violet-400/20 bg-violet-400/[0.08] text-violet-700',
+  REVIEW_SLOW_STOCK: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-700',
+  REVIEW_DEAD_STOCK: 'border-rose-400/20 bg-rose-400/[0.08] text-rose-700',
+  REVIEW_SUPPLIER: 'border-teal-400/20 bg-teal-400/[0.08] text-teal-700',
 };
 
 const PRIORITY_BADGE: Record<RecommendationPriority, string> = {
-  URGENT: 'border-rose-400/25 bg-rose-400/[0.1] text-rose-200',
-  HIGH: 'border-orange-400/25 bg-orange-400/[0.1] text-orange-200',
-  MEDIUM: 'border-slate-700 bg-slate-800 text-slate-300',
+  URGENT: 'border-rose-400/25 bg-rose-400/[0.1] text-rose-700',
+  HIGH: 'border-orange-400/25 bg-orange-400/[0.1] text-orange-700',
+  MEDIUM: 'border-slate-300 bg-slate-100 text-slate-700',
 };
 
 const WORKFLOW_LINKS = [
@@ -89,7 +89,7 @@ function Badge({ className, label }: { className: string; label: string }) {
 }
 
 function workflowLinkClass(): string {
-  return 'inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-emerald-400/40 hover:bg-slate-800 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400';
+  return 'inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 transition hover:border-emerald-400/40 hover:bg-slate-100 hover:text-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600';
 }
 
 function RecommendationCard({
@@ -102,41 +102,41 @@ function RecommendationCard({
   const nextStep = workflowFor(recommendation.type);
 
   return (
-    <article className="rounded-xl border border-slate-800 bg-[#101a2a] p-4 shadow-sm shadow-black/20 sm:p-5">
+    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/10 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={TYPE_BADGE[recommendation.type]} label={TYPE_LABEL[recommendation.type]} />
         <Badge className={PRIORITY_BADGE[recommendation.priority]} label={`${recommendation.priority} priority`} />
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-600">
           {recommendation.confidence.toLowerCase()} confidence
         </span>
       </div>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h3 className="font-semibold text-slate-100">{recommendation.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-300">{recommendation.reason}</p>
-          <p className="mt-2 break-words text-xs text-slate-400">
-            {product.name} <span className="px-1 text-slate-600">·</span> {product.sku}
-            {product.category ? <><span className="px-1 text-slate-600">·</span>{product.category.name}</> : null}
+          <h3 className="font-semibold text-slate-900">{recommendation.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-700">{recommendation.reason}</p>
+          <p className="mt-2 break-words text-xs text-slate-600">
+            {product.name} <span className="px-1 text-slate-500">·</span> {product.sku}
+            {product.category ? <><span className="px-1 text-slate-500">·</span>{product.category.name}</> : null}
           </p>
         </div>
         {recommendation.recommendedQuantity !== undefined ? (
           <div className="shrink-0 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2 sm:text-right">
-            <p className="text-[10px] font-semibold tracking-wide text-emerald-300 uppercase">Suggested quantity</p>
-            <p className="mt-0.5 text-lg font-semibold tabular-nums text-emerald-100">{recommendation.recommendedQuantity}</p>
+            <p className="text-[10px] font-semibold tracking-wide text-emerald-700 uppercase">Suggested quantity</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-emerald-800">{recommendation.recommendedQuantity}</p>
           </div>
         ) : null}
       </div>
 
       {recommendation.sourceDecisions.length > 0 ? (
-        <p className="mt-3 text-xs text-slate-400">
+        <p className="mt-3 text-xs text-slate-600">
           Source decisions: {recommendation.sourceDecisions.join(', ')}
         </p>
       ) : null}
 
       {recommendation.evidence.length > 0 || recommendation.limitations.length > 0 ? (
-        <details className="mt-3 border-t border-slate-800 pt-3">
-          <summary className="w-fit cursor-pointer rounded text-xs font-medium text-slate-400 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+        <details className="mt-3 border-t border-slate-200 pt-3">
+          <summary className="w-fit cursor-pointer rounded text-xs font-medium text-slate-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
             Evidence and limitations ({recommendation.evidence.length} facts, {recommendation.limitations.length} limitations)
           </summary>
           <div className="mt-3">
@@ -147,13 +147,12 @@ function RecommendationCard({
                 evidence: recommendation.evidence,
                 limitations: recommendation.limitations,
               }}
-              darkSurface
-            />
+ />
           </div>
         </details>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-800 pt-3">
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-3">
         <Link className={workflowLinkClass()} to={nextStep.to}>{nextStep.label}</Link>
         <Link className={workflowLinkClass()} to={`/app/inventory/${encodeURIComponent(product.id)}`}>View stock history</Link>
       </div>
@@ -294,73 +293,68 @@ export function UnifiedIntelligencePage() {
       <PageHeader
         title="Intelligence"
         description="Turn inventory data into clear, actionable decisions."
-        darkSurface
-        actions={<SecondaryButton darkSurface disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
-      />
+        actions={<SecondaryButton disabled={loading} onClick={reload}>Refresh</SecondaryButton>}
+ />
 
       <section aria-label="Explore inventory workflows" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {WORKFLOW_LINKS.map((item) => (
           <Link
             key={item.to}
             to={item.to}
-            className="group rounded-xl border border-slate-800 bg-[#101a2a] p-4 shadow-sm shadow-black/20 transition hover:border-emerald-400/30 hover:bg-[#121f31] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/10 transition hover:border-emerald-400/30 hover:bg-slate-50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600"
           >
-            <span className="font-semibold text-slate-100 group-hover:text-emerald-200">{item.label}</span>
-            <span className="mt-1 block text-xs leading-5 text-slate-400">{item.detail}</span>
+            <span className="font-semibold text-slate-900 group-hover:text-emerald-700">{item.label}</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-600">{item.detail}</span>
           </Link>
         ))}
       </section>
 
       <section aria-label="Current page recommendation summary" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card darkSurface className="p-4 sm:p-5">
-          <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Recommendations on this page</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-100">{data ? data.recommendationCount.toLocaleString() : '—'}</p>
-          <p className="mt-1 text-xs text-slate-400">{data ? 'Returned by the recommendation service for this product page.' : loading ? 'Loading recommendation results…' : 'Recommendation count unavailable.'}</p>
+        <Card className="p-4 sm:p-5">
+          <p className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Recommendations on this page</p>
+          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">{data ? data.recommendationCount.toLocaleString() : '—'}</p>
+          <p className="mt-1 text-xs text-slate-600">{data ? 'Returned by the recommendation service for this product page.' : loading ? 'Loading recommendation results…' : 'Recommendation count unavailable.'}</p>
         </Card>
-        <Card darkSurface className="p-4 sm:p-5">
-          <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Products with recommendations on this page</p>
-          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-100">{data ? data.items.length.toLocaleString() : '—'}</p>
-          <p className="mt-1 text-xs text-slate-400">{data ? `${data.pagination.total.toLocaleString()} products in the product search scope; results are paginated by product.` : loading ? 'Loading product results…' : 'Product count unavailable.'}</p>
+        <Card className="p-4 sm:p-5">
+          <p className="text-xs font-semibold tracking-wide text-slate-600 uppercase">Products with recommendations on this page</p>
+          <p className="mt-2 text-3xl font-semibold tabular-nums text-slate-900">{data ? data.items.length.toLocaleString() : '—'}</p>
+          <p className="mt-1 text-xs text-slate-600">{data ? `${data.pagination.total.toLocaleString()} products in the product search scope; results are paginated by product.` : loading ? 'Loading product results…' : 'Product count unavailable.'}</p>
         </Card>
       </section>
 
       {data ? (
-        <p className="-mt-3 text-xs text-slate-400">Summary values describe this page only. Product pages follow search, category, and product-status filters; recommendation type, priority, and confidence filters apply within each page. No global recommendation total is provided.</p>
+        <p className="-mt-3 text-xs text-slate-600">Summary values describe this page only. Product pages follow search, category, and product-status filters; recommendation type, priority, and confidence filters apply within each page. No global recommendation total is provided.</p>
       ) : null}
 
-      <Card darkSurface className="p-4">
+      <Card className="p-4">
         <form onSubmit={applySearch} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Field darkSurface label="Search product" value={searchInput} onChange={setSearchInput} placeholder="Name or SKU" required={false} />
+          <Field label="Search product" value={searchInput} onChange={setSearchInput} placeholder="Name or SKU" required={false} />
           <Select
             label="Category"
             value={categoryId}
             onChange={handleCategory}
             disabled={categoriesLoading || categoriesError !== null}
-            darkSurface
             options={[
               { value: '', label: categoriesLoading ? 'Loading categories…' : categoriesError ? 'Categories unavailable' : 'All categories' },
               ...categories.map((category) => ({ value: category.id, label: category.name })),
             ]}
-          />
+ />
           <Select
             label="Recommendation type"
             value={type}
             onChange={handleType}
-            darkSurface
             options={[{ value: 'all', label: 'Any type' }, ...RECOMMENDATION_TYPES.map((value) => ({ value, label: TYPE_LABEL[value] }))]}
-          />
+ />
           <Select
             label="Priority"
             value={priority}
             onChange={handlePriority}
-            darkSurface
             options={[{ value: 'all', label: 'Any priority' }, ...RECOMMENDATION_PRIORITIES.map((value) => ({ value, label: value }))]}
-          />
+ />
           <Select
             label="Confidence"
             value={confidence}
             onChange={handleConfidence}
-            darkSurface
             options={[
               { value: 'all', label: 'Any confidence' },
               { value: 'HIGH', label: 'High confidence' },
@@ -368,64 +362,62 @@ export function UnifiedIntelligencePage() {
               { value: 'LOW', label: 'Low confidence' },
               { value: 'INSUFFICIENT', label: 'Insufficient evidence' },
             ]}
-          />
+ />
           <Select
             label="Product status"
             value={activeStatus}
             onChange={handleActive}
-            darkSurface
             options={[
               { value: 'all', label: 'Active and inactive' },
               { value: 'true', label: 'Active only' },
               { value: 'false', label: 'Inactive only' },
             ]}
-          />
+ />
           <div className="flex items-end gap-2">
-            <button type="submit" disabled={loading} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-400 px-4 text-sm font-semibold text-[#06251a] transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#101a2a]">
+            <button type="submit" disabled={loading} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white">
               Apply filters
             </button>
-            {hasFilters ? <SecondaryButton darkSurface disabled={loading} onClick={clearFilters}>Clear filters</SecondaryButton> : null}
+            {hasFilters ? <SecondaryButton disabled={loading} onClick={clearFilters}>Clear filters</SecondaryButton> : null}
           </div>
         </form>
 
         {categoriesError ? (
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ErrorBanner darkSurface message={`Category options could not be loaded: ${categoriesError}. Other filters and recommendations remain available.`} />
-            <SecondaryButton darkSurface disabled={categoriesLoading} onClick={() => setCategoryReloadToken((token) => token + 1)}>Retry categories</SecondaryButton>
+            <ErrorBanner message={`Category options could not be loaded: ${categoriesError}. Other filters and recommendations remain available.`} />
+            <SecondaryButton disabled={categoriesLoading} onClick={() => setCategoryReloadToken((token) => token + 1)}>Retry categories</SecondaryButton>
           </div>
         ) : null}
       </Card>
 
       {error ? (
-        <Card darkSurface className="p-4 sm:p-5">
+        <Card className="p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <ErrorBanner darkSurface message={`Intelligence recommendations could not be loaded: ${error}`} />
-            <SecondaryButton darkSurface disabled={loading} onClick={() => setReloadToken((token) => token + 1)}>Try again</SecondaryButton>
+            <ErrorBanner message={`Intelligence recommendations could not be loaded: ${error}`} />
+            <SecondaryButton disabled={loading} onClick={() => setReloadToken((token) => token + 1)}>Try again</SecondaryButton>
           </div>
         </Card>
       ) : loading ? (
-        <Card darkSurface className="p-5"><Spinner darkSurface label="Loading actionable intelligence…" /></Card>
+        <Card className="p-5"><Spinner label="Loading actionable intelligence…" /></Card>
       ) : data === null ? (
-        <Card darkSurface className="p-5">
-          <EmptyState darkSurface title="Intelligence is unavailable" description="The recommendation service did not return data. Retry to load current results." action={<SecondaryButton darkSurface onClick={() => setReloadToken((token) => token + 1)}>Retry</SecondaryButton>} />
+        <Card className="p-5">
+          <EmptyState title="Intelligence is unavailable" description="The recommendation service did not return data. Retry to load current results." action={<SecondaryButton onClick={() => setReloadToken((token) => token + 1)}>Retry</SecondaryButton>} />
         </Card>
       ) : data.items.length === 0 ? (
-        <Card darkSurface>
+        <Card >
           <EmptyState
-            darkSurface
             title={hasFilters ? 'No recommendations on this product page match the filters' : totalPages > 1 ? 'No recommendations were returned for this product page' : 'No recommendations were returned'}
             description={totalPages > 1 ? 'The API paginates by product. Continue through the product pages before concluding that the full search scope has no recommendations.' : hasFilters ? 'Try broader filters or clear them to review the current product scope.' : 'The recommendation service returned no findings for the products in this result scope.'}
-            action={hasFilters ? <SecondaryButton darkSurface onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
-          />
+            action={hasFilters ? <SecondaryButton onClick={clearFilters}>Clear filters</SecondaryButton> : undefined}
+ />
         </Card>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 className="text-lg font-semibold text-slate-100">Actionable insights</h2>
-              <p className="mt-1 text-sm text-slate-400">Recommendations and priority are supplied by StockPilot’s existing engines.</p>
+              <h2 className="text-lg font-semibold text-slate-900">Actionable insights</h2>
+              <p className="mt-1 text-sm text-slate-600">Recommendations and priority are supplied by StockPilot’s existing engines.</p>
             </div>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-slate-700">
               {data.recommendationCount} recommendation{data.recommendationCount === 1 ? '' : 's'} across {data.items.length} product{data.items.length === 1 ? '' : 's'} on this page
             </p>
           </div>
@@ -441,11 +433,11 @@ export function UnifiedIntelligencePage() {
       )}
 
       {data && totalPages > 1 ? (
-        <Card darkSurface className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm text-slate-300">
+        <Card className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm text-slate-700">
           <span>Product page {data.pagination.page} of {totalPages} · {data.pagination.total.toLocaleString()} products in the search, category, and status scope</span>
           <div className="flex gap-2">
-            <SecondaryButton darkSurface disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</SecondaryButton>
-            <SecondaryButton darkSurface disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</SecondaryButton>
+            <SecondaryButton disabled={loading || page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</SecondaryButton>
+            <SecondaryButton disabled={loading || page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</SecondaryButton>
           </div>
         </Card>
       ) : null}
