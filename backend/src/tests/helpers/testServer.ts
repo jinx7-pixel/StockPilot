@@ -15,6 +15,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import type { Express } from 'express';
+import type { AuthMail } from '../../security/authMail.js';
 
 export interface JsonResponse<T = unknown> {
   status: number;
@@ -81,9 +82,11 @@ export class TestClient {
     body?: unknown,
     options?: RequestOptions,
   ): Promise<JsonResponse<T>> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...options?.headers };
-
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...(method === 'GET' ? {} : { 'Content-Type': 'application/json' }),
+      ...options?.headers,
+    };
 
     if (this.cookies.size > 0) {
       headers.Cookie = [...this.cookies]
@@ -166,6 +169,7 @@ export interface TestServer {
   /** A client seeded with an existing jar, i.e. an already-signed-in browser. */
   clientWith(cookies: Record<string, string>): TestClient;
   close(): Promise<void>;
+  outbox?: AuthMail[];
 }
 
 /** Mount any Express app on an ephemeral port. */
@@ -197,5 +201,7 @@ export async function startTestServer(): Promise<TestServer> {
   // Imported lazily so this module can be loaded by the test bootstrap without
   // pulling in the whole application graph.
   const { createApp } = await import('../../app.js');
-  return startServerWith(createApp());
+  const outbox: AuthMail[] = [];
+  const server = await startServerWith(createApp({ sendEmail: async (mail) => { outbox.push(mail); } }));
+  return { ...server, outbox };
 }

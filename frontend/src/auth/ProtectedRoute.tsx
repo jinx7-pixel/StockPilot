@@ -36,7 +36,7 @@ export function ProtectedRoute() {
   }
 
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search + location.hash }} />;
   }
 
   return <Outlet />;

@@ -65,9 +65,15 @@ const VALID_PRODUCTION = {
   PGDATABASE: 'stockpilot_prod',
   PGUSER: 'stockpilot_app',
   PGPASSWORD: 'a-real-password',
-  PGSSLMODE: 'require',
+  PGSSLMODE: 'verify-full',
   TRUST_PROXY: '1',
   CORS_ORIGINS: 'https://app.example.com',
+  APP_PUBLIC_URL: 'https://app.example.com',
+  SMTP_HOST: 'smtp.example.com',
+  SMTP_FROM: 'accounts@example.com',
+  SMTP_USER: 'test-user',
+  SMTP_PASSWORD: 'test-smtp-password',
+  MFA_ENCRYPTION_KEY: Buffer.alloc(32).toString('base64'),
   COOKIE_SECURE: 'true',
   // Not production-relevant, cleared so the local .env cannot leak in.
   DATABASE_URL: undefined,
@@ -117,17 +123,14 @@ describe('Configuration — production succeeds when everything required is set'
     assert.equal(env.trustProxy, 1);
     assert.deepEqual(env.corsOrigins, ['https://app.example.com']);
     assert.equal(env.auth.cookieSecure, true);
-    assert.equal(env.database.sslMode, 'require');
+    assert.equal(env.database.sslMode, 'verify-full');
     assert.equal(env.database.host, 'db.internal');
     assert.equal(env.database.user, 'stockpilot_app');
   });
 
-  it('accepts TRUST_PROXY=true as an explicit trust-everything choice', async () => {
+  it('rejects TRUST_PROXY=true', async () => {
     const error = await loadError({ ...VALID_PRODUCTION, TRUST_PROXY: 'true' });
-    assert.equal(error, null, error?.message);
-
-    const { env } = await loadConfig({ ...VALID_PRODUCTION, TRUST_PROXY: 'true' });
-    assert.equal(env.trustProxy, true);
+    assert.match(error?.message ?? '', /TRUST_PROXY/);
   });
 
   it('accepts a DATABASE_URL instead of discrete variables', async () => {
@@ -137,6 +140,14 @@ describe('Configuration — production succeeds when everything required is set'
       DATABASE_URL: 'postgresql://app:secret@db.internal:5432/stockpilot_prod',
     });
     assert.equal(error, null, error?.message);
+  });
+
+  it('refuses SSL query options that override verify-full', async () => {
+    const error = await loadError({
+      ...VALID_PRODUCTION,
+      DATABASE_URL: 'postgresql://app:secret@db.internal:5432/stockpilot_prod?sslmode=disable',
+    });
+    assert.match(error?.message ?? '', /DATABASE_URL must omit SSL query options/);
   });
 });
 
@@ -194,42 +205,39 @@ describe('Configuration — PostgreSQL SSL', () => {
     const { env } = await loadConfig({ ...VALID_PRODUCTION, PGSSLMODE: 'verify-full ' });
     assert.equal(env.database.sslMode, 'verify-full');
 
-    const upper = await loadConfig({ ...VALID_PRODUCTION, PGSSLMODE: 'REQUIRE' });
-    assert.equal(upper.env.database.sslMode, 'require');
+    const upper = await loadConfig({ ...VALID_PRODUCTION, PGSSLMODE: 'VERIFY-FULL' });
+    assert.equal(upper.env.database.sslMode, 'verify-full');
   });
 
-  it('accepts every mode pg understands', async () => {
-    // `disable`, `allow` and `prefer` are legal *values* but are refused by the
-    // separate production TLS rule; the rest must parse cleanly.
-    for (const mode of ['require', 'no-verify', 'verify-ca', 'verify-full']) {
+  it('permits development modes and requires verify-full in production', async () => {
+    for (const mode of ['require', 'no-verify', 'verify-ca']) {
+      assert.equal(await loadError({ NODE_ENV: 'development', PGSSLMODE: mode }), null);
       const error = await loadError({ ...VALID_PRODUCTION, PGSSLMODE: mode });
-      assert.equal(error, null, `${mode} should be accepted: ${error?.message}`);
+      assert.match(error?.message ?? '', /PGSSLMODE must be verify-full/);
     }
   });
 
   it('refuses PGSSLMODE=disable in production', async () => {
     const error = await loadError({ ...VALID_PRODUCTION, PGSSLMODE: 'disable' });
     assert.ok(error, 'production must not silently disable TLS');
-    assert.match(error!.message, /does not guarantee an encrypted database session/);
+    assert.match(error!.message, /PGSSLMODE must be verify-full/);
   });
 
   it('refuses PGSSLMODE=prefer in production because it can fall back to plaintext', async () => {
     const error = await loadError({ ...VALID_PRODUCTION, PGSSLMODE: 'prefer' });
     assert.ok(error);
-    assert.match(error!.message, /fall back to plaintext/);
+    assert.match(error!.message, /PGSSLMODE must be verify-full/);
   });
 });
 
 describe('Configuration — resolveSsl maps each mode explicitly', () => {
-  it('maps every supported mode to the value pg would have used', () => {
-    // Deliberately identical to pg's own mapping, so no existing connection
-    // changes behaviour — only the previously silent typo becomes an error.
+  it('maps every supported mode to an explicit TLS policy', () => {
     assert.equal(resolveSsl('disable'), false);
     assert.equal(resolveSsl('allow'), undefined);
     assert.deepEqual(resolveSsl('require'), { rejectUnauthorized: false });
     assert.deepEqual(resolveSsl('no-verify'), { rejectUnauthorized: false });
     assert.equal(resolveSsl('verify-ca'), true);
-    assert.equal(resolveSsl('verify-full'), true);
+    assert.deepEqual(resolveSsl('verify-full'), { rejectUnauthorized: true });
     assert.equal(resolveSsl('prefer'), true);
   });
 
@@ -335,9 +343,9 @@ describe('Configuration — CORS', () => {
   });
 
   it('refuses a plain-http origin in production', async () => {
-    const error = await loadError({ ...VALID_PRODUCTION, CORS_ORIGINS: 'http://app.example.com' });
+    const error = await loadError({ ...VALID_PRODUCTION, CORS_ORIGINS: 'http://badlocalhost.example.com' });
     assert.ok(error);
-    assert.match(error!.message, /https:\/\//);
+    assert.match(error!.message, /exact HTTPS origins/);
   });
 
   it('accepts several explicit https origins', async () => {
@@ -350,7 +358,7 @@ describe('Configuration — CORS', () => {
 
   it('keeps the localhost default for development', async () => {
     const { env } = await loadConfig({ NODE_ENV: 'development', CORS_ORIGINS: undefined });
-    assert.deepEqual(env.corsOrigins, ['http://localhost:5173']);
+    assert.deepEqual(env.corsOrigins, ['http://localhost:5173', 'http://127.0.0.1:5173']);
   });
 });
 

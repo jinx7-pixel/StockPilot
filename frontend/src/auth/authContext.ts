@@ -17,6 +17,7 @@ export interface AuthContextValue {
   login: (input: LoginInput) => Promise<LoginWorkspace[] | null>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   /** Set when a sign-in attempt fails, for display on the form. */
   error: string | null;
   clearError: () => void;

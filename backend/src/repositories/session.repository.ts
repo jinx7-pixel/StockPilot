@@ -5,7 +5,9 @@
  * never written to the database.
  */
 
-import { query } from '../db/pool.js';
+import type { PoolClient } from 'pg';
+
+import { getPool, query } from '../db/pool.js';
 import type { AuthSessionRow, UserRole } from './auth.types.js';
 
 const COLUMNS = 'id, user_id, token_hash, expires_at, created_at, last_used_at';
@@ -25,8 +27,8 @@ export async function createSession(input: {
   userId: string;
   tokenHash: string;
   expiresAt: Date;
-}): Promise<AuthSessionRow> {
-  const result = await query<AuthSessionRow>(
+}, client?: PoolClient): Promise<AuthSessionRow> {
+  const result = await (client ?? getPool()).query<AuthSessionRow>(
     `INSERT INTO auth_sessions (user_id, token_hash, expires_at)
      VALUES ($1, $2, $3)
      RETURNING ${COLUMNS}`,

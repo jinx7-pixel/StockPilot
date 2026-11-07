@@ -29,6 +29,15 @@ const loginPasswordSchema = z
   .min(1, 'Password is required.')
   .max(200, 'Password must be at most 200 characters.');
 
+const tokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, 'Enter a valid account link.');
+const codeSchema = z.string().trim().regex(/^(?:[0-9]{6}|[a-fA-F0-9]{20})$/, 'Enter a valid authenticator or recovery code.');
+export const emailRequestSchema = z.object({ email: emailSchema }).strict();
+export const verifyEmailSchema = z.object({ token: tokenSchema }).strict();
+export const resetPasswordSchema = z.object({ token: tokenSchema, password: loginPasswordSchema }).strict();
+export const mfaStartSchema = z.object({ password: loginPasswordSchema }).strict();
+export const mfaConfirmSchema = z.object({ code: z.string().trim().regex(/^\d{6}$/) }).strict();
+export const mfaDisableSchema = z.object({ password: loginPasswordSchema, code: codeSchema }).strict();
+
 /** Matches the `businesses.name` column width. */
 const businessNameSchema = z
   .string({ error: 'Business name is required.' })
@@ -48,6 +57,7 @@ export const registerSchema = z
     businessName: businessNameSchema,
     name: userNameSchema,
     email: emailSchema,
+    token: tokenSchema,
     password: loginPasswordSchema,
   })
   // Reject unexpected keys so a client cannot smuggle in fields such as
@@ -59,6 +69,7 @@ export const loginSchema = z
     email: emailSchema,
     password: loginPasswordSchema,
     workspaceId: z.uuid().optional(),
+    mfaCode: codeSchema.optional(),
   })
   .strict();
 

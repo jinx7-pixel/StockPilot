@@ -10,8 +10,14 @@
  */
 
 import 'dotenv/config';
+import { randomBytes } from 'node:crypto';
 
 process.env.NODE_ENV = 'test';
+process.env.MFA_ENCRYPTION_KEY = randomBytes(32).toString('base64');
+
+if (process.env.DATABASE_URL?.trim()) {
+  throw new Error('Tests require discrete PG* settings so DATABASE_URL cannot override TEST_PGDATABASE.');
+}
 
 const testDatabase = process.env.TEST_PGDATABASE?.trim() || 'stockpilot_test';
 

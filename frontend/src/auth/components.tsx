@@ -14,6 +14,7 @@ export function AuthCard({
   artDescription,
   children,
   footer,
+  showGoogle = true,
 }: {
   title: string;
   subtitle: string;
@@ -21,6 +22,7 @@ export function AuthCard({
   artDescription: string;
   children: ReactNode;
   footer: ReactNode;
+  showGoogle?: boolean;
 }) {
   const headingId = useId();
   const googleStatusId = useId();
@@ -49,6 +51,7 @@ export function AuthCard({
 
           {children}
 
+          {showGoogle && <>
           <div className="auth-divider" aria-hidden="true">or</div>
           <button type="button" disabled aria-describedby={googleStatusId} className="auth-google">
             <svg aria-hidden="true" width="17" height="17" viewBox="0 0 48 48" fill="none">
@@ -62,6 +65,7 @@ export function AuthCard({
           <p id={googleStatusId} className="auth-google-status">
             Google sign-in is not configured yet.
           </p>
+          </>}
 
           <p className="auth-footer">{footer}</p>
         </section>

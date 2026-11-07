@@ -30,6 +30,8 @@ import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
 import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { PasswordRecoveryPage, VerifyEmailPage } from './pages/AccountEmailPages';
+import { AccountSecurityPage } from './pages/AccountSecurityPage';
 import { ReorderPage } from './pages/ReorderPage';
 import { SaleDetailPage } from './pages/SaleDetailPage';
 import { SalesPage } from './pages/SalesPage';
@@ -47,11 +49,15 @@ export function App() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<PasswordRecoveryPage key="request" />} />
       </Route>
+      <Route path="/reset-password" element={<PasswordRecoveryPage key="reset" reset />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/app" element={<WorkspaceLayout />}>
           <Route index element={<WorkspacePage />} />
+          <Route path="security" element={<AccountSecurityPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="stock-risk" element={<StockRiskPage />} />
           <Route path="demand" element={<DemandPage />} />

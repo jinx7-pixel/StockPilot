@@ -15,7 +15,13 @@ import { asyncHandler } from '../middlewares/asyncHandler.js';
 import { authRateLimiter, loginRateLimiter, registerRateLimiter } from '../middlewares/rateLimit.js';
 import { readSessionToken, requireAuth } from '../middlewares/requireAuth.js';
 import { clearSessionCookie, setSessionCookie } from '../security/cookies.js';
-import { loginSchema, registerSchema } from '../services/auth.schemas.js';
+import { findAccountSecurity } from '../repositories/accountSecurity.repository.js';
+import * as accountEmail from '../services/accountEmail.service.js';
+import * as accountMfa from '../services/accountMfa.service.js';
+import {
+  emailRequestSchema, loginSchema, mfaConfirmSchema, mfaDisableSchema, mfaStartSchema,
+  registerSchema, resetPasswordSchema, verifyEmailSchema,
+} from '../services/auth.schemas.js';
 import * as authService from '../services/auth.service.js';
 import type { AuthedRequest } from '../types/express.js';
 
@@ -60,6 +66,73 @@ authRouter.post(
     res.status(201).json({ data: { user: session.user } });
   }),
 );
+
+for (const [path, purpose] of [['/register/request', 'register'], ['/password/request', 'reset']] as const) {
+  authRouter.post(path, registerRateLimiter, asyncHandler(async (req, res) => {
+    const { email } = parseOrThrow(emailRequestSchema, req.body);
+    const send = accountEmail.requireMail(req.app.locals.sendAuthMail);
+    res.status(202).json({ data: { accepted: true } });
+    void accountEmail.requestPublicEmail(send, purpose, email).catch(() => {
+      console.error(`[auth] ${req.requestId} account email failed`);
+    });
+  }));
+}
+
+authRouter.post('/password/reset', registerRateLimiter, asyncHandler(async (req, res) => {
+  const { token, password } = parseOrThrow(resetPasswordSchema, req.body);
+  await accountEmail.resetPassword(token, password);
+  res.json({ data: { reset: true } });
+}));
+
+authRouter.get('/security', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const account = await findAccountSecurity(req.auth.id);
+  res.json({ data: {
+    emailVerified: Boolean(account?.email_verified_at),
+    mfaEnabled: Boolean(account?.mfa_secret),
+    recoveryCodesRemaining: account?.mfa_recovery_hashes?.length ?? 0,
+  } });
+}));
+
+authRouter.post('/email/request', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const send = accountEmail.requireMail(req.app.locals.sendAuthMail);
+  const userId = req.auth.id;
+  res.status(202).json({ data: { accepted: true } });
+  void accountEmail.requestVerification(send, userId).catch(() => {
+    console.error(`[auth] ${req.requestId} verification email failed`);
+  });
+}));
+
+authRouter.post('/email/verify', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { token } = parseOrThrow(verifyEmailSchema, req.body);
+  await accountEmail.verifyEmail(req.auth.id, token);
+  res.json({ data: { verified: true } });
+}));
+
+authRouter.post('/logout-all', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  await accountEmail.logoutEverywhere(req.auth.id);
+  clearSessionCookie(res);
+  res.json({ data: { loggedOut: true } });
+}));
+
+authRouter.post('/mfa/start', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { password } = parseOrThrow(mfaStartSchema, req.body);
+  const secret = await accountMfa.startMfa(req.auth.id, req.authSessionId, password);
+  res.json({ data: { secret } });
+}));
+
+authRouter.post('/mfa/enable', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { code } = parseOrThrow(mfaConfirmSchema, req.body);
+  const { session, recoveryCodes } = await accountMfa.enableMfa(req.auth, req.authSessionId, code);
+  setSessionCookie(res, session.token, session.expiresAt);
+  res.json({ data: { recoveryCodes } });
+}));
+
+authRouter.post('/mfa/disable', requireAuth, asyncHandler(async (req: AuthedRequest, res) => {
+  const { password, code } = parseOrThrow(mfaDisableSchema, req.body);
+  const session = await accountMfa.disableMfa(req.auth, req.authSessionId, password, code);
+  setSessionCookie(res, session.token, session.expiresAt);
+  res.json({ data: { disabled: true } });
+}));
 
 /** POST /api/auth/login — exchanges credentials for a session or a workspace choice. */
 authRouter.post(

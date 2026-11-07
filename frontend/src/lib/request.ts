@@ -102,7 +102,7 @@ export async function requestWithMeta<T, M = unknown, S = never>(
     headers: {
       Accept: 'application/json',
       ...extraHeaders,
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(method === 'GET' ? {} : { 'Content-Type': 'application/json' }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });

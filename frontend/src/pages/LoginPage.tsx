@@ -19,13 +19,16 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [recoveryNotice, setRecoveryNotice] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
   const [workspaces, setWorkspaces] = useState<LoginWorkspace[] | null>(null);
   const [workspaceId, setWorkspaceId] = useState('');
 
   function clearWorkspaceChoice() {
     setWorkspaces(null);
     setWorkspaceId('');
+    setMfaRequired(false);
+    setMfaCode('');
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -35,7 +38,11 @@ export function LoginPage() {
     clearError();
 
     try {
-      const choices = await login({ email, password, ...(workspaceId ? { workspaceId } : {}) });
+      const choices = await login({
+        email, password,
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(mfaRequired ? { mfaCode } : {}),
+      });
       if (choices) {
         setWorkspaces(choices);
         setWorkspaceId('');
@@ -44,6 +51,10 @@ export function LoginPage() {
       const target = (location.state as LocationState | null)?.from ?? '/app';
       navigate(target, { replace: true });
     } catch (cause) {
+      if (cause instanceof ApiError && cause.code === 'MFA_REQUIRED') {
+        setMfaRequired(true);
+        return;
+      }
       // The API returns one indistinguishable message for a wrong password and
       // an unknown email, so this cannot be used to probe for accounts.
       setFormError(cause instanceof ApiError ? cause.message : 'Sign in failed. Please try again.');
@@ -66,6 +77,8 @@ export function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="auth-form">
+        {new URLSearchParams(location.search).get('password') === 'updated' &&
+          <p role="status" className="auth-notice">Password updated. Sign in with your new password.</p>}
         <FormError message={formError ?? error} />
 
         <Field
@@ -89,21 +102,9 @@ export function LoginPage() {
             showPasswordToggle
           />
           <div className="auth-recovery">
-            <button
-              type="button"
-              onClick={() => setRecoveryNotice(true)}
-              className="auth-text-link"
-            >
-              Forgot password?
-            </button>
+            <Link to="/forgot-password" className="auth-text-link">Forgot password?</Link>
           </div>
         </div>
-
-        {recoveryNotice ? (
-          <p role="status" className="auth-notice">
-            Password recovery is not configured yet.
-          </p>
-        ) : null}
 
         {workspaces ? (
           <>
@@ -111,7 +112,7 @@ export function LoginPage() {
             <Select
               label="Workspace"
               value={workspaceId}
-              onChange={setWorkspaceId}
+              onChange={(value) => { setWorkspaceId(value); setMfaRequired(false); setMfaCode(''); }}
               options={[
                 { value: '', label: 'Choose your workspace' },
                 ...workspaces.map(({ id, name }, index) => ({
@@ -127,7 +128,11 @@ export function LoginPage() {
           </>
         ) : null}
 
-        <SubmitButton pending={pending} label={workspaces ? 'Open workspace' : 'Sign in'} />
+        {mfaRequired ? (
+          <Field label="Authenticator or recovery code" value={mfaCode} onChange={setMfaCode}
+            autoComplete="one-time-code" disabled={pending} />
+        ) : null}
+        <SubmitButton pending={pending} label={mfaRequired ? 'Verify and sign in' : workspaces ? 'Open workspace' : 'Sign in'} />
       </form>
     </AuthCard>
   );

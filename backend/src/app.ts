@@ -6,9 +6,11 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 
 import { env } from './config/env.js';
+import { AppError, AuthorizationError } from './errors.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 import { apiRouter } from './routes/index.js';
+import { sendAuthMail, type SendAuthMail } from './security/authMail.js';
 
 /** Header carrying the correlation id, in and out. */
 export const REQUEST_ID_HEADER = 'X-Request-Id';
@@ -25,8 +27,9 @@ const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
  * Kept separate from `server.ts` so the app can be mounted in tests without
  * binding a network port.
  */
-export function createApp(): Express {
+export function createApp({ sendEmail = sendAuthMail }: { sendEmail?: SendAuthMail } = {}): Express {
   const app = express();
+  app.locals.sendAuthMail = sendEmail;
 
   app.disable('x-powered-by');
 
@@ -44,8 +47,6 @@ export function createApp(): Express {
 
   app.use(helmet());
   app.use(cookieParser());
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: true }));
 
   /**
    * Attach a correlation id to every request, before anything that might want
@@ -110,7 +111,23 @@ export function createApp(): Express {
     next();
   });
 
-  app.use('/api', apiRouter);
+  app.use('/api', (req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+    const origin = req.get('Origin');
+    const site = req.get('Sec-Fetch-Site');
+    if (origin ? !env.corsOrigins.includes(origin) : site === 'cross-site' || site === 'same-site') {
+      return next(new AuthorizationError('Request origin is not allowed.'));
+    }
+
+    // Match the media type even for empty requests such as logout and DELETE.
+    if (req.get('Content-Type')?.split(';')[0]?.trim().toLowerCase() !== 'application/json') {
+      return next(new AppError('Send the request as application/json.', 415, 'UNSUPPORTED_MEDIA_TYPE'));
+    }
+
+    next();
+  }, express.json({ limit: '1mb' }), apiRouter);
 
   app.get('/', (_req, res) => {
     res.status(200).json({

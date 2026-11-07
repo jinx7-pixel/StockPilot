@@ -20,24 +20,16 @@ import type { UserRole } from '../repositories/auth.types.js';
  * Responds 401 with no hint about *why* — a missing cookie, an unknown token
  * and an expired token are indistinguishable to the caller.
  */
-export const requireAuth: RequestHandler = (req, _res, next) => {
-  void (async () => {
-    const token = readSessionToken(req);
+export const requireAuth: RequestHandler = async (req, _res, next) => {
+  const token = readSessionToken(req);
+  if (!token) throw new AuthenticationError();
 
-    if (!token) {
-      next(new AuthenticationError());
-      return;
-    }
+  const session = await resolveSession(token);
+  if (!session) throw new AuthenticationError();
 
-    const session = await resolveSession(token);
-    if (!session) {
-      next(new AuthenticationError());
-      return;
-    }
-
-    req.auth = session.user;
-    next();
-  })();
+  req.auth = session.user;
+  req.authSessionId = session.sessionId;
+  next();
 };
 
 /**

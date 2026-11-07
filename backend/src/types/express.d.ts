@@ -19,6 +19,8 @@ declare global {
        * Carries only safe fields: no `password_hash`, no session token.
        */
       auth?: AuthenticatedUser;
+      /** ID of the verified session, for security changes that rotate it. */
+      authSessionId?: string;
       /**
        * Correlation id for this request, attached by the request-id middleware.
        *
@@ -32,6 +34,6 @@ declare global {
 }
 
 /** A request that has passed through `requireAuth`. */
-export type AuthedRequest = Request & { auth: AuthenticatedUser };
+export type AuthedRequest = Request & { auth: AuthenticatedUser; authSessionId: string };
 
 export {};

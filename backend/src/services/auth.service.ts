@@ -18,10 +18,13 @@
  *     whose passwords were verified.
  */
 
+import type { PoolClient } from 'pg';
+
 import { env } from '../config/env.js';
 import { withTransaction } from '../db/pool.js';
-import { AuthenticationError, ConflictError } from '../errors.js';
-import type { UserRole } from '../repositories/auth.types.js';
+import { AuthenticationError, RateLimitError } from '../errors.js';
+import { consumeEmailToken, findAccountSecurity, findEmailToken, takeAuthAttempt } from '../repositories/accountSecurity.repository.js';
+import type { UserRole, UserWithBusinessRow } from '../repositories/auth.types.js';
 import { createBusiness } from '../repositories/business.repository.js';
 import {
   createSession,
@@ -37,6 +40,8 @@ import {
   verifyPassword,
 } from '../security/password.js';
 import { generateSessionToken, hashSessionToken } from '../security/session.js';
+import { decryptTotpSecret, matchingTotpStep } from '../security/totp.js';
+import { invalidEmailToken } from './accountEmail.service.js';
 import type { LoginInput, RegisterInput } from './auth.schemas.js';
 
 /**
@@ -81,15 +86,19 @@ function invalidCredentials(): AuthenticationError {
 
 /** Create a business and its owner atomically, then open a session for them. */
 export async function registerBusinessOwner(input: RegisterInput): Promise<IssuedSession> {
+  const tokenHash = hashSessionToken(input.token);
+  const pending = await findEmailToken(tokenHash, 'register');
+  if (pending?.email !== input.email) throw invalidEmailToken();
   assertPasswordPolicy(input.password);
 
   // Hash *before* opening the transaction: Argon2id is deliberately slow, and
   // holding a transaction open across it would needlessly serialise writers.
   const passwordHash = await hashPassword(input.password);
 
-  const { business, user } = await withTransaction(async (client) => {
-    if (await emailIsTakenForRegistration(client, input.email)) {
-      throw new ConflictError('This email is already registered. Sign in instead.', 'EMAIL_ALREADY_REGISTERED');
+  return withTransaction(async (client) => {
+    const claimed = await consumeEmailToken(client, tokenHash, 'register');
+    if (claimed?.email !== input.email || await emailIsTakenForRegistration(client, input.email)) {
+      throw invalidEmailToken();
     }
 
     const createdBusiness = await createBusiness(client, input.businessName);
@@ -101,21 +110,21 @@ export async function registerBusinessOwner(input: RegisterInput): Promise<Issue
       role: 'owner',
     });
 
-    return { business: createdBusiness, user: createdUser };
-  });
-
-  return issueSession({
-    id: user.id,
-    businessId: user.business_id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    business: { id: business.id, name: business.name },
+    await client.query('UPDATE users SET email_verified_at = now() WHERE id = $1', [createdUser.id]);
+    return issueSession({
+      id: createdUser.id,
+      businessId: createdBusiness.id,
+      name: createdUser.name,
+      email: createdUser.email,
+      role: createdUser.role,
+      business: { id: createdBusiness.id, name: createdBusiness.name },
+    }, client);
   });
 }
 
 /** Authenticate an existing user, asking them to choose if multiple accounts match. */
 export async function login(input: LoginInput): Promise<LoginResult> {
+  if (!(await takeAuthAttempt('login', input.email, 15, 900))) throw new RateLimitError();
   const candidates = await findUsersByEmail(input.email, input.workspaceId);
   if (candidates.length === 0) {
     await simulatePasswordVerification(input.password);
@@ -124,25 +133,46 @@ export async function login(input: LoginInput): Promise<LoginResult> {
 
   // Older registrations may share an email. Check each password before showing
   // any workspace choices, and re-check the selected account on the next request.
-  const matches: AuthenticatedUser[] = [];
+  const matches: UserWithBusinessRow[] = [];
   for (const user of candidates) {
     if (await verifyPassword(user.password_hash, input.password)) {
-      matches.push({
-        id: user.id,
-        businessId: user.business_id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        business: { id: user.business_id, name: user.business_name },
-      });
+      matches.push(user);
     }
   }
 
   const [user] = matches;
   if (!user) throw invalidCredentials();
-  if (matches.length > 1) return { workspaces: matches.map(({ business }) => business) };
+  if (matches.length > 1) {
+    return { workspaces: matches.map((match) => ({ id: match.business_id, name: match.business_name })) };
+  }
 
-  return { session: await issueSession(user) };
+  return withTransaction(async (client) => {
+    const account = await findAccountSecurity(user.id, client);
+    if (!account || account.password_hash !== user.password_hash) throw invalidCredentials();
+    if (account.mfa_secret) {
+      const code = input.mfaCode;
+      if (!code) throw new AuthenticationError('Enter your authenticator or recovery code.', 'MFA_REQUIRED');
+      const step = matchingTotpStep(decryptTotpSecret(user.id, account.mfa_secret), code, account.mfa_last_step);
+      if (step !== undefined) {
+        await client.query('UPDATE users SET mfa_last_step = $2 WHERE id = $1', [user.id, step]);
+      } else {
+        const recoveryHash = hashSessionToken(code.toLowerCase());
+        if (!account.mfa_recovery_hashes?.includes(recoveryHash)) {
+          throw new AuthenticationError('Incorrect authenticator or recovery code.', 'INVALID_MFA_CODE');
+        }
+        await client.query('UPDATE users SET mfa_recovery_hashes = array_remove(mfa_recovery_hashes, $2) WHERE id = $1',
+          [user.id, recoveryHash]);
+      }
+    }
+    return { session: await issueSession({
+      id: user.id,
+      businessId: user.business_id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      business: { id: user.business_id, name: user.business_name },
+    }, client) };
+  });
 }
 
 /** Resolve a session token to its user and tenant, or null when absent/expired. */
@@ -172,11 +202,11 @@ export async function logout(token: string): Promise<boolean> {
   return deleteSessionByTokenHash(hashSessionToken(token));
 }
 
-async function issueSession(user: AuthenticatedUser): Promise<IssuedSession> {
+export async function issueSession(user: AuthenticatedUser, client: PoolClient): Promise<IssuedSession> {
   const { token, tokenHash } = generateSessionToken();
   const expiresAt = sessionExpiry();
 
-  await createSession({ userId: user.id, tokenHash, expiresAt });
+  await createSession({ userId: user.id, tokenHash, expiresAt }, client);
 
   return { user, token, expiresAt };
 }

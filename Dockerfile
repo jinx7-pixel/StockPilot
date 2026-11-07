@@ -24,7 +24,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1 — dependency install, cached independently of source changes.
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 
 WORKDIR /app
 
@@ -35,7 +35,7 @@ RUN npm ci
 # -----------------------------------------------------------------------------
 # Stage 2 — compile TypeScript to dist/.
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 
 WORKDIR /app
 
@@ -53,7 +53,7 @@ RUN npm run build
 # Stage 3 — production dependencies only (no devDependencies, no compiler,
 # no test tooling).
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS prod-deps
+FROM node:24-alpine AS prod-deps
 
 WORKDIR /app
 COPY backend/package.json backend/package-lock.json ./
@@ -62,7 +62,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # -----------------------------------------------------------------------------
 # Stage 4 — runtime.
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS runtime
+FROM node:24-alpine AS runtime
 
 # NODE_ENV=production activates assertProductionSafe(), which refuses to start
 # without a real database host, database name, role, TLS, a secure cookie, an
@@ -124,7 +124,7 @@ CMD ["node", "dist/server.js"]
 #
 # It runs as tooling, not as a served process, so NODE_ENV is left unset:
 # `assertProductionSafe()` only applies to a served production API.
-FROM node:20-alpine AS migrate
+FROM node:24-alpine AS migrate
 
 WORKDIR /app
 
