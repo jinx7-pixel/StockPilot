@@ -21,13 +21,18 @@ describe('Footer', () => {
     }
   });
 
-  it('links GitHub to the profile from the configured repository remote safely', () => {
+  it('links GitHub and the portfolio in separate tabs', () => {
     render(<Footer />);
 
-    const github = screen.getByRole('link', { name: 'GitHub profile, opens in a new tab' });
-    expect(github).toHaveAttribute('href', 'https://github.com/jinx7-pixel');
-    expect(github).toHaveAttribute('target', '_blank');
-    expect(github).toHaveAttribute('rel', 'noopener noreferrer');
+    for (const [name, href] of [
+      ['GitHub profile, opens in a new tab', 'https://github.com/jinx7-pixel'],
+      ['Portfolio, opens in a new tab', 'https://jinx-portfolio.pages.dev/'],
+    ]) {
+      const link = screen.getByRole('link', { name });
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
   });
 
   it('makes the displayed email a mailto link', () => {

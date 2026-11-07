@@ -8,32 +8,32 @@ const FAQ_CONTENT = [
   {
     question: 'What is StockPilot?',
     answer:
-      'StockPilot is an inventory management experience designed to help businesses organize stock information, understand stock levels, and make more informed inventory decisions.',
+      'StockPilot helps you record stock movements, check what’s on hand, and decide when to replenish.',
   },
   {
     question: 'Who is StockPilot designed for?',
     answer:
-      'It is intended for businesses that need a clearer view of their products, available stock, and inventory priorities.',
+      'It’s built for teams that manage product inventory and need a shared view of quantities, movements, and reorder priorities.',
   },
   {
     question: 'How does StockPilot help with low-stock items?',
     answer:
-      'Stock levels and reorder information can help you identify products that may need attention. You can review those items and decide what to replenish.',
+      'It compares what’s on hand with each product’s reorder point so you can see what needs replenishing.',
   },
   {
     question: 'Can I see which products need attention?',
     answer:
-      'StockPilot’s inventory views bring important stock information together so you can identify and review products that need attention.',
+      'Yes. Use the stock risk view to review low-stock and out-of-stock products, then check the reorder view to decide what to replenish first.',
   },
   {
     question: 'Does StockPilot automatically place purchase orders?',
     answer:
-      'No. StockPilot does not automatically place purchase orders. A reviewed recommendation can be turned into a draft purchase order; a user reviews it and handles the final ordering action.',
+      'No. You can turn a reviewed recommendation into a draft purchase order. Your team decides when to place it.',
   },
   {
     question: 'Is the inventory preview on the landing page live data?',
     answer:
-      'No. The landing-page inventory visuals are static illustrations with sample values. They are examples, not live inventory data.',
+      'The walkthrough and inventory previews use sample data. Your own stock figures appear in your workspace.',
   },
 ];
 

@@ -1,14 +1,6 @@
-/**
- * Tests for the landing hero.
- *
- * The 3D composition and its motion are CSS, and `jsdom` applies no stylesheet,
- * so none of that is assertable here — it is verified in a real browser. What
- * *is* assertable, and what this file covers, is the part that would actually
- * break a visitor: the copy, the heading hierarchy, where the CTAs point, and
- * the fact that the invented dashboard figures are never announced as if they
- * were real readings.
- */
+/** Hero copy, navigation and motion controls. Visual layout is checked in-browser. */
 
+import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
@@ -52,11 +44,6 @@ describe('HeroSection', () => {
 
   it('prepares the secondary CTA for the features section', () => {
     renderHero();
-    /*
-     * `#features` does not exist yet — building that section is explicitly out
-     * of scope for this task — so this asserts the anchor is prepared rather
-     * than that it resolves.
-     */
     expect(screen.getByRole('link', { name: 'Explore Features' })).toHaveAttribute(
       'href',
       '#features',
@@ -79,17 +66,20 @@ describe('HeroSection', () => {
     }
   });
 
-  it('offers the dashboard preview as one described image, not as data', () => {
+  it('keeps the decorative flower out of the accessibility tree', () => {
     renderHero();
-
-    const visual = screen.getByRole('img');
-    // The figures are invented, so they must not be announced as readings.
-    expect(visual.getAttribute('aria-label')).toMatch(/illustrative/i);
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it('marks the preview as illustrative for sighted users too', () => {
+  it('lets visitors pause and resume background motion', async () => {
+    const user = userEvent.setup();
     renderHero();
-    expect(screen.getByText(/illustrative preview/i)).toBeInTheDocument();
+    const hero = screen.getByRole('region', { name: /Know Your Stock/ });
+    await user.click(screen.getByRole('button', { name: 'Pause animation' }));
+    expect(hero).toHaveAttribute('data-motion', 'paused');
+    expect(screen.getByRole('button', { name: 'Resume animation' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Resume animation' }));
+    expect(hero).toHaveAttribute('data-motion', 'running');
   });
 
   it('invents no statistics, testimonials or live-AI claims', () => {

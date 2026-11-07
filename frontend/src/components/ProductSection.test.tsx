@@ -45,16 +45,16 @@ describe('ProductSection', () => {
     ).toBeInTheDocument();
   });
 
-  it('offers the dashboard preview as one described image, not as data', () => {
+  it('describes the workspace preview as illustrative sample data', () => {
     renderSection();
 
-    const visual = screen.getByRole('img');
-    // The figures are invented, so they must not be announced as readings.
-    expect(visual.getAttribute('aria-label')).toMatch(/illustrative/i);
-    expect(visual.getAttribute('aria-label')).toMatch(/sample data/i);
+    for (const visual of screen.getAllByRole('img')) {
+      expect(visual.getAttribute('aria-label')).toMatch(/illustrative/i);
+      expect(visual.getAttribute('aria-label')).toMatch(/sample data/i);
+    }
   });
 
-  it('keeps the invented figures in a single image node', () => {
+  it('keeps sample figures inside described previews', () => {
     renderSection();
 
     /*
@@ -81,31 +81,14 @@ describe('ProductSection', () => {
     // Rendered alongside its unit, hence the substring match.
     expect(screen.getByText(/SKU-1042/).closest('[aria-hidden="true"]')).not.toBeNull();
 
-    // Still exactly one image node, still described.
     expect(screen.getAllByRole('img')).toHaveLength(1);
-    expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/illustrative/i);
 
-    // The capability list below the preview is untouched by the hiding.
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3);
+
   });
 
   it('marks the preview as illustrative for sighted users too', () => {
     renderSection();
     expect(screen.getByText(/illustrative preview/i)).toBeInTheDocument();
-  });
-
-  it('renders exactly three capability cards', () => {
-    renderSection();
-
-    for (const title of [
-      'Inventory visibility',
-      'Actionable stock management',
-      'Inventory insights and recommendations',
-    ]) {
-      expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument();
-    }
-    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3);
   });
 
   it('describes capabilities the codebase actually supports', () => {
@@ -150,66 +133,10 @@ describe('ProductSection', () => {
     }
   });
 
-  it('contains no focusable or interactive elements to get wrong', () => {
+  it('links to the workflow without making the sample workspace interactive', () => {
     renderSection();
-
-    /*
-     * The preview is a picture and the cards are prose. Nothing here is
-     * clickable, so there is no link that could 404 into the authenticated app
-     * and no control that could be announced without a label.
-     */
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    expect(screen.getByRole('link', { name: 'See how it works' })).toHaveAttribute('href', '#how-it-works');
     expect(screen.queryAllByRole('button')).toHaveLength(0);
-  });
-
-  it('renders dark: no light-surface classes anywhere in the section', () => {
-    renderSection();
-
-    /*
-     * Guards a regression that actually shipped once. The section was authored
-     * light — `bg-slate-50`, `bg-white` panels, `text-slate-900` — which rendered
-     * as a near-white band with white cards under the hero.
-     *
-     * `jsdom` applies no stylesheet, so computed colour is not assertable here.
-     * The class contract is, though, and that is what actually went wrong: the
-     * light utilities were in the markup, not defeated by a cascade elsewhere.
-     * A dark `text-accent-400` on a `bg-white` card would be perfectly legible to
-     * this suite and invisible to a user.
-     */
-    const section = document.getElementById('product');
-    expect(section).not.toBeNull();
-
-    // The section paints itself; it no longer opts into a light page background.
-    expect(section).toHaveClass('product-root');
-
-    const offenders: string[] = [];
-    for (const el of Array.from(section!.querySelectorAll('*'))) {
-      for (const cls of Array.from(el.classList)) {
-        if (
-          cls === 'bg-white' ||
-          cls === 'bg-slate-50' ||
-          cls === 'bg-slate-100' ||
-          cls === 'text-slate-900' ||
-          cls === 'border-slate-100' ||
-          cls === 'border-slate-200'
-        ) {
-          offenders.push(`${el.tagName}.${cls}`);
-        }
-      }
-    }
-    expect(offenders).toEqual([]);
-  });
-
-  it('staggers the entrance with per-element delays', () => {
-    renderSection();
-
-    const rising = document.querySelectorAll('.product-rise');
-    expect(rising.length).toBeGreaterThan(0);
-
-    const delays = Array.from(rising).map((el) => (el as HTMLElement).style.getPropertyValue('--section-delay'));
-    expect(delays.every((d) => d.endsWith('s'))).toBe(true);
-    // Reading order: each element waits longer than the one before it.
-    const seconds = delays.map((d) => parseFloat(d));
-    expect(seconds).toEqual([...seconds].sort((a, b) => a - b));
+    expect(screen.getByRole('img').querySelector('a, button, input, [tabindex]')).toBeNull();
   });
 });

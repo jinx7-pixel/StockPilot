@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 const FOOTER_LINKS = [
   { label: 'Product', href: '#product' },
   { label: 'Features', href: '#features' },
@@ -7,19 +9,20 @@ const FOOTER_LINKS = [
 ] as const;
 
 const GITHUB_PROFILE_URL = 'https://github.com/jinx7-pixel';
+const PORTFOLIO_URL = 'https://jinx-portfolio.pages.dev/';
 const CONTACT_EMAIL = 'jinx4784@gmail.com';
 
 const FOOTER_LINK_CLASS =
-  'rounded-sm text-sm text-slate-400 transition-colors duration-200 hover:text-accent-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 motion-reduce:transition-none';
+  'rounded-sm text-sm text-slate-600 transition-colors duration-200 hover:text-[#086dac] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:ring-offset-white motion-reduce:transition-none';
 
 const CONTACT_LINK_CLASS =
-  'group flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg border border-slate-700/60 bg-navy-800/20 px-2.5 py-1.5 text-sm text-slate-300 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-400/35 hover:bg-navy-800/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900 motion-reduce:transition-none motion-reduce:hover:translate-y-0';
+  'group flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg border border-[#d9e3ee] bg-white px-2.5 py-1.5 text-sm text-[#172b46] transition-colors duration-200 hover:border-[#b9d5ea] hover:bg-[#f5faff] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:ring-offset-white motion-reduce:transition-none';
 
 function BrandMark() {
   return (
     <span
       aria-hidden="true"
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-500 text-navy-900 shadow-[0_7px_18px_-12px_rgba(16,185,129,0.72)]"
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#cfe6f6] bg-[#edf7fe] text-[#086dac]"
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
         <path
@@ -70,27 +73,28 @@ function XIcon() {
 
 export function Footer() {
   const year = new Date().getFullYear();
+  const wordmarkGradient = useId();
 
   return (
-    <footer className="border-t border-slate-700/60 bg-navy-900 font-landing">
-      <div className="mx-auto max-w-5xl px-4 py-9 sm:px-6 sm:py-10 lg:px-8 lg:py-11">
+    <footer id="footer" className="scroll-mt-20 bg-white px-5 font-landing text-[#172b46] sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1280px] border-t border-[#d9e3ee] pt-10 pb-7 sm:pt-12 sm:pb-9">
         <div className="grid min-w-0 gap-8 sm:grid-cols-2 sm:gap-x-8 lg:grid-cols-[1.1fr_0.9fr_1fr] lg:gap-10">
           <div className="min-w-0 sm:col-span-2 lg:col-span-1">
             <a
               href="#main-content"
               aria-label="StockPilot, back to top"
-              className="inline-flex items-center gap-3 rounded-md text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 focus-visible:ring-offset-2 focus-visible:ring-offset-navy-900"
+              className="inline-flex items-center gap-3 rounded-md text-[#172b46] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               <BrandMark />
               <span className="text-lg font-semibold tracking-tight">StockPilot</span>
             </a>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
               Clearer stock information for more confident inventory decisions.
             </p>
           </div>
 
           <nav aria-label="Footer" className="min-w-0">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-200">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-[#172b46]">
               Explore
             </h2>
             <ul className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-2.5">
@@ -107,7 +111,7 @@ export function Footer() {
           <section aria-labelledby="footer-connect-heading" className="min-w-0">
             <h2
               id="footer-connect-heading"
-              className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-200"
+              className="text-xs font-semibold uppercase tracking-[0.16em] text-[#172b46]"
             >
               Connect
             </h2>
@@ -120,14 +124,14 @@ export function Footer() {
                   aria-label="GitHub profile, opens in a new tab"
                   className={CONTACT_LINK_CLASS}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/60 bg-navy-900/65 text-slate-300 transition-colors duration-200 group-hover:border-accent-400/30 group-hover:bg-accent-500/10 group-hover:text-accent-400 motion-reduce:transition-none">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#d9e3ee] bg-[#f6faff] text-[#086dac]">
                     <GitHubIcon />
                   </span>
                   <span className="min-w-0 flex-1">GitHub</span>
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 16 16"
-                    className="h-3 w-3 shrink-0 text-slate-500 transition-colors group-hover:text-accent-400 motion-reduce:transition-none"
+                    className="h-3 w-3 shrink-0 text-slate-600 transition-colors group-hover:text-[#086dac] motion-reduce:transition-none"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="1.5"
@@ -145,29 +149,63 @@ export function Footer() {
                   aria-label={`Email ${CONTACT_EMAIL}`}
                   className={CONTACT_LINK_CLASS}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/60 bg-navy-900/65 text-slate-300 transition-colors duration-200 group-hover:border-accent-400/30 group-hover:bg-accent-500/10 group-hover:text-accent-400 motion-reduce:transition-none">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#d9e3ee] bg-[#f6faff] text-[#086dac]">
                     <EmailIcon />
                   </span>
                   <span className="min-w-0 break-all">{CONTACT_EMAIL}</span>
                 </a>
               </li>
-              <li className="flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-500">
+              <li className="flex min-h-10 min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-600">
                 <span
                   role="img"
                   aria-label="X icon, visual only"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-800/80 bg-navy-900/45 text-slate-500"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-600"
                 >
                   <XIcon />
                 </span>
                 <span>X</span>
-                <span className="ml-auto text-xs text-slate-500">Visual only</span>
+                <span className="ml-auto text-xs text-slate-600">Visual only</span>
               </li>
             </ul>
           </section>
         </div>
 
-        <div className="mt-8 border-t border-slate-800/80 pt-4 sm:mt-9 sm:flex sm:items-center sm:justify-between">
-          <p className="text-xs text-slate-500">© {year} StockPilot. Code licensed under MIT.</p>
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          viewBox="0 0 1200 246"
+          className="mt-9 block h-auto w-full select-none sm:mt-12"
+        >
+          <defs>
+            <linearGradient id={wordmarkGradient} x2="0" y2="1">
+              <stop offset="0" stopColor="#e2e8ef" />
+              <stop offset="1" stopColor="#f6f8fa" />
+            </linearGradient>
+          </defs>
+          <text
+            x="4"
+            y="214"
+            textLength="1192"
+            lengthAdjust="spacingAndGlyphs"
+            fontSize="244"
+            fontWeight="750"
+            fill={`url(#${wordmarkGradient})`}
+          >
+            StockPilot
+          </text>
+        </svg>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-4">
+          <p className="text-sm text-slate-600">© {year} StockPilot. Code licensed under MIT.</p>
+          <a
+            href={PORTFOLIO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Portfolio, opens in a new tab"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d9e3ee] bg-[#f8fafc] px-4 text-sm font-medium text-[#172b46] hover:border-[#b9d5ea] hover:text-[#086dac] focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2"
+          >
+            Portfolio <span aria-hidden="true">↗</span>
+          </a>
         </div>
       </div>
     </footer>

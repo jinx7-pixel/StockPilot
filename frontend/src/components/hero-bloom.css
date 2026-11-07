@@ -1,0 +1,165 @@
+/* Scoped to the public header and hero. No runtime font or media CDN requests. */
+.landing-page { --bloom-ink: #103a70; --stage-blue: #16a9f3; --stage-cyan: #75d9f0; }
+.sp-header {
+  height: 80px; margin-bottom: -80px;
+  background: rgb(12 86 155 / 64%);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgb(255 255 255 / 13%);
+  transition: background-color .2s ease, border-color .2s ease;
+}
+.sp-header[data-surface='hero'] {
+  background: transparent;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+.sp-header > nav { height: 100%; max-width: 1440px; }
+.sp-header .sp-brand { font-size: 21px; letter-spacing: -.7px; gap: 10px; }
+.sp-header .sp-brand-mark { background: #fff; border-radius: 11px; width: 36px; height: 36px; }
+.sp-header .sp-brand-mark svg { color: #2467cb; width: 21px; height: 21px; }
+.sp-header .sp-nav-link { color: #fff; border-radius: 999px; min-height: 44px; display: inline-flex; align-items: center; }
+.sp-header .sp-nav-link:hover { background: rgb(255 255 255 / 12%); border-color: transparent; }
+.sp-header .sp-nav-login { color: white; background: rgb(0 44 100 / 24%); }
+.sp-header .sp-nav-start { color: var(--bloom-ink); background: white; }
+.sp-header .sp-nav-login, .sp-header .sp-nav-start {
+  align-items: center; justify-content: center; min-height: 44px;
+  padding: 10px 22px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  transition: background-color .18s ease, transform .18s ease;
+}
+.sp-header .sp-nav-login:hover { background: rgb(0 44 100 / 45%); }
+.sp-header .sp-nav-start:hover { background: #e4f4ff; transform: translateY(-1px); }
+.sp-header .sp-menu-toggle { color: white; border-radius: 50%; }
+.sp-header .sp-menu-toggle:hover { background: rgb(255 255 255 / 14%); border-color: transparent; }
+.sp-header a:focus-visible, .sp-header button:focus-visible,
+.sp-hero a:focus-visible, .sp-hero button:focus-visible {
+  outline: 2px solid white; outline-offset: 5px; box-shadow: 0 0 0 7px #174b90;
+}
+.sp-hero {
+  position: relative; isolation: isolate; overflow: hidden; color: white;
+  min-height: 800px; min-height: min(900px, max(800px, 100svh));
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 154px 24px 104px;
+  /* Mirrored light and shadow continue the flower's palette across wide
+     screens. Static gradients avoid extra animated layers or blur surfaces. */
+  background:
+    radial-gradient(ellipse 42% 64% at 0% 62%, rgb(49 53 190 / 46%), transparent 78%),
+    radial-gradient(ellipse 42% 64% at 100% 62%, rgb(49 53 190 / 46%), transparent 78%),
+    radial-gradient(ellipse 35% 46% at 22% 25%, rgb(102 224 250 / 48%), transparent 80%),
+    radial-gradient(ellipse 35% 46% at 78% 25%, rgb(102 224 250 / 48%), transparent 80%),
+    linear-gradient(180deg, #23aaf2 0%, #20adf1 50%, #249ce6 100%);
+}
+.sp-bloom-stage {
+  position: absolute; z-index: -3; pointer-events: none;
+  width: 1040px; height: 1040px; top: 49%; left: 50%; transform: translate(-50%, -50%);
+}
+/* Resolve the flower and edge shading into the same blue that starts Product.
+   This static overlay keeps the section boundary seamless at every width. */
+.sp-hero::after {
+  content: ''; position: absolute; inset: auto 0 0; height: 200px;
+  z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom, rgb(22 169 243 / 0), var(--stage-blue));
+}
+.sp-bloom-motion {
+  position: relative; width: 100%; height: 100%;
+  animation: sp-bloom-drift 14s ease-in-out infinite; will-change: transform;
+}
+.sp-bloom { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+/* Fixed optical treatments: clear inner folds, diffused outer petals. Both
+   images share one source and one animated parent, so they cannot drift apart. */
+.sp-bloom-haze {
+  opacity: .85;
+  filter: blur(22px) saturate(2.2) contrast(1.12);
+  mask-image: radial-gradient(ellipse at 48% 53%, #000 22%, rgb(0 0 0 / 80%) 48%, transparent 73%);
+}
+.sp-bloom-core {
+  filter: blur(1.5px) saturate(2.2) brightness(.86) contrast(1.15);
+  mask-image: radial-gradient(ellipse at 48% 55%, #000 12%, rgb(0 0 0 / 95%) 28%, rgb(0 0 0 / 35%) 46%, transparent 64%);
+}
+.sp-hero-shade {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(18 58 154 / 16%), transparent 27%, transparent 73%, rgb(18 58 154 / 16%)),
+    radial-gradient(ellipse 38% 38% at 50% 54%, rgb(26 29 132 / 35%), transparent 100%),
+    linear-gradient(0deg, rgb(6 74 145 / 18%), transparent 28%);
+}
+.sp-hero-content { width: 100%; max-width: 1050px; text-align: center; }
+.sp-eyebrow {
+  display: inline-flex; align-items: center; gap: 9px; padding: 9px 16px;
+  background: rgb(9 55 119 / 48%); border: 1px solid rgb(255 255 255 / 26%);
+  border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 2.4px; text-transform: uppercase;
+}
+.sp-eyebrow > span { width: 6px; height: 6px; border-radius: 50%; background: #b4efff; }
+.sp-hero h1 {
+  margin: 25px 0 0; font-size: clamp(48px, 6vw, 86px); line-height: 1.06;
+  font-weight: 600; letter-spacing: -3.5px; text-wrap: balance;
+  text-shadow: 0 2px 30px rgb(30 47 140 / 12%);
+}
+.sp-hero h1 > span {
+  display: block; font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400; font-style: italic; letter-spacing: -3px;
+}
+.sp-hero-description {
+  max-width: 590px; margin: 25px auto 0; font-size: 17px; line-height: 1.8;
+  color: white; text-wrap: pretty; text-shadow: 0 1px 10px rgb(14 39 108 / 40%);
+}
+.sp-hero-actions { margin-top: 35px; display: flex; justify-content: center; gap: 12px; }
+.sp-hero-primary, .sp-hero-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 24px;
+  border-radius: 999px; padding: 16px 26px; font-size: 14px; font-weight: 600;
+  transition: transform .2s ease, background-color .2s ease;
+}
+.sp-hero-primary { background: white; color: #15376b; box-shadow: 0 5px 25px rgb(15 43 106 / 12%); }
+.sp-hero-secondary { background: rgb(13 48 128 / 55%); color: white; border: 1px solid rgb(255 255 255 / 38%); }
+.sp-hero-actions a:hover { transform: translateY(-2px); }
+.sp-hero-primary:hover { background: #e9f7ff; }
+.sp-hero-secondary:hover { background: rgb(13 48 128 / 75%); }
+.sp-hero-actions a:active { transform: translateY(0); }
+.sp-capabilities { margin: 33px 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 25px; }
+.sp-capabilities li { display: flex; align-items: center; gap: 7px; font-size: 12px; color: white; }
+.sp-capabilities li > span { color: #c8f5ff; }
+.sp-hero-bottom {
+  position: absolute; bottom: 25px; left: 32px; right: 32px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.sp-discover { display: inline-flex; align-items: center; gap: 18px; min-height: 44px; font-size: 12px; }
+.sp-motion-toggle {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 9px 14px; font-size: 11px; cursor: pointer;
+  color: white; background: rgb(8 48 105 / 45%); border: 1px solid rgb(255 255 255 / 25%); border-radius: 999px;
+}
+.sp-motion-toggle:hover { background: rgb(8 48 105 / 65%); }
+.sp-hero[data-motion='paused'] .sp-bloom-motion { animation-play-state: paused; }
+@keyframes sp-bloom-drift {
+  0%, 100% { transform: rotate(-12deg) scale(1) translate3d(0, 0, 0); }
+  50% { transform: rotate(12deg) scale(1.10, .97) translate3d(12px, -16px, 0); }
+}
+@media (max-width: 1023px) {
+  .sp-header { height: 72px; margin-bottom: -72px; }
+  .sp-hero { min-height: 780px; padding-top: 144px; }
+}
+@media (max-width: 640px) {
+  .sp-header { height: 68px; margin-bottom: -68px; }
+  .sp-header .sp-brand { font-size: 19px; }
+  .sp-header .sp-brand-mark { width: 32px; height: 32px; }
+  .sp-hero { min-height: 760px; min-height: max(740px, 100svh); padding: 132px 22px 116px; }
+  .sp-bloom-stage { width: 620px; height: 620px; top: 41%; }
+  .sp-bloom-haze { filter: blur(14px) saturate(2.2) contrast(1.12); }
+  .sp-bloom-core { filter: blur(1px) saturate(2.2) brightness(.86) contrast(1.15); }
+  .sp-hero h1 { font-size: clamp(40px, 10.5vw, 62px); line-height: 1.12; letter-spacing: -1.8px; margin-top: 23px; }
+  .sp-hero h1 > span { letter-spacing: -1.5px; margin-top: 6px; }
+  .sp-hero-description { font-size: 15px; line-height: 1.75; margin-top: 22px; }
+  .sp-hero-actions { flex-direction: column; align-items: stretch; margin: 28px auto 0; max-width: 340px; gap: 10px; }
+  .sp-hero-primary, .sp-hero-secondary { padding: 14px 23px; }
+  .sp-eyebrow { font-size: 10px; letter-spacing: 1.7px; }
+  .sp-capabilities { gap: 10px 14px; margin-top: 24px; }
+  .sp-capabilities li { font-size: 11px; }
+  .sp-hero-bottom { left: 22px; right: 22px; bottom: 18px; gap: 8px; }
+  .sp-discover { font-size: 10px; gap: 9px; }
+  .sp-motion-toggle { font-size: 10px; padding: 9px 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-header { transition: none; }
+  .sp-bloom-motion { animation: none; will-change: auto; }
+  .sp-motion-toggle { display: none; }
+  .sp-hero a, .sp-header a { transition: none; }
+  .sp-hero a:hover, .sp-header .sp-nav-start:hover { transform: none; }
+}

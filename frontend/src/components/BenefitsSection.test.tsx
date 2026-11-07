@@ -14,7 +14,7 @@ describe('BenefitsSection', () => {
     expect(screen.getByText('WHY STOCKPILOT')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Keep inventory information clear, spot the products that need attention, and make more confident stock decisions.',
+        'Know what’s available, what’s running low, and what to reorder first.',
       ),
     ).toBeInTheDocument();
   });
@@ -35,19 +35,19 @@ describe('BenefitsSection', () => {
     ]);
 
     expect(
-      within(benefits).getByText('Understand what is available and which products need attention.'),
+      within(benefits).getByText('Check on-hand quantities and recent movements in one place.'),
     ).toBeInTheDocument();
     expect(
       within(benefits).getByText(
-        'Spot low-stock and out-of-stock items before they become bigger operational problems.',
+        'See which items are running low and which are already out of stock.',
       ),
     ).toBeInTheDocument();
     expect(
-      within(benefits).getByText('Focus your attention on the products that need replenishment first.'),
+      within(benefits).getByText('Use replenishment recommendations to decide what to order first.'),
     ).toBeInTheDocument();
     expect(
       within(benefits).getByText(
-        'Use organized inventory information and stock insights to make informed decisions.',
+        'Review the evidence behind a recommendation before creating a draft order.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /about/i })).not.toBeInTheDocument();
@@ -62,5 +62,7 @@ describe('BenefitsSection', () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('Illustrative')).toBeInTheDocument();
+    expect(screen.getByText('6 units on hand · reorder at 12')).toBeInTheDocument();
+    expect(screen.getByText('Low stock')).toBeInTheDocument();
   });
 });

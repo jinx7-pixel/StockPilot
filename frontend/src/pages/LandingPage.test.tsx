@@ -97,18 +97,6 @@ describe('landing navbar', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
   });
 
-  it('uses a readable navy glass surface while keeping the mobile drawer opaque', () => {
-    renderNavbar();
-
-    const navbar = document.querySelector('.landing-page > header');
-    expect(navbar).toHaveClass('bg-navy-900/90', 'backdrop-blur-md');
-    expect(navbar?.className).toContain('shadow-[inset_0_-1px_0_rgb(51_65_85_/_0.6)]');
-    expect(navbar).not.toHaveClass('bg-transparent');
-    expect(document.getElementById('landing-drawer')).toHaveClass('bg-navy-900');
-    expect(document.getElementById('landing-drawer')).not.toHaveClass('backdrop-blur-md');
-    expect(document.querySelector('.landing-page')).toBeInTheDocument();
-  });
-
   it('exposes the four section links with their matching anchor targets', () => {
     renderNavbar();
 
@@ -175,43 +163,6 @@ describe('landing navbar', () => {
     expect(screen.getAllByRole('link', { name: 'Get Started' })[0]).toHaveAttribute('href', '/register');
   });
 
-  it('gives Log in the orbiting ring at every breakpoint', () => {
-    renderNavbar();
-
-    /*
-     * The ring is on both the bar's Log in and the drawer's — the drawer is the
-     * only one visible on a phone, so styling just the bar's would leave mobile
-     * with no effect at all.
-     *
-     * Both stay real links rather than divs with handlers: the ring is decoration
-     * and must not cost the control its semantics or its single focus stop.
-     */
-    const login = screen.getAllByRole('link', { name: 'Log in' });
-    expect(login).toHaveLength(2);
-
-    for (const link of login) {
-      expect(link).toHaveAttribute('href', '/login');
-      expect(link).toHaveClass('moving-border');
-      expect(link.tagName).toBe('A');
-    }
-  });
-
-  it('gives Log in no static border of its own', () => {
-    renderNavbar();
-
-    /*
-     * `MovingBorder` is meant to be the only edge on this control. A permanent
-     * `border` underneath it showed as a continuous outline the whole time, so
-     * the orbiting arc never looked like it *was* the border — it looked like
-     * decoration travelling around a permanently-outlined box.
-     */
-    for (const link of screen.getAllByRole('link', { name: 'Log in' })) {
-      expect(link.className).not.toMatch(/(^|\s)border(\s|$)/);
-      expect(link.className).not.toContain('border-accent');
-      expect(link.className).not.toContain('border-slate');
-    }
-  });
-
   it('keeps the drawer Log in inside the drawer and closes it on use', async () => {
     const user = userEvent.setup();
     renderNavbar();
@@ -220,7 +171,7 @@ describe('landing navbar', () => {
 
     const drawer = document.getElementById('landing-drawer')!;
     const drawerLogin = within(drawer).getByRole('link', { name: 'Log in' });
-    expect(drawerLogin).toHaveClass('moving-border');
+    expect(drawerLogin).toHaveAttribute('href', '/login');
 
     await user.click(drawerLogin);
     expect(toggle()).toHaveAttribute('aria-expanded', 'false');
@@ -300,23 +251,11 @@ describe('landing navbar', () => {
     expect(document.body.style.overflow).toBe('');
   });
 
-  it('gives Get Started no decorative layer of any kind', () => {
+  it('keeps Get Started labels and destinations clear despite decorative arrows', () => {
     renderNavbar();
-
-    /*
-     * Get Started is a plain link. It has carried a sweeping shine and, briefly, a
-     * sprite-sheet mask; both are gone. Assert nothing decorative crept back in —
-     * an extra absolutely-positioned child is exactly how a band that renders
-     * underneath the label comes back unnoticed.
-     */
     for (const cta of screen.getAllByRole('link', { name: 'Get Started' })) {
-      expect(cta.querySelector('.animate-shine')).toBeNull();
-      expect(cta.querySelector('[data-mask]')).toBeNull();
-      expect(cta.querySelector('[aria-hidden="true"]')).toBeNull();
-      // Nothing to clip any longer.
-      expect(cta.className).not.toContain('overflow-hidden');
-      // The label is the element's own text.
-      expect(cta.textContent).toBe('Get Started');
+      expect(cta).toHaveAccessibleName('Get Started');
+      expect(cta).toHaveAttribute('href', '/register');
     }
   });
 

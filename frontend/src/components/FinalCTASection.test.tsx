@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { FinalCTASection } from './FinalCTASection';
 
 describe('FinalCTASection', () => {
-  it('keeps its closing message and links to the existing How It Works section', () => {
-    render(<FinalCTASection />);
+  it('presents the closing message and links to signup and the existing walkthrough', () => {
+    render(<MemoryRouter><FinalCTASection /></MemoryRouter>);
 
     expect(
       screen.getByRole('heading', {
@@ -15,13 +16,12 @@ describe('FinalCTASection', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Explore how StockPilot brings inventory information and priorities into a clearer view.',
+        'See what’s on hand, spot low stock, and decide what to reorder in one workspace.',
       ),
     ).toBeInTheDocument();
 
     const link = screen.getByRole('link', { name: 'Explore How It Works' });
     expect(link).toHaveAttribute('href', '#how-it-works');
-    expect(link.className).toContain('focus-visible:ring-2');
-    expect(link.className).toContain('motion-reduce:transition-none');
+    expect(screen.getByRole('link', { name: 'Get Started' })).toHaveAttribute('href', '/register');
   });
 });
